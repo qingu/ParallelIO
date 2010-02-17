@@ -244,7 +244,8 @@ foreach \$suite (qw(@testsuites)){
 	    close(T);
 	}
     }else{
-	print "suite \$suite FAILED to configure or build\\n";	
+	die "suite \$suite FAILED to configure or build ";	
+
     }
 }
 print "test complete on $host \$passcnt tests PASS, \$failcnt tests FAIL\\n";
