@@ -93,6 +93,11 @@ module pio_types
        integer(kind=PIO_OFFSET) :: offset             ! offset into file
        integer(i4)              :: iotype             ! Type of IO to perform see parameter statement below     
        logical                  :: file_is_open = .false.
+#ifdef ASYNC_PNETCDF
+       integer, pointer         :: req(:)             ! request id
+       integer                  :: current_rc=1       ! number of the current request
+       integer                  :: max_rc=0           ! maximum possible number of requests
+#endif       
     end type File_desc_t
 
 

@@ -82,11 +82,19 @@ contains
              call piodie(subname,__LINE__,'empty iobuf')
           end if
 #endif
+#ifdef ASYNC_PNETCDF
+          ierr=nfmpi_iput_vara_real ( File%fh,varDesc%varid,start, &
+               count,IOBUF, &
+               int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
+               file%req(file%current_rc))
+          file%current_rc=file%current_rc+1
+          
+#else          
           ierr=nfmpi_put_vara_all( File%fh,varDesc%varid,start, &
                count,IOBUF, &
                int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
                iodesc%Write%ElemTYPE)
-
+#endif
           if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
                '  IAM: ',File%iosystem%io_rank,' start: ',start,' count: ',count,&
                ' size :',iodesc%Write%n_ElemTYPE, ' error: ',ierr, &
@@ -297,11 +305,19 @@ contains
              call piodie(subname,__LINE__,'empty iobuf')
           end if
 #endif
+#ifdef ASYNC_PNETCDF
+          ierr=nfmpi_iput_vara_int ( File%fh,varDesc%varid,start, &
+               count,IOBUF, &
+               int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
+               file%req(file%current_rc))
+          file%current_rc=file%current_rc+1
+          
+#else          
           ierr=nfmpi_put_vara_all( File%fh,varDesc%varid,start, &
                count,IOBUF, &
                int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
                iodesc%Write%ElemTYPE)
-
+#endif
           if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
                '  IAM: ',File%iosystem%io_rank,' start: ',start,' count: ',count,&
                ' size :',iodesc%Write%n_ElemTYPE, ' error: ',ierr, &
@@ -512,11 +528,19 @@ contains
              call piodie(subname,__LINE__,'empty iobuf')
           end if
 #endif
+#ifdef ASYNC_PNETCDF
+          ierr=nfmpi_iput_vara_double ( File%fh,varDesc%varid,start, &
+               count,IOBUF, &
+               int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
+               file%req(file%current_rc))
+          file%current_rc=file%current_rc+1
+          
+#else          
           ierr=nfmpi_put_vara_all( File%fh,varDesc%varid,start, &
                count,IOBUF, &
                int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
                iodesc%Write%ElemTYPE)
-
+#endif
           if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
                '  IAM: ',File%iosystem%io_rank,' start: ',start,' count: ',count,&
                ' size :',iodesc%Write%n_ElemTYPE, ' error: ',ierr, &

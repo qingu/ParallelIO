@@ -507,7 +507,6 @@ contains
     !------------------
     integer :: iotype, mpierr, msg
     type(iosystem_desc_t), pointer :: ios
-    character(len=PIO_MAX_NAME) :: tmpname
 
     ios => File%iosystem
 
@@ -528,20 +527,19 @@ contains
 
 #ifdef _PNETCDF
        case(iotype_pnetcdf)
-          ierr=nfmpi_inq_attname(File%fh,varid,attnum,tmpname)
+          ierr=nfmpi_inq_attname(File%fh,varid,attnum,name)
 
 #endif
 
 #ifdef  _NETCDF
        case(pio_iotype_netcdf4p, pio_iotype_netcdf4c)
-          ierr=nf90_inq_attname(File%fh,varid,attnum,tmpname)
+          ierr=nf90_inq_attname(File%fh,varid,attnum,name)
        case(iotype_netcdf)
           if (ios%io_rank==0) then
-             ierr=nf90_inq_attname(File%fh,varid,attnum,tmpname)
-             if(Debug) print *,__FILE__,__LINE__,name
+             ierr=nf90_inq_attname(File%fh,varid,attnum,name)
           endif
           if(.not.ios%async_interface .and. ios%num_tasks==ios%num_iotasks) then
-             call MPI_BCAST(tmpname,PIO_MAX_NAME,MPI_CHARACTER,0,ios%IO_comm, mpierr)
+             call MPI_BCAST(name,len_trim(name),MPI_CHARACTER,0,ios%IO_comm, mpierr)
              call CheckMPIReturn('nf_mod',mpierr)
           end if
 
@@ -554,10 +552,10 @@ contains
     endif
     call check_netcdf(File, ierr,_FILE_,__LINE__)
     if(ios%async_interface .or. ios%num_tasks>ios%num_iotasks) then
-       call MPI_BCAST(tmpname,PIO_MAX_NAME,MPI_CHARACTER,ios%IOMaster,ios%my_comm, mpierr)
+       call MPI_BCAST(name,len_trim(name),MPI_CHARACTER,ios%IOMaster,ios%my_comm, mpierr)
        call CheckMPIReturn('nf_mod',mpierr)
     end if
-    name = tmpname(1:len_trim(tmpname))
+
   end function inq_attname_vid
 
 !> 
@@ -1393,6 +1391,9 @@ contains
 #ifdef _PNETCDF
        case(iotype_pnetcdf)
           ierr=nfmpi_enddef(File%fh)
+#ifdef ASYNC_PNETCDF
+          call alloc_check(file%req,file%max_rc)
+#endif
 #endif
 
 #ifdef _NETCDF
@@ -1559,7 +1560,7 @@ contains
 !<
   integer function def_var_0d(File,name,type,vardesc) result(ierr)
 
-    type (File_desc_t), intent(in)  :: File
+    type (File_desc_t), intent(inout)  :: File
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
     type (Var_desc_t), intent(inout) :: vardesc
@@ -1583,7 +1584,7 @@ contains
 !<
   integer function def_var_md(File,name,type,dimids,vardesc) result(ierr)
 
-    type (File_desc_t), intent(in)  :: File
+    type (File_desc_t), intent(inout)  :: File
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
     integer, intent(in)             :: dimids(:)
@@ -1628,6 +1629,10 @@ contains
           else
              ierr=nfmpi_def_var(File%fh,name(1:nlen),type,vardesc%ndims,dimids(1:vardesc%ndims),vardesc%varid)
           end if
+#ifdef ASYNC_PNETCDF
+          file%max_rc=file%max_rc+1
+#endif
+
 #endif
 
 #ifdef _NETCDF
