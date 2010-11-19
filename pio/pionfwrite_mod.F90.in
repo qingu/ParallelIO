@@ -75,7 +75,6 @@ contains
 #ifdef ASYNC_PNETCDF
           ierr=nfmpi_iput_vara_{TYPE} ( File%fh,varDesc%varid,start, &
                count,IOBUF, &
-               int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
                file%req(file%current_rc))
           file%current_rc=file%current_rc+1
           

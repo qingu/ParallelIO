@@ -241,7 +241,8 @@ contains
 #ifdef _PNETCDF
        case(PIO_iotype_pnetcdf)
 #ifdef ASYNC_PNETCDF
-          if(file%max_rc>=file%current_rc) then
+          file%current_rc=file%current_rc-1
+          if(file%current_rc>0) then
              call alloc_check(status,file%current_rc-1)
              ierr = nfmpi_wait_all(file%fh,file%current_rc-1,file%req(1:file%current_rc),status)
              call dealloc_check(status)
