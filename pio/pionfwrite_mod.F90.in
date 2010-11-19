@@ -74,8 +74,7 @@ contains
 #endif
 #ifdef ASYNC_PNETCDF
           ierr=nfmpi_iput_vara_{TYPE} ( File%fh,varDesc%varid,start, &
-               count,IOBUF, &
-               file%req(file%current_rc))
+               count,IOBUF, file%req(file%current_rc))
           file%current_rc=file%current_rc+1
           
 #else          

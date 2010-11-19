@@ -243,8 +243,8 @@ contains
 #ifdef ASYNC_PNETCDF
           file%current_rc=file%current_rc-1
           if(file%current_rc>0) then
-             call alloc_check(status,file%current_rc-1)
-             ierr = nfmpi_wait_all(file%fh,file%current_rc-1,file%req(1:file%current_rc),status)
+             call alloc_check(status,file%current_rc)
+             ierr = nfmpi_wait_all(file%fh,file%current_rc,file%req(1:file%current_rc),status)
              call dealloc_check(status)
              call dealloc_check(file%req)
              file%current_rc=1

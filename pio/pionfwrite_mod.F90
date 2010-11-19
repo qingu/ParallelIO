@@ -85,9 +85,7 @@ contains
 #endif
 #ifdef ASYNC_PNETCDF
           ierr=nfmpi_iput_vara_real ( File%fh,varDesc%varid,start, &
-               count,IOBUF, &
-               int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
-               file%req(file%current_rc))
+               count,IOBUF, file%req(file%current_rc))
           file%current_rc=file%current_rc+1
           
 #else          
@@ -304,9 +302,7 @@ contains
 #endif
 #ifdef ASYNC_PNETCDF
           ierr=nfmpi_iput_vara_int ( File%fh,varDesc%varid,start, &
-               count,IOBUF, &
-               int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
-               file%req(file%current_rc))
+               count,IOBUF, file%req(file%current_rc))
           file%current_rc=file%current_rc+1
           
 #else          
@@ -523,9 +519,7 @@ contains
 #endif
 #ifdef ASYNC_PNETCDF
           ierr=nfmpi_iput_vara_double ( File%fh,varDesc%varid,start, &
-               count,IOBUF, &
-               int(iodesc%Write%n_ElemTYPE,kind=pio_offset), &
-               file%req(file%current_rc))
+               count,IOBUF, file%req(file%current_rc))
           file%current_rc=file%current_rc+1
           
 #else          
