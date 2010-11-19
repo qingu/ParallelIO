@@ -11,7 +11,10 @@ module piolib_mod
   !--------------
   use pio_kinds
   !--------------
-  use pio_types
+  use pio_types, only : file_desc_t, iosystem_desc_t, var_desc_t, io_desc_t, &
+	pio_iotype_pbinary, pio_iotype_binary, pio_iotype_direct_pbinary, &
+	pio_iotype_netcdf, pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, &
+        pio_noerr
   !--------------
   use alloc_mod
   !--------------
@@ -53,7 +56,6 @@ module piolib_mod
        PIO_seterrorhandling, &
        PIO_get_local_array_size, &
        PIO_freedecomp,     &
-       PIO_setnumagg,     &
        PIO_dupiodesc,     &
        PIO_getnumiotasks, &
        PIO_set_hint,      &
@@ -191,14 +193,6 @@ module piolib_mod
      module procedure numtowrite
   end interface
 
-!> 
-!! @defgroup PIO_setnumagg PIO_setnumagg
-!!  uses the mpi-io hint functionality to set the number of 
-!!  aggregators to use.  is ignored if mpi-io is not enabled.
-!<
-  interface PIO_setnumagg
-     module procedure setnumagg
-  end interface
 
 !> 
 !! @defgroup PIO_getnumiotasks PIO_getnumiotasks
@@ -358,6 +352,7 @@ contains
 !! @copydoc PIO_error_method
 !<
   subroutine seterrorhandlingi(ios, method)
+    use pio_types, only : pio_internal_error, pio_return_error
     use pio_msg_mod, only : pio_msg_seterrorhandling
     type(iosystem_desc_t), intent(inout) :: ios
     integer, intent(in) :: method
@@ -1229,6 +1224,7 @@ contains
   !
 
   subroutine dupiodesc2(src, dest)
+    use pio_types, only : io_desc2_t
     type(io_desc2_t), intent(in) :: src
     type(io_desc2_t), intent(out) :: dest
 
@@ -1252,6 +1248,7 @@ contains
 
 
   subroutine genindexedblock(lenblocks,basetype,elemtype,filetype,displace)
+    use pio_types, only : pio_double, pio_int, pio_real, pio_char
 #ifdef NO_MPI2
     use pio_support, only : mpi_type_create_indexed_block
 #endif
@@ -1334,6 +1331,7 @@ contains
 !! @param base @em optional argument can be used to offset the first io task - default base is task 1.
 !<
   subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base)
+    use pio_types, only : pio_internal_error, pio_rearr_none
     integer(i4), intent(in) :: comp_rank
     integer(i4), intent(in) :: comp_comm
     integer(i4), intent(in) :: num_iotasks 
@@ -1370,15 +1368,17 @@ contains
     iosystem%union_comm = comp_comm
     iosystem%comp_comm = comp_comm
     iosystem%comp_rank = comp_rank
-    iosystem%rearr = rearr
     iosystem%intercomm = MPI_COMM_NULL
     iosystem%my_comm = comp_comm
     iosystem%async_interface = .false.
-
+#ifndef _MPISERIAL
+    iosystem%info = mpi_info_null
+#endif
     call mpi_comm_size(comp_comm,iosystem%num_tasks,ierr)
 
     iosystem%num_comptasks = iosystem%num_tasks
     iosystem%union_rank = comp_rank
+    iosystem%rearr = rearr
 
     if(check) call checkmpireturn('init: after call to comm_size: ',ierr)
     ! ---------------------------------------
@@ -1437,7 +1437,7 @@ contains
     ! Entry: it is the number of IO-clients per IO-node
     ! Exit:  is is the total number of IO-tasks
     !---------------------------------------------------
-    if (rearr == PIO_rearr_none) then
+    if (iosystem%rearr == PIO_rearr_none) then
        rearrFlag = 0
     else
        rearrFlag = 1
@@ -1457,10 +1457,12 @@ contains
     iosystem%num_iotasks =n_iotasks
     call alloc_check(iosystem%ioranks,n_iotasks,'init:n_ioranks')
     j=1
+    iosystem%iomaster=-1
     do i=1,iosystem%num_tasks
        if(iotmp2(i) == 1) then 
           iosystem%ioranks(j) = i-1
 	  j=j+1
+	  if(iosystem%iomaster<0) iosystem%iomaster=i-1
        endif
     enddo
     call dealloc_check(iotmp)
@@ -1498,31 +1500,14 @@ contains
 
     if(debug) print *,'init: iam: ',comp_rank,' before allocate(status): n_iotasks: ',n_iotasks
 
-    if (rearr == PIO_rearr_none) then
+    if (iosystem%rearr == PIO_rearr_none) then
        iosystem%userearranger= .false.
     else
        iosystem%userearranger= .true.
     endif
 
-
-#if defined(USEMPIIO) || defined(_PNETCDF) || defined(_NETCDF4)
+#ifndef _MPISERIAL
     call mpi_info_create(iosystem%info,ierr)
-    ! turn on mpi-io aggregation 
-    !DBG    print *,'PIO_init: before call to setnumagg'
-    itmp = num_aggregator
-    call mpi_bcast(itmp, 1, mpi_integer, 0, iosystem%comp_comm, ierr)
-    if(itmp .gt. 0) then 
-       call setnumagg(iosystem,itmp)  ! let mpi-io do aggregation
-    endif
-
-#ifdef PIO_GPFS_HINTS
-    call PIO_set_hint(iosystem,"ibm_largeblock_io","true")
-#endif
-#ifdef PIO_LUSTRE_HINTS
-    call PIO_set_hint(iosystem, 'romio_ds_read','disable')
-    call PIO_set_hint(iosystem,'romio_ds_write','disable')
-#endif
-
 #endif
 
     if(debug) print *,'iam: ',iosystem%io_rank,__LINE__,'init: userearranger: ',iosystem%userearranger
@@ -1553,6 +1538,27 @@ contains
     
     if(iosystem%ioproc) call mpi_comm_rank(iosystem%io_comm,iosystem%io_rank,ierr)
     if(check) call checkmpireturn('init: after call to comm_rank: ',ierr)
+    ! turn on mpi-io aggregation 
+    !DBG    print *,'PIO_init: before call to setnumagg'
+    itmp = num_aggregator
+    call mpi_bcast(itmp, 1, mpi_integer, 0, iosystem%comp_comm, ierr)
+
+    if(itmp .gt. 0) then 
+       write(cb_nodes,('(i5)')) itmp
+#ifdef BGx
+       call PIO_set_hint(iosystem,"bgl_nodes_pset",trim(adjustl(cb_nodes)))
+#else
+       call PIO_set_hint(iosystem,"cb_nodes",trim(adjustl(cb_nodes)))
+#endif       
+    endif
+
+#ifdef PIO_GPFS_HINTS
+    call PIO_set_hint(iosystem,"ibm_largeblock_io","true")
+#endif
+#ifdef PIO_LUSTRE_HINTS
+    call PIO_set_hint(iosystem, 'romio_ds_read','disable') 
+    call PIO_set_hint(iosystem,'romio_ds_write','disable') 
+#endif
 
 #ifdef TIMING
     call t_stopf("PIO_init")
@@ -1575,6 +1581,7 @@ contains
 !! @param iosystem a derived type which can be used in subsequent pio operations (defined in PIO_types).
 !<
   subroutine init_intercom(component_count, peer_comm, comp_comms, io_comm, iosystem)
+    use pio_types, only : pio_internal_error, pio_rearr_box
     integer, intent(in) :: component_count
     integer, intent(in) :: peer_comm
     integer, intent(in) :: comp_comms(component_count)   !  The compute communicator
@@ -1588,7 +1595,9 @@ contains
 
     integer :: i, j, iam, io_leader, comp_leader
     integer(i4), pointer :: iotmp(:)
-
+    character(len=5) :: cb_nodes
+    integer :: itmp
+    
 #ifdef TIMING
     call t_startf("PIO_init")
 #endif
@@ -1732,9 +1741,36 @@ contains
           endif
        end if
     
+#if defined(USEMPIIO) || defined(_PNETCDF) || defined(_NETCDF4)
+#ifndef _MPISERIAL
+       call mpi_info_create(iosystem(i)%info,ierr)
+       ! turn on mpi-io aggregation 
+       !DBG    print *,'PIO_init: before call to setnumagg'
+!       itmp = num_aggregator
+!       call mpi_bcast(itmp, 1, mpi_integer, 0, iosystem%union_comm, ierr)
+!       if(itmp .gt. 0) then 
+!          write(cb_nodes,('(i5)')) itmp
+!#ifdef BGx
+!          call PIO_set_hint(iosystem(i),"bgl_nodes_pset",trim(adjustl(cb_nodes)))
+!#else
+!          call PIO_set_hint(iosystem(i),"cb_nodes",trim(adjustl(cb_nodes)))
+!#endif       
+!       endif
+
+#ifdef PIO_GPFS_HINTS
+       call PIO_set_hint(iosystem(i),"ibm_largeblock_io","true")
+#endif
+#ifdef PIO_LUSTRE_HINTS
+       call PIO_set_hint(iosystem(i), 'romio_ds_read','disable') 
+       call PIO_set_hint(iosystem(i),'romio_ds_write','disable') 
+#endif
+#endif
+#endif
     end do
 
     if(DebugAsync) print*,__FILE__,__LINE__, iosystem(1)%ioranks
+
+
 
     ! This routine does not return
     if(io_comm /= MPI_COMM_NULL) call pio_msg_handler(component_count,iosystem) 
@@ -1821,10 +1857,15 @@ contains
     
     integer :: ierr
 #if defined(USEMPIIO) || defined(_PNETCDF) || defined(_NETCDF4)
-    if(iosystem%info /= mpi_info_null) then
+#ifndef _MPISERIAL
+    if(iosystem%ioproc) then
+       if(iosystem%io_rank==0 .or. Debug) print *,'Setting mpi info: ',hint,'=',hintval
        call mpi_info_set(iosystem%info,hint,hintval,ierr)
        call checkmpireturn('PIO_set_hint',ierr)
+    else
+       iosystem%info=mpi_info_null
     end if
+#endif
 #endif
   end subroutine PIO_set_hint
 
@@ -1859,38 +1900,6 @@ contains
      ierr = 0
 
   end subroutine finalize
-
-!> 
-!! @public 
-!! @ingroup PIO_setnumagg
-!! @brief this sets the number of mpi-io aggregators by setting mpi-io hints.  
-!!  note that the mpi-io layer is free to ignore any hints passed to it.  
-!! @details
-!!  this is a collective call with the following parameters:
-!! @param iosystem : a defined pio system descriptor, see PIO_types
-!! @param numagg : the number of aggregators
-!<
-  subroutine setnumagg(iosystem,numagg)
-    type (iosystem_desc_t), intent(inout) :: iosystem
-    integer(i4), intent(in)  :: numagg
-
-    character(len=5) :: cb_nodes
-    integer(i4) :: ierr
-    logical(log_kind), parameter ::  check = .true.
-#if defined(USEMPIIO) || defined(_PNETCDF)
-    if(numagg>0) then
-       write(cb_nodes,('(i5)')) numagg
-       call mpi_info_create(iosystem%info,ierr)    
-       if(check) call checkmpireturn('setnumagg: after call to mpi_info_create:',ierr)
-#ifdef BGx
-       call mpi_info_set(iosystem%info,'bgl_nodes_pset',trim(adjustl(cb_nodes)),ierr)
-#else
-       call mpi_info_set(iosystem%info,'cb_nodes',trim(adjustl(cb_nodes)),ierr)
-#endif
-    end if
-#endif
-
-  end subroutine setnumagg
 
 
 !>
@@ -2007,7 +2016,7 @@ contains
   !=============================================
 
   subroutine copy_decompmap(src,dest)
-
+    use pio_types, only : decompmap_t
     type (decompmap_t), intent(in) :: src
     type (decompmap_t), intent(inout) :: dest
 
@@ -2132,10 +2141,10 @@ contains
     !--------------------------------
 
 #if defined(USEMPIIO) 
-    if ( (file%iotype==iotype_pbinary .or. file%iotype==iotype_direct_pbinary) &
+    if ( (file%iotype==pio_iotype_pbinary .or. file%iotype==pio_iotype_direct_pbinary) &
          .and. (.not. iosystem%userearranger) ) then
        write(rd_buffer,('(i9)')) 16*1024*1024
-       call mpi_info_set(iosystem%info,'cb_buffer_size',trim(adjustl(rd_buffer)),ierr)
+       call PIO_set_hint(iosystem, "cb_buffer_size",trim(adjustl(rd_buffer)))
     endif
 #endif
 
@@ -2157,15 +2166,15 @@ contains
 
     end if
     select case(iotype)
-    case(iotype_pbinary, iotype_direct_pbinary)
+    case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
        if(present(amode_in)) then
           print *, 'warning, the mode argument is currently ignored for binary file operations'
        end if
        ierr = create_mpiio(file,myfname)
-    case( iotype_pnetcdf, iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
+    case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
        ierr = create_nf(file,myfname, amode)	
        if(debug .and. iosystem%io_rank==0)print *,_FILE_,__LINE__,' open: ', myfname, file%fh
-    case(iotype_binary)
+    case(pio_iotype_binary)
        print *,'createfile: io type not supported'
     end select
     if(ierr==0) file%file_is_open=.true.
@@ -2230,9 +2239,9 @@ contains
     ! set some iotype specific stuff
     !--------------------------------
 
-    if(iosystem%num_iotasks.eq.1.and.iotype.eq.iotype_pnetcdf) then	
+    if(iosystem%num_iotasks.eq.1.and.iotype.eq.pio_iotype_pnetcdf) then	
 #if defined(_NETCDF)
-       file%iotype=iotype_netcdf
+       file%iotype=pio_iotype_netcdf
 #else
        file%iotype = iotype 
 #endif       
@@ -2244,10 +2253,10 @@ contains
     myfname = fname
 
 #if defined(USEMPIIO)
-    if ( (file%iotype==iotype_pbinary .or. file%iotype==iotype_direct_pbinary) &
+    if ( (file%iotype==pio_iotype_pbinary .or. file%iotype==pio_iotype_direct_pbinary) &
          .and. (.not. iosystem%userearranger) ) then
        write(rd_buffer,('(i9)')) 16*1024*1024
-       call mpi_info_set(iosystem%info,'cb_buffer_size',trim(adjustl(rd_buffer)),ierr)
+       call PIO_set_hint(iosystem, "cb_buffer_size",trim(adjustl(rd_buffer)))
     endif
 #endif
 #ifndef _NETCDF4
@@ -2279,15 +2288,15 @@ contains
     end if
 
     select case(iotype)
-    case(iotype_pbinary, iotype_direct_pbinary)
+    case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
        if(amode /=0) then
           print *, 'warning, the mode argument is currently ignored for binary file operations'
        end if
        ierr = open_mpiio(file,myfname)
-    case( iotype_pnetcdf, iotype_netcdf, pio_iotype_netcdf4c, pio_iotype_netcdf4p)
+    case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4c, pio_iotype_netcdf4p)
        ierr = open_nf(file,myfname,amode)
        if(debug .and. iosystem%io_rank==0)print *,_FILE_,__LINE__,' open: ', myfname, file%fh
-    case(iotype_binary)   ! appears to be a no-op
+    case(pio_iotype_binary)   ! appears to be a no-op
        
     end select
     if(Debug .and. file%iosystem%io_rank==0) print *,_FILE_,__LINE__,'open: ',file%fh, myfname
@@ -2323,10 +2332,10 @@ contains
     end if
 
     select case(file%iotype)
-    case( iotype_pnetcdf, iotype_netcdf)
+    case( pio_iotype_pnetcdf, pio_iotype_netcdf)
        ierr = sync_nf(file)
-    case(iotype_pbinary, iotype_direct_pbinary)
-    case(iotype_binary) 
+    case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
+    case(pio_iotype_binary) 
     end select
   end subroutine syncfile
 !> 
@@ -2428,11 +2437,11 @@ contains
     if(debug .and. file%iosystem%io_rank==0) print *,_FILE_,__LINE__,'close: ',file%fh
     iotype = file%iotype 
     select case(iotype)
-    case(iotype_pbinary, iotype_direct_pbinary)
+    case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
        ierr = close_mpiio(file)
-    case( iotype_pnetcdf, iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
+    case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
        ierr = close_nf(file)
-    case(iotype_binary)
+    case(pio_iotype_binary)
        print *,'closefile: io type not supported'
     end select
     if(ierr==0) file%file_is_open=.false.

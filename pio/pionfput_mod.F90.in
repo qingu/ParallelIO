@@ -7,7 +7,11 @@ module pionfput_mod
   use perf_mod, only : t_startf, t_stopf      ! _EXTERNAL
 #endif
   use pio_kinds, only: i4,r4,r8,pio_offset
-  use pio_types
+  use pio_types, only : file_desc_t, iosystem_desc_t, var_desc_t, &
+	pio_iotype_pbinary, pio_iotype_binary, pio_iotype_direct_pbinary, &
+	pio_iotype_netcdf, pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, &
+	pio_noerr
+
   use pio_utils, only : check_netcdf
   use pio_msg_mod
   use pio_support, only : Debug, DebugIO, piodie   
@@ -105,7 +109,7 @@ contains
 
        select case (iotype) 
 #ifdef _PNETCDF
-       case(iotype_pnetcdf)
+       case(pio_iotype_pnetcdf)
 #ifdef ASYNC_PNETCDF
           ierr = nfmpi_iput_var1_{TYPE} (File%fh, varid, int(index,kind=PIO_OFFSET), ival, file%req(file%current_rc)  )
           file%current_rc=file%current_rc+1
@@ -117,7 +121,7 @@ contains
 #ifdef _NETCDF
        case (pio_iotype_netcdf4p)
           ierr = nf90_put_var(File%fh, varid, ival, start=index)
-       case(iotype_netcdf,pio_iotype_netcdf4c)
+       case(pio_iotype_netcdf,pio_iotype_netcdf4c)
           ! Only io proc 0 will do writing
           if (Ios%io_rank == 0) then
              ierr = nf90_put_var(File%fh, varid, ival, start=index)
@@ -194,7 +198,7 @@ contains
 #ifndef ASYNC_PNETCDF
 #ifdef _PNETCDF
 #if(({DIMS}>0) && ({ITYPE} != TYPETEXT))
-    if(iotype == iotype_pnetcdf) then
+    if(iotype == pio_iotype_pnetcdf) then
        do i=1,{DIMS}
           count(i) = size(ival,i)
        end do
@@ -245,7 +249,7 @@ contains
        end if
        select case (iotype) 
 #ifdef _PNETCDF
-       case(iotype_pnetcdf)
+       case(pio_iotype_pnetcdf)
 #ifdef ASYNC_PNETCDF
           ierr = nfmpi_iput_var_{TYPE} (File%fh, varid, ival, file%req(file%current_rc))
           file%current_rc=file%current_rc+1
@@ -281,7 +285,7 @@ contains
 #else
           ierr = nf90_put_var(File%fh, varid, ival, start=start, count=count)
 #endif
-       case(iotype_netcdf,pio_iotype_netcdf4c)
+       case(pio_iotype_netcdf,pio_iotype_netcdf4c)
           ! Only io proc 0 will do writing
           if (Ios%io_rank == 0) then
 
@@ -405,7 +409,7 @@ contains
        endif
        select case (iotype) 
 #ifdef _PNETCDF
-       case(iotype_pnetcdf)
+       case(pio_iotype_pnetcdf)
           clen=count(1)
           do i=2,size(count)
              clen=clen*count(i)
@@ -421,7 +425,7 @@ contains
 #ifdef _NETCDF
        case(pio_iotype_netcdf4p)
           ierr = nf90_put_var(File%fh, varid, ival, start=int(pstart), count=int(pcount))
-       case(iotype_netcdf, pio_iotype_netcdf4c)
+       case(pio_iotype_netcdf, pio_iotype_netcdf4c)
           ! Only io proc 0 will do writing
           if (Ios%io_rank == 0) then
              ierr = nf90_put_var(File%fh, varid, ival, start=int(pstart), count=int(pcount))

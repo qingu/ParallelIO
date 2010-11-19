@@ -32,12 +32,13 @@
 #define DEF_P2P_ISEND .false.
 #define DEF_P2P_MAXREQ 64
 
+#ifndef _MPISERIAL
 #ifdef _USE_FLOW_CONTROL
 #define _USE_COMP2IO_FC 1
 #define _USE_IO2COMP_FC 1
 #define _USE_CREATE_FC 1
 #endif  
-
+#endif
 !
 ! The completely unreadable nature of the following lines is required by some compilers
 !
@@ -83,7 +84,7 @@ module box_rearrange
 
 #ifdef _USEBOX
   use pio_kinds
-  use pio_types
+  use pio_types, only : io_desc_t, iosystem_desc_t
 #ifdef NO_MPI2
   use pio_support, only : MPI_TYPE_CREATE_INDEXED_BLOCK, piodie, &
                           Debug, DebugIO, CheckMPIReturn, pio_fc_gather_int
