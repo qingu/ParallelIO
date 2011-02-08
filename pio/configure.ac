@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 
-AC_INIT(PIO, 1.2.0)
+AC_INIT(PIO, 1.2.6)
 
 
 #
@@ -171,60 +171,6 @@ AC_ARG_VAR(SIZEOF_VOID_P,[Size of void*])
 test "$osname"=NONE && osname=`uname -s`
 test "$machinename"=NONE && machinename=`uname -m`
 fullhostname=`hostname -f 2>/dev/null | sed 1q`
-
-# HARDCODE SPECIFIC MACHINES FOR EXTRAORDINARY CIRCUMSTANCES
-
-# CHECK IF WE ARE ON THE EARTH SIMULATOR
-ES="NO"
-if echo $osname | grep -i esos >/dev/null 2>&1; then
-   ES="YES"
-fi
-if echo $osname | grep -i hp-ux >/dev/null 2>&1; then   
-   if test "$ac_hostname" = "moon"; then 
-      ES="YES"
-      # TELLS CONFIGURE NOT TO RUN ANY TESTS THAT REQUIRE EXECUTION
-      cross_compiling="yes"
-   fi
-fi
-if test "$ES" = "YES"; then   
-   echo "Using preset configuration values for the Earth Simulator"
-   if test -z "$CC"; then
-      CC="escc"
-   fi
-   if test -z "$F90"; then
-      F90="esf90"
-   fi
-   if test -z "$MPIF90"; then
-      MPIF90="esmpif90"
-   fi
-   if test -z "$AR"; then
-      AR="esar cqs"
-   fi
-   if test -z "FPP"; then
-      FPPFLAGS=" "
-   fi
-   if test -z "$F90FLAGS"; then
-      F90FLAGS="-EP -Wf'-pvctl fullmsg -L fmtlist transform map'"
-   fi
-   if test -z "$MACHDEFS"; then
-      MACHDEFS="-DESVEC"
-   fi
-fi
-
-# CHECK IF WE ARE ON THE NCSA IA-64 CLUSTER TITAN
-if test "$ac_hostname" = "user02"; then
-   if echo $osname | grep -i linux >/dev/null 2>&1; then
-      if test -z "$MPI_LIB"; then
-         if test -z "$MPI_INC"; then
-            echo "Using preset MPI configuration for titan"
-	    MPI_LIB="-L/usr/local/vmi/mpich/lib/intel -lmpich -lvmi -ldl -lpthread"
-	    MPI_INC="-I/usr/local/vmi/mpich/include"
-         fi
-      fi
-   fi
-fi
-
-
 
 # START TESTS
 
@@ -446,8 +392,9 @@ if echo $F90 | grep pgf90 >/dev/null 2>&1; then
 fi
 
 if echo $F90 | grep ftn >/dev/null 2>&1; then
- if echo $f90_version | grep -i Portland >/dev/null 2>&1; then
-   echo "Fortran Compiler is Portland Group, XT3"
+ echo "f90_version is $f90_version"
+ if echo $f90_version | grep -i Portland > /dev/null 2>&1; then
+   echo "Fortran Compiler is Portland Group"
    CPRDEF="PGI"
    SYSDEF="CATAMOUNT"
    if test -z "$REAL8"; then
@@ -459,7 +406,17 @@ if echo $F90 | grep ftn >/dev/null 2>&1; then
    if test -z "$ENDIAN"; then
       ENDIAN="-byteswapio"
    fi
- else
+ fi
+ if echo $f90_version | grep -i 'GNU Fortran' > /dev/null 2>&1; then
+   echo "Fortran Compiler is gfortran"
+   CPRDEF="GNU"
+   F90FLAGS="--free-line-length-none"
+ fi
+ if echo $f90_version | grep -i 'PathScale' > /dev/null 2>&1; then
+   echo "Fortran Compiler is pathscale"
+   CPRDEF="PATHSC"
+ fi
+ if echo $f90_version | grep -i 'Cray Fortran' > /dev/null 2>&1; then
    echo "Fortran Compiler is Cray"
    CPRDEF="CRAY" 
    if test -z "$MODINC"; then

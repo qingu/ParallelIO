@@ -23,7 +23,7 @@ AC_LANG_CASE([C], [
 [Fortran 77], [
 	AC_REQUIRE([AC_PROG_F77])
 	AC_ARG_VAR(MPIF77,[MPI Fortran compiler command])
-	AC_CHECK_PROGS(MPIF77, mpif77 hf77 mpxlf_r mpxlf mpf77 mpif90 mpxlf90_r mpxlf90 mpxlf95 mpifrt mpf90, $F77)
+	AC_CHECK_PROGS(MPIF77, mpif77 hf77 mpxlf_r mpxlf mpf77 mpif90 mpxlf90_r mpxlf90 mpxlf95 mpifrt mpf90 ftn, $F77)
 	acx_mpi_save_F77="$F77"
 	F77="$MPIF77"
 	AC_SUBST(MPIF77)
@@ -31,7 +31,7 @@ AC_LANG_CASE([C], [
 [Fortran 90], [
 	AC_REQUIRE([AC_PROG_F90])
 	AC_ARG_VAR(MPIF90,[MPI Fortran compiler command])
-	AC_CHECK_PROGS(MPIF90, mpxlf90_r mpxlf90 mpxlf95 mpipgf90 mpif90 mpifrt mpf90, $F90)
+	AC_CHECK_PROGS(MPIF90, mpxlf90_r mpxlf90 mpxlf95 mpipgf90 mpif90 mpifrt mpf90 ftn, $F90)
 	acx_mpi_save_F90="$F90"
 	F90="$MPIF90"
 	AC_SUBST(MPIF90)
@@ -403,7 +403,7 @@ AC_ARG_VAR([F90SUFFIX], [Fortran 90 filename extension])dnl
 _AC_ARG_VAR_LDFLAGS()dnl
 AC_CHECK_TOOLS(F90,
       [m4_default([$1],
-                  [xlf90 pgf90 ifort pathf90 f90 ftn frt lf95 f95 xlf95 fort efc ifc g95])])
+                  [ftn xlf90 pgf90 ifort pathf90 f90 frt lf95 f95 xlf95 fort efc ifc g95])])
 
 # Check for a valid filname extension in the following order: F90, f90, F, f
 if test -z "$F90SUFFIX"; then

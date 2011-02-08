@@ -188,6 +188,9 @@ module pio_types
                                  ! netcdf file
 	integer(i4)     :: type
         integer(i4)     :: ndims ! number of dimensions as defined on the netcdf file.
+	character	:: name*10, vdf*50
+	integer(i4)	:: cur_ts, num_ts,  lod, bs(3), dims(3)
+	logical		:: verbose
     end type 
 
 !>
@@ -210,14 +213,15 @@ module pio_types
         PIO_iotype_pnetcdf = 5, &   ! parallel read/write of pNetCDF files
         PIO_iotype_netcdf  = 6, &   ! serial read/write of NetCDF file using 'base_node'
         PIO_iotype_netcdf4c = 7, &  ! netcdf4 (hdf5 format) file opened for compression (serial write access only)   
-        PIO_iotype_netcdf4p = 8     ! netcdf4 (hdf5 format) file opened in parallel (all netcdf4 files for read will be opened this way)
-
+        PIO_iotype_netcdf4p = 8,  &   ! netcdf4 (hdf5 format) file opened in parallel (all netcdf4 files for read will be opened this way)
+	PIO_iotype_vdc2 = 10
     integer(i4), public, parameter ::                       &
         iotype_pbinary = PIO_iotype_pbinary,                &
         iotype_direct_pbinary = PIO_iotype_direct_pbinary,  &
         iotype_binary  = PIO_iotype_binary,                 &
         iotype_pnetcdf = PIO_iotype_pnetcdf,                &
-        iotype_netcdf  = PIO_iotype_netcdf
+        iotype_netcdf  = PIO_iotype_netcdf, &
+	iotype_vdc2 = PIO_iotype_vdc2
 
 
 !>
