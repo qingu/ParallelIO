@@ -188,9 +188,11 @@ module pio_types
                                  ! netcdf file
 	integer(i4)     :: type
         integer(i4)     :: ndims ! number of dimensions as defined on the netcdf file.
+#ifdef USE_VAPOR
 	character	:: name*10, vdf*50
 	integer(i4)	:: cur_ts, num_ts,  lod, bs(3), dims(3)
 	logical		:: verbose
+#endif
     end type 
 
 !>
