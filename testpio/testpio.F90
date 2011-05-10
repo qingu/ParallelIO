@@ -918,10 +918,10 @@ program testpio
            !-------------------------------
            ! Print the maximum memory usage 
            !-------------------------------
-           call alloc_print_usage(0,'testpio: after calls to PIO_read_darray')
+!           call alloc_print_usage(0,'testpio: after calls to PIO_read_darray')
 
 #ifdef TESTMEM
-           stop 
+!           stop 
 #endif
 
            if(Debug) then

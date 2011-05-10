@@ -10,7 +10,7 @@ my $result = GetOptions("host=s"=>\$host,"conopts=s@"=>\@conopts);
 my $cfgdir = `pwd`;
 chomp $cfgdir;
 my $clean = 'yes';
-my @valid_env = qw(NETCDF_PATH PNETCDF_PATH MPI_LIB MPI_INC F90 FC CC ALLCFLAGS FFLAGS
+my @valid_env = qw(NETCDF_PATH PNETCDF_PATH MEMMON_PATH MPI_LIB MPI_INC F90 FC CC ALLCFLAGS FFLAGS
                    MACHDEFS MPICC MPIF90 LDLIBS);
 
 
