@@ -1030,7 +1030,7 @@ fi
 
 if test "$USEMEMMON" = "yes"
   then
-        PDEFS="$PDEFS -D_MEMMON"
+        PDEFS="$PDEFS -D_TESTMEM -D_MEMMON"
         if test -n "$MEMMON_PATH"
           then F90FLAGS="$F90FLAGS -qnullterm"
                PLIBS="$PLIBS -L$MEMMON_PATH -lmemmon.rts"
@@ -1041,7 +1041,7 @@ fi
 
 if test "$USESTACKMON" = "yes"
   then
-       PDEFS="$PDEFS -D_STACKMON" 
+       PDEFS="$PDEFS -D_TESTMEM -D_STACKMON" 
        if test -n "$STACKMON_PATH"
          then PLIBS="$DLIBS -L$STACKMON_PATH -lstackmonitor"
          else AC_MSG_WARN([STACKMON_PATH is not set])
