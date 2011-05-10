@@ -30,6 +30,7 @@ SRCS_C = topology.c pnetcdfversion.c
 SRCS_F90 =  pio.F90 \
             pio_kinds.F90  \
             nf_mod.F90     \
+            calcdisplace_mod.F90 \
             ionf_mod.F90 \
             pio_types.F90  \
             piolib_mod.F90 \
@@ -39,7 +40,8 @@ SRCS_F90 =  pio.F90 \
             pio_quicksort.F90 \
             pio_msg_mod.F90 \
             calcdecomp.F90 \
-	    pio_msg_callbacks.F90
+	    pio_msg_callbacks.F90 
+            
            
 
 TEMPLATES_F90 = pionfatt_mod.F90.in \

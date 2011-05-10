@@ -94,7 +94,6 @@ module box_rearrange
 #endif
   use alloc_mod
   use pio_spmd_utils
-
   implicit none
 
   private
@@ -1079,6 +1078,9 @@ end subroutine box_rearrange_io2comp_{TYPE}
 #ifndef _MPISERIAL
 
   subroutine compute_counts(Iosystem, ioDesc, ndof, niodof)
+    
+    use calcdisplace_mod, only : calcdisplace,GCDblocksize
+
 
     type (Iosystem_desc_t), intent(in) :: Iosystem
     type (IO_desc_t),intent(inout) :: ioDesc
@@ -1126,6 +1128,13 @@ end subroutine box_rearrange_io2comp_{TYPE}
     logical :: pio_hs
     logical :: pio_isend
     integer :: pio_maxreq
+
+    ! added 24MAR11
+    integer :: bsize, len, blocksize
+    integer,allocatable :: blk_len(:)
+    integer,allocatable :: displace(:)
+    integer :: numblks
+    integer :: newTYPEs,newTYPEr
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Communication initialization
@@ -1379,8 +1388,8 @@ end subroutine box_rearrange_io2comp_{TYPE}
     !
 
     if (Iosystem%IOproc) then
-
-       !need to cache
+ 
+      !need to cache
        call alloc_check(ioDesc%rtype, nrecvs, 'mpi recv types')
        rtype=>ioDesc%rtype
 
@@ -1397,20 +1406,39 @@ end subroutine box_rearrange_io2comp_{TYPE}
 #endif
 #endif
 
+
+       call GCDblocksize(rindex(pos:pos+rcount(i)-1),blocksize)
+       !blocksize = 225       
+       !blocksize = 5
+       call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEr,ierror)
+       call CheckMPIReturn(subName,ierror)
+       call MPI_TYPE_COMMIT(newTYPEr,ierror)
+       call CheckMPIReturn(subName,ierror)
+
+!DBG       print*,'rindex blocksize=',blocksize
+ 
+
+       len = rcount(i)/blocksize        
+       allocate(displace(len))
+       rindex(pos:pos+rcount(i)-1) = rindex(pos:pos+rcount(i)-1)+1
+       call calcdisplace(blocksize,rindex(pos:pos+rcount(i)-1),displace)
+
+call alloc_print_usage(iosystem%comp_comm,80,'l2629')
           ! need rindex to contain 0-based displacements here
           call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               rcount(i), 1, rindex(pos:pos+rcount(i)-1), &               ! count,blen, disp
-               ioDesc%baseTYPE, rtype(i), ierror )       ! oldtype, newtype
+               len, 1, displace, &               ! count,blen, disp
+               newTYPEr, rtype(i), ierror )       ! oldtype, newtype
           call CheckMPIReturn(subName,ierror)
+call alloc_print_usage(iosystem%comp_comm,80,'l2635')
 
           call MPI_TYPE_COMMIT(rtype(i), ierror)
           call CheckMPIReturn(subName,ierror)
-
+        
+          deallocate(displace)
           pos = pos + rcount(i)
+          call MPI_TYPE_FREE(newTYPEr,ierror)
        end do
-
     endif
-
     !
     ! Create the mpi types for the comp proc sends
 
@@ -1418,19 +1446,38 @@ end subroutine box_rearrange_io2comp_{TYPE}
     call alloc_check(ioDesc%stype, num_iotasks, 'mpi send types')
     stype=>ioDesc%stype
 
+call alloc_print_usage(iosystem%comp_comm,80,'l1447in')
     pos = 1
     do i=1,num_iotasks
+ 
        if (scount(i) /= 0) then
 
+!       blocksize = 5
+!       blocksize = 225       
+       call GCDblocksize(sindex(pos:pos+scount(i)-1),blocksize)
+       call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEs,ierror)
+       call CheckMPIReturn(subName,ierror)
+       call MPI_TYPE_COMMIT(newTYPEs,ierror)
+       call CheckMPIReturn(subName,ierror)
+
+!DBG       print*,'sindex blocksize=',blocksize
+
+       len = scount(i)/blocksize        
+       allocate(displace(len))
+!DBG       print *,'allocate(displace(len)): len:',len
+       sindex(pos:pos+scount(i)-1) = sindex(pos:pos+scount(i)-1)+1
+       call calcdisplace(blocksize,sindex(pos:pos+scount(i)-1),displace)
           call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               scount(i), 1, sindex(pos:pos+scount(i)-1), &        ! count, blen, disp
-               ioDesc%baseTYPE, stype(i), ierror )       ! oldtype, newtype
+               len, 1, displace, &        ! count, blen, disp
+               newTYPEs, stype(i), ierror )       ! oldtype, newtype
           call CheckMPIReturn(subName,ierror)
 
           call MPI_TYPE_COMMIT(stype(i), ierror)
           call CheckMPIReturn(subName,ierror)
-
+ 
+          deallocate(displace)
           pos = pos + scount(i)
+          call MPI_TYPE_FREE(newTYPEs,ierror)
        endif
 
     end do
