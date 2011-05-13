@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/bin/perl
 use strict;
 
 my $outfile;
@@ -9,7 +9,7 @@ my $vtype = {'text' => 'character(len=*)',
 	     'real' => 'real(r4)', 
 	     'double' => 'real(r8)',
 	     'int'    => 'integer(i4)',
-	     'long'   => 'integer(kind=PIO_OFFSET)'};
+	     'long'   => 'integer(i8)'};
 my $itype = {'text' => 100, 
 	     'real' => 101, 
 	     'double' => 102,
@@ -74,7 +74,7 @@ foreach(@ARGV){
     my $dimmodifier;
     my $typemodifier;
     my $itypeflag;
-
+    my $typeblock;
     foreach $line (@parsetext){
 # skip parser comments
 	next if($line =~ /\s*!pl/);
@@ -91,14 +91,25 @@ foreach(@ARGV){
 		$typemodifier=$line;
 		next;
 	    }
-
+	    if($line=~/^\s*type\s+.*\{DIMS\}/i or $line=~/^\s*type\s+.*\{TYPE\}/i){
+		$typeblock=$line;
+		next;
+	    }
+	    if($line=~/^\s*end\s+type\s+.*\{DIMS\}/i or $line=~/^\s*end\s+type\s+.*\{TYPE\}/i){
+		$line = $typeblock.$line;
+		undef $typeblock;
+	    }
+	    if(defined $typeblock){
+		$typeblock = $typeblock.$line;
+		next;
+	    }
 	    if(defined $dimmodifier){
 		$line = $dimmodifier.$line;
-		undef $dimmodifier;
+		undef $dimmodifier ;
 	    } 
 	    if(defined $typemodifier){
 		$line = $typemodifier.$line;
-		undef $typemodifier;
+		undef $typemodifier unless($typeblock==1);
 	    } 
 	    
 	    push(@output, buildout($line));

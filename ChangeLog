@@ -1,6 +1,99 @@
 ===============================================================
 *** You must run 'make predist' in the pio subdirectory before committing. ***
 
+Tag name:pio1_3_0
+Originator(s): Edwards, Dennis
+Date: 05/04/2011
+One-line Summary: Code Clean up, box rearranger bug fixes
+
+List all subroutines eliminated:  mct_rearrange.F90.in mct_rearrange.F90.in
+
+List all subroutines added and what they do: 
+
+List all existing files that have been modified, and describe the changes:
+	testpio/build_defaults.xml
+	testpio/namelist_mod.F90
+	pio/configure.in
+	pio/configure
+	pio/rearrange.F90.in
+	pio/pio_types.F90	
+	pio/Makefile
+	pio/pio.F90
+	   Remove support for mct rearranger
+	pio/piodarray.F90.in
+	   Fix line return in string issue
+	pio/calcdisplace_mod.F90
+	   Fix issues with handling gaps (holes) in source data array
+	pio/piolib_mod.F90
+	   Remove calcdisplace code duplicated in calcdisplace_mod
+	pio/box_rearranger.F90.in
+	   Avoid 0 sized array errors
+	
+
+List all component tags that were used to create pio tag:
+
+Describe the changes for each component above that was changed relative
+to the previous ccsm tag in this sequence (this includes description
+of new functionality and how user can use it):
+
+Bugs fixed: Errors with handling holes in input arrays found with cam regression tests
+
+Describe any changes made to scripts/build system:
+	Removed references to mct in build
+
+Describe any substantial timing or memory changes:
+       
+
+Code reviewed by: Edwards
+
+Summary of pre-tag testing: Cam regressions on bluefire and edinburgh with xlf, pgi, lahey compilers - all pass
+
+                     bluefire 80 tests PASS, 0 tests FAIL
+                     edinburgh (lahey) 22 pass 2 fail (expected)
+                     jaguar (pgi) 80 pass, 0 Fail
+  
+
+===============================================================
+===============================================================
+*** You must run 'make predist' in the pio subdirectory before committing. ***
+
+Tag name: pio1_2_7
+Originator(s): John Dennis
+Date: 04-25-2011
+One-line Summary: Significant reduction in memory usage due to changes in the way MPI data structures are used in the box rearranger.
+
+List all subroutines eliminated:
+
+List all subroutines added and what they do:
+
+List all existing files that have been modified, and describe the changes:
+
+List all component tags that were used to create pio tag:
+
+Describe the changes for each component above that was changed relative
+to the previous ccsm tag in this sequence (this includes description
+of new functionality and how user can use it):
+
+Bugs fixed:
+
+Describe any changes made to scripts/build system:
+
+Describe any substantial timing or memory changes:
+
+Code reviewed by: Jim
+
+Summary of pre-tag testing:   cam pretag testing on bluefire and edinburgh(PGI) all pass
+
+  Regression tests:  bluefire (AIX) 80 PASS, 0 FAIL
+                     edinburgh (lahey) 22 pass 2 fail (expected)
+                     lynx (pgi) 80 pass, 0 Fail
+                     frost (BGL) 74 pass, 6 fail (expected)
+
+===============================================================
+
+===============================================================
+*** You must run 'make predist' in the pio subdirectory before committing. ***
+
 Tag name: pio1_2_6
 Originator(s): Jim
 Date: 11-19-2010
