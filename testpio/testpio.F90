@@ -73,22 +73,21 @@ program testpio
 
   integer(i4) :: varid,dimid_x,dimid_y,dimid_z
 
-  integer(kind=PIO_OFFSET) :: one
+  integer(kind=PIO_OFFSET),parameter :: one = 1
 
   integer, parameter :: ntest = 5
-  integer(i4), dimension(ntest) :: num_agg
-  data num_agg/ 8,12,16,24,32/
+  integer(i4), dimension(ntest),parameter :: num_agg =(/ 8,12,16,24,32/)
 
   integer(i4),pointer :: test_i4wr(:),test_i4rd(:),diff_i4(:)
   integer(i4),pointer :: test_i4i(:),test_i4j(:),test_i4k(:),test_i4m(:),test_i4dof(:)
   real(r4),   pointer :: test_r4wr(:),test_r4rd(:),diff_r4(:)
   real(r8),   pointer :: test_r8wr(:),test_r8rd(:),diff_r8(:)
 
-  logical :: TestR8    = .false.,   &
-       TestR4    = .true.,  &
-       TestInt   = .false.,  &
-       TestCombo = .false.
-  logical, parameter :: CheckArrays = .false.  ! turn off the array check for maximum memory usage testing
+  logical, parameter :: TestR8    = .true.
+  logical, parameter :: TestR4    = .false.
+  logical, parameter :: TestInt   = .false.
+  logical, parameter :: TestCombo = .false.
+  logical, parameter :: CheckArrays = .true.  ! turn off the array check for maximum memory usage testing
 
   logical :: writePhase, readPhase
   logical, parameter :: splitPhase = .true.
@@ -258,6 +257,48 @@ program testpio
   gDims3D(1) = nx_global
   gDims3D(2) = ny_global
   gDims3D(3) = nz_global
+
+  !! ** Set PIO/MPI filesystem hints **
+
+  if (set_mpi_values /= 0) then
+     if (trim(mpi_cb_buffer_size) /= '') then
+        call PIO_set_hint(PIOSYS, 'cb_buffer_size', trim(mpi_cb_buffer_size))
+     end if
+  end if
+
+  if (set_romio_values /= 0) then
+     if (trim(romio_cb_write) /= '') then
+        call PIO_set_hint(PIOSYS, 'romio_cb_write', trim(romio_cb_write))
+     end if
+
+     if (trim(romio_cb_read) /= '') then
+        call PIO_set_hint(PIOSYS, 'romio_cb_read', trim(romio_cb_read))
+     end if
+
+     !! NCH: Not sure if the following applies to non-XFS file systems...
+
+     if (trim(romio_direct_io) /= '') then
+        call PIO_set_hint(PIOSYS, 'direct_read', trim(romio_direct_io))
+        call PIO_set_hint(PIOSYS, 'direct_write', trim(romio_direct_io))
+     end if
+  end if
+
+  if (set_ibm_io_values /= 0) then
+     if (trim(ibm_io_buffer_size) /= '') then
+        call PIO_set_hint(PIOSYS, 'IBM_io_buffer_size', &
+                          trim(ibm_io_buffer_size))
+     end if
+
+     if (trim(ibm_io_largeblock_io) /= '') then
+        call PIO_set_hint(PIOSYS, 'IBM_largeblock_io', &
+                          trim(ibm_io_largeblock_io))
+     end if
+
+     if (trim(ibm_io_sparse_access) /= '') then
+        call PIO_set_hint(PIOSYS, 'IBM_sparse_access', &
+                          trim(ibm_io_sparse_access))
+     end if
+  end if
 
   !-----------------------------------------
   ! Compute compDOF based on namelist input
@@ -593,7 +634,6 @@ program testpio
            
            allocate(vard_r8(nvars), vard_r4(nvars))
            
-           one = 1
            do ivar=1,nvars
               call PIO_SetFrame(vard_r8(ivar),one)
               call PIO_SetFrame(vard_r4(ivar),one)

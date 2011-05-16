@@ -31,7 +31,7 @@ contains
     integer :: idim
     integer :: totActive
 
-    integer, parameter :: stripeSize = 1024*1024
+    integer, parameter :: stripeSize = 864*1024
     integer :: minbytes = stripeSize-256   ! minimum number of contigous blocks in bytes to put on a IO task
     integer :: maxbytes = stripeSize+256   ! maximum length of contigous block in bytes to put on a IO task
     integer :: maxiter = 20
@@ -196,16 +196,14 @@ contains
        endif
 !     print *,''
     enddo
-    if(iorank == 1) then 
-       numOPS = NINT(real(totalSize,kind=8)/real(totActive*blocksize,kind=8))
-       write(*,101) 'PIO: calcdecomp: IO tasks:= ',totActive,' # of ops:= ', numOPS,' size:= ',blocksize
-       write(*,100) 'PIO: calcdecomp: global dimensions: ',gdims
-       write(*,*) 'PIO: calcdecomp: decompse dimensions: ',decompose_dim
-       write(*,100) 'PIO: calcdecomp: count: ',count
-       write(*,100) 'PIO: calcdecomp: start: ',start
-    endif
- 100 format (a,6(i8))
- 101 format (a,i4,a,i5,a,i10)
+!JMD    if(iorank == 1) then 
+!JMD       numOPS = NINT(real(totalSize,kind=8)/real(totActive*blocksize,kind=8))
+!JMD       write(*,101) 'PIO: calcdecomp: IO tasks:= ',totActive,' # of ops:= ', numOPS,' size:= ',blocksize
+!JMD       write(*,100) 'PIO: calcdecomp: global dimensions: ',gdims
+!JMD       write(*,*) 'PIO: calcdecomp: decompse dimensions: ',decompose_dim
+!JMD       write(*,100) 'PIO: calcdecomp: count: ',count
+!JMD       write(*,100) 'PIO: calcdecomp: start: ',start
+!JMD    endif
 
 
     !----------------------------------------
@@ -313,7 +311,18 @@ contains
 !  stop 'point #9'
   
   numaiotasks=totActive
+  if(iorank == 1) then 
+    numOPS = NINT(real(totalSize,kind=8)/real(totActive*blocksize,kind=8))
+    write(*,101) 'PIO: calcdecomp: IO tasks:= ',totActive,' # of ops:= ', numOPS,' size:= ',blocksize
+    write(*,100) 'PIO: calcdecomp: global dimensions: ',gdims
+    write(*,*) 'PIO: calcdecomp: decompse dimensions: ',decompose_dim
+    write(*,100) 'PIO: calcdecomp: count: ',count
+    write(*,100) 'PIO: calcdecomp: start: ',start
+  endif
+  100 format (a,6(i8))
+  101 format (a,i4,a,i5,a,i10)
   iorank=iorank-1
+
   end subroutine CalcStartandCount
   
   integer function nextsmaller(current,value) result(res)
