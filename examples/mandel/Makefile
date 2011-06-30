@@ -1,14 +1,16 @@
 .SUFFIXES:
 .SUFFIXES: .o .f90
 
-FC = mpxlf90_r
-FFLAGS = -O -g
-FINCLUDE = -I/usr/local/include -I/usr/local/lib   -L/usr/local/lib -lnetcdf
+include ../../pio/Makefile.conf
 
-OBJ = mandel2D.o madelio.o
+
+OBJ = mandel2D.o mandelio.o
 
 mandel: $(OBJ)
-	$(FC) $(FINCLUDE) $(FFLAGS)  $(OBJ) -o $@
+	$(MPIF90) $(FOPTS) $(INCLUDES) $(FFLAGS)  $(OBJ) -o $@ -L$(PIO_PATH) -lpio -L$(PIO_PATH)/../timing $(LDLIBS) 
 
 .f90.o:
-	$(FC) -c $(FINCLUDE) $(FFLAGS) $*.f90
+	$(MPIF90) -c $(INCLUDES) $(FOPTS) $(FFLAGS) -I$(PIO_PATH) $*.f90
+
+
+mandel2D.o: mandelio.o 
