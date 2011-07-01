@@ -28,10 +28,11 @@ module mandelio
 contains
   subroutine write_target_netcdf(xsegment, ysegment,x1, rank,ntasks, startx,endx,starty,endy,globalx,globaly,field)
     use netcdf
-    use mpi 
+!    use mpi 
     use pio 
    
     implicit none
+    include 'mpif.h'
     
     integer, intent(in) :: rank, ntasks, startx, endx, starty, endy,globalx,globaly
     integer, intent(in), pointer :: field(:,:)

@@ -18,10 +18,10 @@
 
 	program mandel2d
         use mandelio
-	use mpi
+!	use mpi
 	
 	implicit none
-
+        include 'mpif.h'
 	integer, parameter:: width = 400, height = 400
 	integer :: num_tasks, rank, ierr, rc, xsegment, ysegment, xprocs, xstart, ystart, xend, yend
 	integer, parameter:: x1 = 4, y1 = 2, x2 = 4, y2 = 4
