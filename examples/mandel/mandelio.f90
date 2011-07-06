@@ -2,7 +2,7 @@ subroutine chunk1 (xsegment, ysegment, x1, rank, startx, starty, endx, endy)
 
 implicit none
 
-integer, intent(in)::xsegment, ysegment, rank, x1
+integer::xsegment, ysegment, rank, x1
 integer:: startx, starty, endx, endy
 
 starty = rank/x1
@@ -34,11 +34,11 @@ contains
     implicit none
     include 'mpif.h'
     
-    integer, intent(in) :: rank, ntasks, startx, endx, starty, endy,globalx,globaly
+    integer, intent(in) :: rank, startx, endx, starty, endy,globalx,globaly
     integer, intent(in), pointer :: field(:,:)
-    integer :: xsegment, ysegment, x1
+    integer :: xsegment, ysegment, x1,stride,y1,height, width
     integer :: ierr, ncid, dimx, dimy, varid, status,i,j,n
-    integer :: starts(startx,starty),value
+    integer :: starts(startx,starty),value, ntasks
     integer :: strt(2), cnt(2)
     integer stat(MPI_STATUS_SIZE)
     integer :: aggregator, iotype, lcv, iostat, mytask 
@@ -48,10 +48,15 @@ contains
     type (file_desc_t):: file
     type (var_desc_t) :: variableid 
     type (io_desc_t):: iodesc
-
+    
+    namelist/values/x1,y1, height, width, stride,ntasks
+    open (12, file='mandel.nml', status= 'old')
+    read (12, nml = values)
+    close (12)
+ 
     value = (endx-startx+1)*(endy-starty+1)
-        
-    call  PIO_init(rank, MPI_COMM_WORLD, ntasks ,aggregator ,1 ,PIO_rearr_box ,iosystem)
+   
+    call  PIO_init(rank, MPI_COMM_WORLD, ntasks ,aggregator ,stride ,PIO_rearr_box ,iosystem)
 
     ierr = PIO_createfile(iosystem,file,PIO_iotype_pnetcdf,'pmandel.nc')
 
