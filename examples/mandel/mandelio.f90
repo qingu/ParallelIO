@@ -38,10 +38,10 @@ contains
     integer, intent(in), pointer :: field(:,:)
     integer :: xsegment, ysegment, x1,stride,y1,height, width
     integer :: ierr, ncid, dimx, dimy, varid, status,i,j,n
-    integer :: starts(startx,starty),value, ntasks
+    integer :: starts(startx,starty),value, ntasks, iotasks
     integer :: strt(2), cnt(2)
     integer stat(MPI_STATUS_SIZE)
-    integer :: aggregator, iotype, lcv, iostat, mytask 
+    integer :: aggregator, iotype, lcv, iostat, mytask, escape_radius 
     integer, dimension(xsegment*ysegment) :: compdof
 
     type (iosystem_desc_t):: iosystem
@@ -49,14 +49,17 @@ contains
     type (var_desc_t) :: variableid 
     type (io_desc_t):: iodesc
     
-    namelist/values/x1,y1, height, width, stride,ntasks
+    namelist/values/x1,y1, height, width, stride, iotasks, escape_radius
     open (12, file='mandel.nml', status= 'old')
     read (12, nml = values)
     close (12)
- 
+    aggregator = 0
+    
+  
+    stride = ntasks/iotasks
+   ! print *, 'stride', stride, 'ntasks', ntasks, 'iotasks', iotasks
     value = (endx-startx+1)*(endy-starty+1)
-   
-    call  PIO_init(rank, MPI_COMM_WORLD, ntasks ,aggregator ,stride ,PIO_rearr_box ,iosystem)
+    call  PIO_init(rank, MPI_COMM_WORLD,iotasks  ,aggregator, stride,PIO_rearr_box ,iosystem)
 
     ierr = PIO_createfile(iosystem,file,PIO_iotype_pnetcdf,'pmandel.nc')
 
@@ -71,7 +74,6 @@ contains
     call chunk1(xsegment, ysegment,x1,rank,strt(1),strt(2),endx,endy)
    
    lcv =  1
-!   allocate(result(xsegment, ysegment))
  
    do j = starty, endy
      do i = startx, endx
@@ -79,14 +81,16 @@ contains
        lcv = lcv +1  
      end do 
    end do
- 
+!   call pio_setdebuglevel(1)
+!   print *, 'values of startx, endx, starty, endy', startx, endx, starty, endy   
    call PIO_initdecomp(iosystem, PIO_int,(/globalx,globaly/), compdof, iodesc)   
-    
+!   call pio_setdebuglevel(0)
+!   print*,'fine until here' 
    call  PIO_write_darray(file, variableid, iodesc, field, iostat)
-
+   
    call PIO_closefile(file)
    call  PIO_finalize(iosystem,ierr)
-
+  
   end subroutine write_target_netcdf
 
 end module mandelio

@@ -4,7 +4,8 @@
 include ../../pio/Makefile.conf
 
 
-OBJ = mandel2D.o mandelio.o
+OBJ =  mandel2D.o mandelio.o
+FOPTS = -O
 
 mandel: $(OBJ)
 	$(MPIFC) $(FOPTS) $(INCLUDES) $(FFLAGS)  $(OBJ) -o $@ -L$(PIO_PATH) -lpio -L$(PIO_PATH)/../timing $(LDLIBS) 
@@ -14,3 +15,6 @@ mandel: $(OBJ)
 
 
 mandel2D.o: mandelio.o 
+
+clean:
+	rm -rf *.o mandel
