@@ -25,7 +25,7 @@ endif
 include Makefile.$(PIOARCH)
 export PIOARCH
 
-SRCS_C = topology.c pnetcdfversion.c
+SRCS_C = topology.c 
 
 SRCS_F90 =  pio.F90 \
             pio_kinds.F90  \
@@ -38,7 +38,9 @@ SRCS_F90 =  pio.F90 \
 	    pio_utils.F90 \
             pio_quicksort.F90 \
             pio_msg_mod.F90 \
-	    pio_msg_callbacks.F90
+	    pio_msg_callbacks.F90 \
+            calcdecomp.F90 \
+            calcdisplace_mod.F90
            
 
 TEMPLATES_F90 = pionfatt_mod.F90.in \

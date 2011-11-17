@@ -1,11 +1,6 @@
-#define _FILE_ "pio_types.F90"
+#define __PIO_FILE__ "pio_types.F90"
 module pio_types
     use pio_kinds
-#ifdef _USEMCT
-! needed for MCT
-    use m_GlobalSegMap, only: GlobalSegMap      ! _EXTERNAL
-    use m_Rearranger, only: Rearranger          ! _EXTERNAL
-#endif
 
 #ifdef _NETCDF
      use netcdf                                  ! _EXTERNAL
@@ -42,9 +37,10 @@ module pio_types
         integer(i4)              :: comp_comm          ! The Compute communicator
         integer(i4)              :: intercomm          ! the intercomm (may be MPI_COMM_NULL)
         
-        integer(i4)              :: my_comm          ! either comp_comm or intercomm
-        integer(i4)              :: num_tasks        !  number of tasks
+        integer(i4)              :: my_comm            ! either comp_comm or intercomm
+        integer(i4)              :: num_tasks          !  number of tasks
         integer(i4)              :: num_iotasks        ! total number of IO tasks
+        integer(i4)              :: num_aiotasks       ! number of actual IO tasks
         integer(i4)              :: num_comptasks
 
         integer(i4)              :: union_rank
@@ -52,6 +48,7 @@ module pio_types
         integer(i4)              :: io_rank            ! the io rank if io_rank = -1 not an IO processor
 !
         integer(i4)              :: Info               ! MPI-IO info structure
+        integer(i4)              :: numOST
         
 ! rank of the io and comp roots in the intercomm
         integer(i4)              :: IOMaster           ! The intercom of the io_rank 0
@@ -65,7 +62,7 @@ module pio_types
         logical(log_kind)        :: UseRearranger      ! .true. if data rearrangement is necessary
         logical(log_kind)        :: async_interface    ! .true. if using the async interface model
         integer(i4)              :: rearr         ! type of rearranger
-                                                  ! e.g. rearr_{none,mct,box}
+                                                  ! e.g. rearr_{none,box}
 	integer(i4)              :: error_handling ! how pio handles errors
         integer(i4),pointer      :: ioranks(:)         ! the computational ranks for the IO tasks
 
@@ -129,19 +126,8 @@ module pio_types
 #endif
         type(IO_desc2_t)    :: Read
         type(IO_desc2_t)    :: Write
-	integer(kind=PIO_Offset), pointer :: start(:)
-	integer(kind=PIO_Offset), pointer :: count(:)
-#ifdef _USEMCT
-        ! MCT GlobalSegMaps defined on comp_comm
-
-	integer(i4) :: lsize_comp      ! local size of GSMap for comp layout
-        integer(i4) :: lsize_io        ! local size of GSMap for IO layout
-
-        type (Rearranger) :: rearr_comp_to_io   ! mct rearranger comp->io
-        type (Rearranger) :: rearr_io_to_comp   ! mct rearranger io->comp
-
-        integer(i4), pointer :: compDOF_index(:)  ! permutation array
-#endif
+	integer(kind=PIO_Offset), pointer :: start(:) => NULL()
+	integer(kind=PIO_Offset), pointer :: count(:) => NULL()
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! fields for box-based rearranger
@@ -149,18 +135,18 @@ module pio_types
 
         integer :: baseTYPE
 
-        integer, pointer :: dest_ioproc(:)     ! for each dof
-        integer, pointer :: dest_ioindex(:)    ! for each dof
+        integer, pointer :: dest_ioproc(:)=> NULL()     ! for each dof
+        integer, pointer :: dest_ioindex(:)=> NULL()    ! for each dof
 
 
         ! Values needed only on io procs
-        integer,pointer :: rfrom(:)   ! rfrom(nrecvs)= rank of ith sender
-        integer,pointer :: rtype(:)   ! rtype(nrecvs)=mpi types for receives
+        integer,pointer :: rfrom(:)=> NULL()   ! rfrom(nrecvs)= rank of ith sender
+        integer,pointer :: rtype(:)=> NULL()   ! rtype(nrecvs)=mpi types for receives
 
         
         ! needed on all procs
-        integer,pointer :: scount(:)  ! scount(num_iotasks)= # sends to ith ioproc
-        integer,pointer :: stype(:)   ! stype(num_iotasks)=mpi type for sends
+        integer,pointer :: scount(:)=> NULL()  ! scount(num_iotasks)= # sends to ith ioproc
+        integer,pointer :: stype(:)=> NULL()   ! stype(num_iotasks)=mpi type for sends
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         integer(i4) :: async_id
@@ -226,12 +212,10 @@ module pio_types
 !! @brief The three choices to control rearrangement are:
 !! @details
 !!  - PIO_rearr_none : Do not use any form of rearrangement
-!!  - PIO_rearr_mct : Use MCT based rearrangement
 !!  - PIO_rearr_box : Use a PIO internal box rearrangement
 !>
     integer(i4), public, parameter :: PIO_rearr_none = 0
-    integer(i4), public, parameter :: PIO_rearr_mct =  1
-    integer(i4), public, parameter :: PIO_rearr_box =  2
+    integer(i4), public, parameter :: PIO_rearr_box =  1
 
 !> 
 !! @public
@@ -286,6 +270,7 @@ module pio_types
    integer, public, parameter :: PIO_MAX_NAME = nf_max_name
    integer, public, parameter :: PIO_MAX_VAR_DIMS = nf_max_var_dims
    integer, public, parameter :: PIO_64BIT_OFFSET = nf_64bit_offset
+   integer, public, parameter :: PIO_num_OST =  16
 #else
 #ifdef _NETCDF
    integer, public, parameter :: PIO_global = nf90_global
@@ -303,6 +288,7 @@ module pio_types
    integer, public, parameter :: PIO_MAX_NAME = nf90_max_name
    integer, public, parameter :: PIO_MAX_VAR_DIMS = nf90_max_var_dims
    integer, public, parameter :: PIO_64BIT_OFFSET = nf90_64bit_offset
+   integer, public, parameter :: PIO_num_OST =  16
 #else
    integer, public, parameter :: PIO_global = 0
    integer, public, parameter :: PIO_double = 6
@@ -317,6 +303,7 @@ module pio_types
    integer, public, parameter :: PIO_WRITE = 20
    integer, public, parameter :: PIO_NOWRITE = 21
    integer, public, parameter :: PIO_64BIT_OFFSET = 0
+   integer, public, parameter :: PIO_num_OST =  16
 #endif
 #endif
 ! should be defined in the mct mpiserial library.

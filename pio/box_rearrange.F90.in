@@ -1,4 +1,4 @@
-#define _FILE_ "box_rearrange.F90"
+#define __PIO_FILE__ "box_rearrange.F90"
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 !  Module box_rearrange
@@ -24,6 +24,7 @@
 ! cache communication pattern for rearranger in the ioDesc
 #define BOX_CACHE 1
 
+
 ! communication algorithm options
 #define COLLECTIVE 0
 #define POINT_TO_POINT 1
@@ -33,7 +34,7 @@
 #define DEF_P2P_MAXREQ 64
 
 #ifndef _MPISERIAL
-#ifdef _USE_FLOW_CONTROL
+#ifndef _NO_FLOW_CONTROL
 #define _USE_COMP2IO_FC 1
 #define _USE_IO2COMP_FC 1
 #define _USE_CREATE_FC 1
@@ -59,20 +60,6 @@
 #endif
 
 !
-! USESPACE
-! By default, use an algorithm on the senders that uses
-! very little temp space but needs to make one pass through
-! the compdof destinations for each io proc.  If _USE_SPACE
-! is nonzero, enable an alternate algorithm that makes a 
-! single pass but needs a lot of temp space to store the
-! results
-!
-
-! NOTE: code change caching is allocating anyway so do not shut off
-#define _USE_SPACE 1
-!#undef _USE_SPACE
-
-!
 ! arbitrary mpi message tags used for the rearrange
 !
 
@@ -82,7 +69,6 @@
 
 module box_rearrange
 
-#ifdef _USEBOX
   use pio_kinds
   use pio_types, only : io_desc_t, iosystem_desc_t
 #ifdef NO_MPI2
@@ -94,7 +80,6 @@ module box_rearrange
 #endif
   use alloc_mod
   use pio_spmd_utils
-
   implicit none
 
   private
@@ -172,12 +157,12 @@ subroutine box_rearrange_comp2io_{TYPE} (IOsystem, ioDesc, s1, src, s2, &
   num_iotasks = IOsystem%num_iotasks
 
   if (num_tasks /= 1 .or. num_iotasks /= 1) &
-    call piodie( _FILE_,__LINE__, &
+    call piodie( __PIO_FILE__,__LINE__, &
                  'built with -D_MPISERIAL but num_tasks=', num_tasks, &
                  'num_iotasks=', num_iotasks )
 
   if (size(src)>0 .and. size(src)< ndof) &
-    call piodie( _FILE_,__LINE__, &
+    call piodie( __PIO_FILE__,__LINE__, &
                  'box_rearrange_comp2io: size(compbuf)=', size(src), &
                  ' not equal to size(compdof)=', ndof )
 
@@ -187,12 +172,12 @@ subroutine box_rearrange_comp2io_{TYPE} (IOsystem, ioDesc, s1, src, s2, &
 
     if (ioproc /= -1 ) then  ! ignore sender hole
       if (ioproc /= 1) &     ! ioproc is 1-based
-        call piodie( _FILE_,__LINE__, &
+        call piodie( __PIO_FILE__,__LINE__, &
                      'box_rearrange_comp2io: i=', i, &
                      'dest_ioproc(i)=', ioproc )
 
       if ( ioindex<0 .or. ioindex>=niodof ) &
-        call piodie( _FILE_,__LINE__, &
+        call piodie( __PIO_FILE__,__LINE__, &
                      'box_rearrange_comp2io: i=', i, &
                      'dest_ioindex(i) out of range=', ioindex )
 
@@ -289,7 +274,7 @@ subroutine box_rearrange_comp2io_{TYPE} (IOsystem, ioDesc, s1, src, s2, &
   num_iotasks = IOsystem%num_iotasks
 
   if (size(src) > 0 .and. size(src)<ndof) &
-    call piodie( _FILE_,__LINE__, &
+    call piodie( __PIO_FILE__,__LINE__, &
                  'box_rearrange_comp2io: size(compbuf)=', size(src), &
                  ' not equal to size(compdof)=', ndof)
 
@@ -377,7 +362,7 @@ subroutine box_rearrange_comp2io_{TYPE} (IOsystem, ioDesc, s1, src, s2, &
         ! go from 1-based io rank to 0-based comprank
         io_comprank=find_io_comprank(IOsystem,i)
 
-        if(Debug) print *, _FILE_,__LINE__,myrank,': send posted dest=',io_comprank,' count=',scount(i), stype(i)
+        if(Debug) print *, __PIO_FILE__,__LINE__,myrank,': send posted dest=',io_comprank,' count=',scount(i), stype(i)
 
         call MPI_ISEND( src, 1, stype(i),    &                 ! buf, count, type
                         io_comprank,TAG2,    &                 ! destination,tag
@@ -473,12 +458,12 @@ subroutine box_rearrange_io2comp_{TYPE} (IOsystem, ioDesc, s1, iobuf, &
   num_iotasks = IOsystem%num_iotasks
 
   if (num_tasks /= 1 .or. num_iotasks /= 1) &
-    call piodie( _FILE_,__LINE__, &
+    call piodie( __PIO_FILE__,__LINE__, &
                  'built with -D_MPISERIAL but num_tasks=', num_tasks, &
                  'num_iotasks=', num_iotasks )
 
   if (size(compbuf) > 0 .and. size(compbuf)<ndof) &
-    call piodie( _FILE_,__LINE__, &
+    call piodie( __PIO_FILE__,__LINE__, &
                  'box_rearrange_io2comp: size(compbuf)=', size(compbuf), &
                  ' not equal to size(compdof)=', ndof)
 
@@ -488,11 +473,11 @@ subroutine box_rearrange_io2comp_{TYPE} (IOsystem, ioDesc, s1, iobuf, &
 
     if (ioproc /= -1 ) then  ! ignore sender hole
       if (ioproc /= 1) &
-        call piodie( _FILE_,__LINE__, &
+        call piodie( __PIO_FILE__,__LINE__, &
                      'box_rearrange_io2comp: i=',i,'dest_ioproc(i)=', ioproc )
 
       if ( ioindex<0 .or. ioindex>=niodof ) &
-        call piodie( _FILE_,__LINE__, &
+        call piodie( __PIO_FILE__,__LINE__, &
                      'box_rearrange_io2comp: i=',i, &
                      'dest_ioindex(i) out of range=', ioindex )
 
@@ -588,7 +573,7 @@ subroutine box_rearrange_io2comp_{TYPE} (IOsystem,ioDesc,s1, iobuf,s2, compbuf, 
   num_iotasks = IOsystem%num_iotasks
 
   if (size(compbuf) > 0 .and. size(compbuf)<ndof) &
-    call piodie( _FILE_,__LINE__, &
+    call piodie( __PIO_FILE__,__LINE__, &
                  'box_rearrange_io2comp: size(compbuf)=', size(compbuf), &
                  ' not equal to size(compdof)=', ndof)
 
@@ -816,7 +801,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
        ! gcoord matches this box
        if (found) then
-          call piodie(_FILE_,__LINE__, 'multiple matches')
+          call piodie(__PIO_FILE__,__LINE__, 'multiple matches')
        endif
 
        found = .true.
@@ -905,7 +890,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
     ndof=size(compdof)
 
-    if(Debug) print *,_FILE_,__LINE__,minval(compdof), maxval(compdof)
+    if(Debug) print *,__PIO_FILE__,__LINE__,minval(compdof), maxval(compdof)
     do i=1,ndof
        ! Compute global coordinates for compdof(i)
 
@@ -938,7 +923,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
              end do
 
              print *, subName, ':: INFO dof ', i, ' index=', gindex, ' gcoord=', gcoord
-             call piodie( _FILE_,__LINE__, 'quitting' )
+             call piodie( __PIO_FILE__,__LINE__, 'quitting' )
           endif
 
           dest_ioproc(i)  = ioproc
@@ -996,8 +981,8 @@ end subroutine box_rearrange_io2comp_{TYPE}
     ! Gather iodesc%start,iodesc%count from IO procs to root IO proc
     ! then broadcast to all procs
     if(ndim.ne.size(iodesc%start)) then
-       print *,_FILE_,__LINE__,ndim, size(iodesc%start)
-       call piodie(_FILE_,__LINE__,'bad ndim size',ndim)
+       print *,__PIO_FILE__,__LINE__,ndim, size(iodesc%start)
+       call piodie(__PIO_FILE__,__LINE__,'bad ndim size',ndim)
     end if
 
     start = 0
@@ -1013,9 +998,9 @@ end subroutine box_rearrange_io2comp_{TYPE}
                               0, Iosystem%IO_comm                   )
 
        if(Debug) then
-          print *, _FILE_,__LINE__,iodesc%start, iodesc%count
+          print *, __PIO_FILE__,__LINE__,iodesc%start, iodesc%count
           if(iosystem%io_rank==0) &
-             print *,_FILE_,__LINE__,ndim,(i,' :', &
+             print *,__PIO_FILE__,__LINE__,ndim,(i,' :', &
                 start(:,i), count(:,i),i=1,iosystem%num_iotasks)
        end if
        ! note that index in start,count is the io_rank not comp_rank
@@ -1050,7 +1035,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
 !       will NOT be allocated in this build
 
     if (Iosystem%num_tasks /= 1 .or. Iosystem%num_iotasks /= 1) then
-      call piodie( _FILE_,__LINE__, &
+      call piodie( __PIO_FILE__,__LINE__, &
                    'pio was built with -D_MPISERIAL but tasks=', &
                    Iosystem%num_tasks, &
                    'iotasks=', Iosystem%num_iotasks)
@@ -1079,6 +1064,9 @@ end subroutine box_rearrange_io2comp_{TYPE}
 #ifndef _MPISERIAL
 
   subroutine compute_counts(Iosystem, ioDesc, ndof, niodof)
+    
+    use calcdisplace_mod, only : calcdisplace,GCDblocksize,gcd
+
 
     type (Iosystem_desc_t), intent(in) :: Iosystem
     type (IO_desc_t),intent(inout) :: ioDesc
@@ -1127,6 +1115,15 @@ end subroutine box_rearrange_io2comp_{TYPE}
     logical :: pio_isend
     integer :: pio_maxreq
 
+    ! added 24MAR11
+    integer :: bsize, len, blocksize
+    integer,allocatable :: blk_len(:)
+    integer,allocatable :: displace(:)
+    integer,allocatable :: bsizeT(:)
+    integer :: numblks
+    integer :: newTYPEs,newTYPEr
+    integer :: ii
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Communication initialization
     pio_hs     = DEF_P2P_HANDSHAKE
@@ -1152,7 +1149,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
        if (iorank /= -1) then                       ! not a sender hole
           if (iorank<1 .or. iorank>num_iotasks) &
-               call piodie(_FILE_,__LINE__,'io destination out of range',iorank)
+               call piodie(__PIO_FILE__,__LINE__,'io destination out of range',iorank)
           scount(iorank) = scount(iorank) + 1
        endif
 
@@ -1284,7 +1281,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
        spos(i)=spos(i-1)+scount(i-1)
 
        if (scount(i)/=0 .and. spos(i) > ndof) & 
-            call piodie(_FILE_,__LINE__,'spos=',spos(i),'> ndof=',ndof)
+            call piodie(__PIO_FILE__,__LINE__,'spos=',spos(i),'> ndof=',ndof)
     end do
 
     call alloc_check(tempcount, num_iotasks, 'tempcount')
@@ -1299,7 +1296,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
           tempcount(iorank) = tempcount(iorank) + 1
 
           if (tempcount(iorank) > scount(iorank)) &
-               call piodie(_FILE_,__LINE__,'tempcount>scount')
+               call piodie(__PIO_FILE__,__LINE__,'tempcount>scount')
        endif
     end do
     call dealloc_check(tempcount, 'tempcount')
@@ -1378,39 +1375,75 @@ end subroutine box_rearrange_io2comp_{TYPE}
     ! Create the mpi types for io proc receives
     !
 
-    if (Iosystem%IOproc) then
-
-       !need to cache
+    if (Iosystem%IOproc .and. nrecvs>0) then
+ 
+      !need to cache
        call alloc_check(ioDesc%rtype, nrecvs, 'mpi recv types')
        rtype=>ioDesc%rtype
-
        pos = 1
-       do i=1,nrecvs
+       ii = 1
+          allocate(bsizeT(nrecvs))
+          do i=1,nrecvs
+             call GCDblocksize(rindex(pos:pos+rcount(i)-1),blocksize)
+             if(rcount(i) > 0) then 
+                bsizeT(ii)=blocksize
+                ii = ii + 1
+             endif
+             pos = pos + rcount(i)
+          enddo
+          blocksize = gcd(bsizeT(1:ii-1))
+          !       print *,'gcd: receive block lengths: ', bsizeT(1:ii-1)
+          deallocate(bsizeT)
+          !       print *,'GCD calculated for receive loop blocksize: ',blocksize
+          call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEr,ierror)
+          call CheckMPIReturn(subName,ierror)
+          call MPI_TYPE_COMMIT(newTYPEr,ierror)
+          call CheckMPIReturn(subName,ierror)
+
+          pos = 1
+          do i=1,nrecvs
 
 #if DEBUG
 #if DEBUG_INDICES
-          print *, subName,':: myrank=',myrank,': recv indices from ',rfrom(i), &
-               ' count=',rcount(i),' value=',rindex(pos:pos+rcount(i)-1)
+             print *, subName,':: myrank=',myrank,': recv indices from ',rfrom(i), &
+                  ' count=',rcount(i),' value=',rindex(pos:pos+rcount(i)-1)
 #else
-          print *, subName,':: myrank=',myrank,': recv indices from ',rfrom(i), &
-               ' count=',rcount(i)
+             print *, subName,':: myrank=',myrank,': recv indices from ',rfrom(i), &
+                  ' count=',rcount(i)
 #endif
 #endif
 
-          ! need rindex to contain 0-based displacements here
-          call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               rcount(i), 1, rindex(pos:pos+rcount(i)-1), &               ! count,blen, disp
-               ioDesc%baseTYPE, rtype(i), ierror )       ! oldtype, newtype
-          call CheckMPIReturn(subName,ierror)
 
-          call MPI_TYPE_COMMIT(rtype(i), ierror)
-          call CheckMPIReturn(subName,ierror)
+!       call GCDblocksize(rindex(pos:pos+rcount(i)-1),blocksize)
+!       call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEr,ierror)
+!       call CheckMPIReturn(subName,ierror)
+!       call MPI_TYPE_COMMIT(newTYPEr,ierror)
+!       call CheckMPIReturn(subName,ierror)
 
-          pos = pos + rcount(i)
-       end do
+             len = rcount(i)/blocksize        
+             allocate(displace(len))
+             if(blocksize == 1) then 
+                displace(:) = rindex(pos:pos+rcount(i)-1)
+             else
+                rindex(pos:pos+rcount(i)-1) = rindex(pos:pos+rcount(i)-1)+1
+                call calcdisplace(blocksize,rindex(pos:pos+rcount(i)-1),displace)
+             endif
 
+             !DBG call alloc_print_usage(iosystem%comp_comm,80,'l2629')
+             ! need rindex to contain 0-based displacements here
+             call MPI_TYPE_CREATE_INDEXED_BLOCK( &
+                  len, 1, displace, &               ! count,blen, disp
+                  newTYPEr, rtype(i), ierror )       ! oldtype, newtype
+             call CheckMPIReturn(subName,ierror)
+             
+             call MPI_TYPE_COMMIT(rtype(i), ierror)
+             call CheckMPIReturn(subName,ierror)
+             
+             deallocate(displace)
+             pos = pos + rcount(i)
+          end do
+          call MPI_TYPE_FREE(newTYPEr,ierror)
     endif
-
     !
     ! Create the mpi types for the comp proc sends
 
@@ -1419,21 +1452,59 @@ end subroutine box_rearrange_io2comp_{TYPE}
     stype=>ioDesc%stype
 
     pos = 1
+    allocate(bsizeT(num_iotasks))
+    ii = 1
     do i=1,num_iotasks
+       if(scount(i) /= 0) then 
+          call GCDblocksize(sindex(pos:pos+scount(i)-1),blocksize)
+          bsizeT(ii)=blocksize
+	  pos = pos + scount(i)
+	  ii = ii+1
+       endif
+    enddo
+    blocksize = gcd(bsizeT(1:ii-1))
+    deallocate(bsizeT)
+!    print *,'GCD calculated for send loop blocksize: ',blocksize
+    call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEs,ierror)
+    call CheckMPIReturn(subName,ierror)
+    call MPI_TYPE_COMMIT(newTYPEs,ierror)
+    call CheckMPIReturn(subName,ierror)
+
+    pos = 1
+    do i=1,num_iotasks
+ 
        if (scount(i) /= 0) then
 
+!       call GCDblocksize(sindex(pos:pos+scount(i)-1),blocksize)
+!       call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEs,ierror)
+!       call CheckMPIReturn(subName,ierror)
+!       call MPI_TYPE_COMMIT(newTYPEs,ierror)
+!       call CheckMPIReturn(subName,ierror)
+
+
+       len = scount(i)/blocksize        
+       allocate(displace(len))
+       if(blocksize == 1) then 
+	  displace(:) = sindex(pos:pos+scount(i)-1)
+       else
+          sindex(pos:pos+scount(i)-1) = sindex(pos:pos+scount(i)-1)+1
+          call calcdisplace(blocksize,sindex(pos:pos+scount(i)-1),displace)
+       endif
           call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               scount(i), 1, sindex(pos:pos+scount(i)-1), &        ! count, blen, disp
-               ioDesc%baseTYPE, stype(i), ierror )       ! oldtype, newtype
+               len, 1, displace, &        ! count, blen, disp
+               newTYPEs, stype(i), ierror )       ! oldtype, newtype
           call CheckMPIReturn(subName,ierror)
 
           call MPI_TYPE_COMMIT(stype(i), ierror)
           call CheckMPIReturn(subName,ierror)
-
+ 
+          deallocate(displace)
           pos = pos + scount(i)
        endif
 
     end do
+
+    call MPI_TYPE_FREE(newTYPEs,ierror)
 
     !
     ! clean up
@@ -1504,8 +1575,8 @@ end subroutine box_rearrange_io2comp_{TYPE}
     ! Gather iodesc%start,iodesc%count from IO procs to root IO proc
     ! then broadcast to all procs
     if(ndim.ne.size(iodesc%start)) then
-       print *,_FILE_,__LINE__,ndim, size(iodesc%start)
-       call piodie(_FILE_,__LINE__,'bad ndim size',ndim)
+       print *,__PIO_FILE__,__LINE__,ndim, size(iodesc%start)
+       call piodie(__PIO_FILE__,__LINE__,'bad ndim size',ndim)
     end if
 
 
@@ -1523,8 +1594,8 @@ end subroutine box_rearrange_io2comp_{TYPE}
             0,Iosystem%IO_comm,ierror )
        call CheckMPIReturn(subName,ierror)
        if(Debug) then
-          print *, _FILE_,__LINE__,iodesc%start, iodesc%count
-          if(iosystem%io_rank==0) print *,_FILE_,__LINE__,ndim,(i,' :',start(:,i), count(:,i),i=1,iosystem%num_iotasks)
+          print *, __PIO_FILE__,__LINE__,iodesc%start, iodesc%count
+          if(iosystem%io_rank==0) print *,__PIO_FILE__,__LINE__,ndim,(i,' :',start(:,i), count(:,i),i=1,iosystem%num_iotasks)
        end if
        ! note that index in start,count is the io_rank not comp_rank
     endif
@@ -1560,7 +1631,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
 !       will NOT be allocated in this build
 
     if (Iosystem%num_tasks /= 1 .or. Iosystem%num_iotasks /= 1) then
-      call piodie( _FILE_,__LINE__, &
+      call piodie( __PIO_FILE__,__LINE__, &
                    'pio was built with -D_MPISERIAL but tasks=', &
                    Iosystem%num_tasks, &
                    'iotasks=', Iosystem%num_iotasks)
@@ -1620,11 +1691,11 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
     if (Iosystem%union_rank == Iosystem%ioranks(1)) then
        if (Iosystem%io_rank/=0) then
-          call piodie( _FILE_,__LINE__,'Iosystem%iomaster rank ',Iosystem%iomaster, &
+          call piodie( __PIO_FILE__,__LINE__,'Iosystem%iomaster rank ',Iosystem%iomaster, &
                'has nonzero io_rank ',Iosystem%io_rank)
        endif
        if (nsends_global /= nrecvs_global ) &
-            call piodie( _FILE_,__LINE__,'nsends_global=',nsends_global, &
+            call piodie( __PIO_FILE__,__LINE__,'nsends_global=',nsends_global, &
             '!= nrecvs_global=',nrecvs_global )
     endif
 
@@ -1656,6 +1727,8 @@ end subroutine box_rearrange_io2comp_{TYPE}
 #ifndef _MPISERIAL
 
   subroutine compute_counts( Iosystem,ioDesc,ndof,niodof )
+
+    use calcdisplace_mod, only : calcdisplace, GCDblocksize, gcd
 
     type (Iosystem_desc_t), intent(in) :: Iosystem
     type (IO_desc_t),intent(in) :: ioDesc
@@ -1702,6 +1775,15 @@ end subroutine box_rearrange_io2comp_{TYPE}
     integer,pointer :: tempcount(:)
 
     integer :: basetype_mpi
+
+    ! added 15APR11
+    integer :: bsize, len, blocksize
+    integer,allocatable :: blk_len(:)
+    integer,allocatable :: displace(:)
+    integer,allocatable :: bsizeT(:)
+    integer :: numblks
+    integer :: newTYPEs,newTYPEr
+    integer :: ii
 
     ! init
 
@@ -1768,7 +1850,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
        if (iorank /= -1) then                       ! not a sender hole
           if (iorank<1 .or. iorank>num_iotasks) &
-               call piodie(_FILE_,__LINE__,'io destination out of range',iorank)
+               call piodie(__PIO_FILE__,__LINE__,'io destination out of range',iorank)
 
           scount(iorank) = scount(iorank) + 1
 
@@ -1839,7 +1921,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
 #endif
 
           if ( (pos+rcount(i)-1) > niodof) then
-             call piodie( _FILE_,__LINE__, &
+             call piodie( __PIO_FILE__,__LINE__, &
                   'more indices received on this io proc.  size of iodof box=',&
                   pos+rcount(i)-1, &
                   'niodof=',niodof)
@@ -1862,7 +1944,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
     ! comp procs send the index sets
     !
 
-#ifdef _USE_SPACE
+
     ! Uses three temp arrays but
     ! computes everything in one pass.  Alternative is
     ! to make a pass per ioproc through the destinations 
@@ -1879,7 +1961,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
        spos(i)=spos(i-1)+scount(i-1)
 
        if (scount(i)/=0 .and. spos(i) > ndof) & 
-            call piodie(_FILE_,__LINE__,'spos=',spos(i),'> ndof=',ndof)
+            call piodie(__PIO_FILE__,__LINE__,'spos=',spos(i),'> ndof=',ndof)
     end do
 
     ! srcindex() contains blocks of indices in the src array
@@ -1895,7 +1977,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
           tempcount(iorank) = tempcount(iorank) + 1
 
           if (tempcount(iorank) > scount(iorank)) &
-               call piodie(_FILE_,__LINE__,'tempcount>scount')
+               call piodie(__PIO_FILE__,__LINE__,'tempcount>scount')
        endif
 
     end do
@@ -1904,11 +1986,12 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
     ! construct a type to send a sparse subset of dest_ioindex()
 
-
     pos=1
     do i=1,num_iotasks
        if (scount(i) /= 0) then
-          call MPI_TYPE_CREATE_INDEXED_BLOCK( &
+
+   
+           call MPI_TYPE_CREATE_INDEXED_BLOCK( &
                scount(i), 1, srcindex(pos:pos+scount(i)-1), &             ! count, blen, disp
                MPI_INTEGER, sendtype, ierror )            ! oldtype, newtype
           call CheckMPIReturn(subName,ierror)
@@ -1938,64 +2021,6 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
     call dealloc_check(spos,'spos')
 
-    ! _USE_SPACE
-#else  
-
-    ! This alternative trades uses much less temp space
-    ! but makes one pass through the compdof for each ioproc
-    ! so that it can pull out the indices on-the-fly
-
-    call alloc_check(srcindex,max_scount,'sindex(max_scount)')
-
-    do i=1,num_iotasks                   ! send indices to ioproc i
-       if (scount(i) /= 0) then
-
-          count=0
-          loop1: do j=1,ndof               ! search for indices to ioproc i
-             iorank=ioDesc%dest_ioproc(j)       ! sender hole is -1
-             if (iorank==i) then
-                count=count+1
-                srcindex(count)=j-1              ! 0-based
-
-                if (count==scount(i)) exit loop1
-             endif
-          end do loop1
-
-          if (count/=scount(i)) call piodie(_FILE_,__LINE__,'count/=scount(i)')
-          if (count>max_scount) call piodie(_FILE_,__LINE__,'count>max_scount')
-
-          call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               scount(i), 1, srcindex, &                  ! count, blen, disp
-               MPI_INTEGER, sendtype, ierror )            ! oldtype, newtype
-          call CheckMPIReturn(subName,ierror)
- 
-          call MPI_TYPE_COMMIT(sendtype, ierror)
-          call CheckMPIReturn(subName,ierror)
-
-          ! go from 1-based io rank to 0-based comprank
-          io_comprank=find_io_comprank(Iosystem,i)
-
-
-#if DEBUG
-          print *,myrank,': send posted dest=',io_comprank,' count=',scount(i)
-#endif
-          call MPI_ISEND( ioDesc%dest_ioindex, 1, sendtype, &    ! buf, count, type
-               io_comprank,TAG1,    &                 ! destination,tag
-               Iosystem%union_comm,sreq,ierror )
-          call CheckMPIReturn(subName,ierror)
-
-          call MPI_TYPE_FREE(sendtype, ierror)
-          call CheckMPIReturn(subName,ierror)
-
-          call MPI_REQUEST_FREE(sreq,ierror)
-          call CheckMPIReturn(subName,ierror)
-
-       endif
-    end do
-
-#endif
-
-
 #if DEBUG_BARRIER
     call MPI_BARRIER(Iosystem%union_comm,ierror)
     call CheckMPIReturn(subName,ierror)
@@ -2024,7 +2049,27 @@ end subroutine box_rearrange_io2comp_{TYPE}
     !
 
 
-    if (Iosystem%IOproc) then
+    if (Iosystem%IOproc .and. nrecvs>0) then
+
+       pos=1
+       ii = 1
+       allocate(bsizeT(nrecvs))
+       do i=1,nrecvs
+          call GCDblocksize(rindex(pos:pos+rcount(i)-1),blocksize)
+          if(rcount(i) > 0) then
+             bsizeT(ii)=blocksize
+             ii = ii + 1
+          endif
+          pos = pos + rcount(i)
+       enddo
+       blocksize = gcd(bsizeT(1:ii-1))
+!       print *,'gcd: receive block lengths: ', bsizeT(1:ii-1)
+       deallocate(bsizeT)
+!       print *,'GCD calculated for receive loop blocksize: ',blocksize
+       call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEr,ierror)
+       call CheckMPIReturn(subName,ierror)
+       call MPI_TYPE_COMMIT(newTYPEr,ierror)
+       call CheckMPIReturn(subName,ierror)
 
        pos=1
        do i=1,nrecvs
@@ -2038,19 +2083,27 @@ end subroutine box_rearrange_io2comp_{TYPE}
                ' count=',rcount(i)
 #endif
 #endif
+          len = rcount(i)/blocksize
+          allocate(displace(len))
+          if(blocksize == 1) then
+              displace(:) = rindex(pos:pos+rcount(i)-1)
+          else
+              rindex(pos:pos+rcount(i)-1) = rindex(pos:pos+rcount(i)-1)+1
+              call calcdisplace(blocksize,rindex(pos:pos+rcount(i)-1),displace)
+          endif
 
           ! need rindex to contain 0-based displacements here
           call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               rcount(i), 1, rindex(pos:pos+rcount(i)-1), &               ! count,blen, disp
-               ioDesc%baseTYPE, rtype(i), ierror )       ! oldtype, newtype
+               len, 1, displace, &               ! count,blen, disp
+               newTYPEr, rtype(i), ierror )       ! oldtype, newtype
           call CheckMPIReturn(subName,ierror)
 
           call MPI_TYPE_COMMIT(rtype(i), ierror)
           call CheckMPIReturn(subName,ierror)
-
+          deallocate(displace)
           pos=pos+rcount(i)
        end do
-
+       call MPI_TYPE_FREE(newTYPEr,ierror)
     endif
 
 
@@ -2058,60 +2111,53 @@ end subroutine box_rearrange_io2comp_{TYPE}
     ! Create the mpi types for the comp proc sends
 
 
-#ifdef _USE_SPACE
+
+    pos = 1
+    allocate(bsizeT(num_iotasks))
+    ii = 1
+    do i=1,num_iotasks
+       if(scount(i) /= 0) then
+          call GCDblocksize(srcindex(pos:pos+scount(i)-1),blocksize)
+          bsizeT(ii)=blocksize
+          pos = pos + scount(i)
+          ii = ii+1
+       endif
+    enddo
+    blocksize = gcd(bsizeT(1:ii-1))
+    deallocate(bsizeT)
+!    print *,'GCD calculated for send loop blocksize: ',blocksize
+    call MPI_TYPE_CONTIGUOUS(blocksize,ioDesc%baseTYPE,newTYPEs,ierror)
+    call CheckMPIReturn(subName,ierror)
+    call MPI_TYPE_COMMIT(newTYPEs,ierror)
+    call CheckMPIReturn(subName,ierror)
 
     pos=1
     do i=1,num_iotasks
        if (scount(i) /= 0) then
 
+          len = scount(i)/blocksize
+          allocate(displace(len))
+          if(blocksize == 1) then
+             displace(:) = srcindex(pos:pos+scount(i)-1)
+          else
+             srcindex(pos:pos+scount(i)-1) = srcindex(pos:pos+scount(i)-1)+1
+             call calcdisplace(blocksize,srcindex(pos:pos+scount(i)-1),displace)
+          endif
+
           call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               scount(i), 1, srcindex(pos:pos+scount(i)-1), &        ! count, blen, disp
-               ioDesc%baseTYPE, stype(i), ierror )       ! oldtype, newtype
+               len, 1, displace, &        ! count, blen, disp
+               newTYPEs, stype(i), ierror )       ! oldtype, newtype
           call CheckMPIReturn(subName,ierror)
 
           call MPI_TYPE_COMMIT(stype(i), ierror)
           call CheckMPIReturn(subName,ierror)
-
+ 	  deallocate(displace)
           pos=pos+scount(i)
        endif
 
     end do
-
-    ! if _USE_SPACE
-#else
-
-    ! This alternative uses more time but less space
-
-    do i=1,num_iotasks                   ! send indices to ioproc i
-       if (scount(i) /= 0) then
-
-          count=0
-          loop2: do j=1,ndof               ! search for indices to ioproc i
-             iorank=ioDesc%dest_ioproc(j)       ! sender hole is -1
-             if (iorank==i) then
-                count=count+1
-                srcindex(count)=j-1              ! 0-based
-
-                if (count==scount(i)) exit loop2
-             endif
-          end do loop2
-
-          if (count/=scount(i)) call piodie(_FILE_,__LINE__,'count/=scount(i)')
-          if (count>max_scount) call piodie(_FILE_,__LINE__,'count>max_scount')
-
-          call MPI_TYPE_CREATE_INDEXED_BLOCK( &
-               scount(i), 1, srcindex, &                  ! count, blen, disp
-               ioDesc%baseTYPE, stype(i), ierror )       ! oldtype, newtype
-          call CheckMPIReturn(subName,ierror)
-
-          call MPI_TYPE_COMMIT(stype(i), ierror)
-          call CheckMPIReturn(subName,ierror)
-       endif
-    end do
-
-    ! if _USE_SPACE
-#endif
-
+    
+    call MPI_TYPE_FREE(newTYPEs,ierror)
 
     !
     ! clean up
@@ -2209,9 +2255,6 @@ end subroutine box_rearrange_io2comp_{TYPE}
 
 
   end subroutine box_rearrange_free
-
-! _USEBOX
-#endif
 
 end module box_rearrange
 

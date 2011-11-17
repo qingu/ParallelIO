@@ -1,5 +1,17 @@
-#define _FILE_ "pio_support.F90"
+#define __PIO_FILE__ "pio_support.F90"
 ! This module is intended for the internal use of PIO only
+
+!
+! Code added as a work around for poor rsend performance on cray systems with
+! Gemini interconnect
+!
+#ifdef _NO_MPI_RSEND
+#define MPI_RSEND MPI_SEND
+#define mpi_rsend mpi_send
+#define MPI_IRSEND MPI_ISEND
+#define mpi_irsend mpi_isend
+#endif
+
 module pio_support
   use pio_kinds
   implicit none
@@ -156,7 +168,7 @@ contains
     integer, pointer :: sdof1d(:)
     integer          :: status(MPI_STATUS_SIZE)
     integer, parameter :: masterproc = 0
-#ifdef _USE_FLOW_CONTROL
+#ifndef _NO_FLOW_CONTROL
     integer :: &
       rcv_request    ,&! request id
       hs = 1           ! MPI handshaking variable
@@ -193,24 +205,24 @@ contains
           wdof = dof
        else
           if (myrank == n .and. sdof > 0) then
-#ifdef _USE_FLOW_CONTROL
+#ifndef _NO_FLOW_CONTROL
              call MPI_RECV(hs,1,MPI_INTEGER,masterproc,n,comm,status,ierr)
-             if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_writedof mpi_recv')
+             if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_writedof mpi_recv')
 #endif
-             call MPI_SEND(dof,sdof,MPI_INTEGER,masterproc,n,comm,status,ierr)
-             if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_writedof mpi_send')
+             call MPI_SEND(dof,sdof,MPI_INTEGER,masterproc,n,comm,ierr)
+             if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_writedof mpi_send')
           endif
           if (myrank == masterproc .and. sdof1d(n) > 0) then
-#ifdef _USE_FLOW_CONTROL
+#ifndef _NO_FLOW_CONTROL
              call MPI_IRECV(wdof,sdof1d(n),MPI_INTEGER,n,n,comm,rcv_request,ierr)
-             if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_writedof mpi_irecv')
-             call MPI_SEND(hs,1,MPI_INTEGER,n,n,comm,status,ierr)
-             if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_writedof mpi_send')
+             if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_writedof mpi_irecv')
+             call MPI_SEND(hs,1,MPI_INTEGER,n,n,comm,ierr)
+             if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_writedof mpi_send')
              call MPI_WAIT(rcv_request,status,ierr)
-             if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_writedof mpi_wait')
+             if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_writedof mpi_wait')
 #else
              call MPI_RECV(wdof,sdof1d(n),MPI_INTEGER,n,n,comm,status,ierr)
-             if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_writedof mpi_recv')
+             if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_writedof mpi_recv')
 #endif
           endif
        endif
@@ -280,13 +292,13 @@ contains
        read(unit,*) rversno,rnpes
        write(6,*) subName,': reading file ',trim(file),' versno=',rversno
        if (rnpes /= npes) then
-          call piodie(_FILE_,__LINE__,'pio_readdof npes incorrect')
+          call piodie(__PIO_FILE__,__LINE__,'pio_readdof npes incorrect')
        endif
 
        do n = 0,npes-1
           read(unit,*) rn,sdof
           if (rn /= n) then
-             call piodie(_FILE_,__LINE__,'pio_readdof rn out of sync')
+             call piodie(__PIO_FILE__,__LINE__,'pio_readdof rn out of sync')
           endif
           allocate(wdof(sdof))
           do m = 1,sdof
@@ -297,11 +309,11 @@ contains
              allocate(dof(sdof))
              dof = wdof
           else
-             call MPI_SEND(sdof,1,MPI_INTEGER,n,n,comm,status,ierr)
-             if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_readdof mpi_send1')
+             call MPI_SEND(sdof,1,MPI_INTEGER,n,n,comm,ierr)
+             if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_readdof mpi_send1')
              if (sdof > 0) then
-                call MPI_SEND(wdof,sdof,MPI_INTEGER,n,npes+n,comm,status,ierr)
-                if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_readdof mpi_send2')
+                call MPI_SEND(wdof,sdof,MPI_INTEGER,n,npes+n,comm,ierr)
+                if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_readdof mpi_send2')
              endif
           endif
           deallocate(wdof)
@@ -309,12 +321,12 @@ contains
        close(unit)
     else
        call MPI_RECV(sdof,1,MPI_INTEGER,masterproc,myrank,comm,status,ierr)
-       if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_readdof mpi_recv1')
+       if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_readdof mpi_recv1')
        if (sdof > 0) then
           deallocate(dof)
           allocate(dof(sdof))
           call MPI_RECV(dof,sdof,MPI_INTEGER,masterproc,npes+myrank,comm,status,ierr)
-          if (ierr /= MPI_SUCCESS) call piodie(_FILE_,__LINE__,' pio_readdof mpi_recv2')
+          if (ierr /= MPI_SUCCESS) call piodie(__PIO_FILE__,__LINE__,' pio_readdof mpi_recv2')
        endif
     endif
 
@@ -436,7 +448,7 @@ contains
          fc_gather = .false.
       endif
    else
-#ifdef _USE_FLOW_CONTROL
+#ifndef _NO_FLOW_CONTROL
       gather_block_size = max(1,max_gather_block_size)
       fc_gather = .true.
 #else
