@@ -22,6 +22,7 @@
 module piovdc
 	use pio
 	implicit none
+	integer (kind=PIO_OFFSET), intent(out)  :: vdc_iostart(3), vdc_iocount(3)	
 contains
 
 !> @brief subroutine checks MPI status and prepares a VDC optimized IO
