@@ -22,6 +22,7 @@
 module piovdc
 	use pio
 	implicit none
+	integer (i4)	:: vdc_dims(3), vdc_bsize(3)
 	integer (kind=PIO_OFFSET), intent(out)  :: vdc_iostart(3), vdc_iocount(3)	
 contains
 

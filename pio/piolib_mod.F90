@@ -23,7 +23,9 @@ module piolib_mod
   use ionf_mod, only : create_nf, open_nf,close_nf, sync_nf
   use pionfread_mod, only : read_nf
   use pionfwrite_mod, only : write_nf
-
+#ifdef _COMPRESSION
+    use piovdc
+#endif
   use pio_mpi_utils, only : PIO_type_to_mpi_type 
   use iompi_mod
   use rearrange
@@ -1300,9 +1302,6 @@ contains
 !<
   subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base, dims, bsize)
     use pio_types, only : pio_internal_error, pio_rearr_none
-#ifdef _COMPRESSION
-    use piovdc
-#endif
     integer(i4), intent(in) :: comp_rank
     integer(i4), intent(in) :: comp_comm
     integer(i4), intent(in) :: num_iotasks 
@@ -1337,6 +1336,8 @@ contains
 
 #ifdef _COMPRESSION
     call init_vdc2(comp_rank, dims, bsize, vdc_iostart, vdc_iocount, num_ioprocs)
+    vdc_dims = dims
+    vdc_bsize = bsize
 #endif
     iosystem%error_handling = PIO_internal_error
     iosystem%union_comm = comp_comm
@@ -2165,7 +2166,7 @@ contains
        ierr = create_nf(file,trim(myfname), amode)	
        if(debug .and. iosystem%io_rank==0)print *,__PIO_FILE__,__LINE__,' open: ', myfname, file%fh
     case(pio_iotype_vdc2)
-	print *, 'creatfile: vdf library will handle creating files'	
+	call createvdf(vdc_dims, vdc_bsize, fname)
     case(pio_iotype_binary)
        print *,'createfile: io type not supported'
     end select
