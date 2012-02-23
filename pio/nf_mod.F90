@@ -50,7 +50,8 @@ module nf_mod
   interface pio_def_var
      module procedure &
           def_var_0d, &
-          def_var_md
+          def_var_md, &
+	  def_var_md_vdc
   end interface
 
 !>
@@ -1679,11 +1680,6 @@ contains
              call MPI_BCAST(vardesc%varid, 1, MPI_INTEGER, 0, ios%IO_Comm, ierr)
           end if
 #endif
-
-#ifdef _COMPRESSION
-       case(pio_iotype_vdc2)
-	  call defvdfvar(TRIM(name), vardesc%varid)
-#endif
        case default
           call bad_iotype(iotype,__PIO_FILE__,__LINE__)
 
@@ -1694,6 +1690,89 @@ contains
        call MPI_BCAST(vardesc%varid, 1, MPI_INTEGER, ios%Iomaster, ios%my_Comm, ierr)
     end if
   end function def_var_md
+
+!> 
+!! @public
+!! @ingroup PIO_def_var
+!! @brief Defines the a netcdf variable
+!! @details
+!! @param File @copydoc file_desc_t
+!! @param name : The name of the variable to define
+!! @param type : The type of variable 
+!! @param dimids : The dimension identifier returned by \ref PIO_def_dim
+!! @param vdc_desc @copydoc vdc_var_desc_t
+!! @retval ierr @copydoc error_return
+!<
+  integer function def_var_md_vdc(File,name,type,dimids,vardesc, ts, lod, reflevel) result(ierr)
+
+    type (File_desc_t), intent(in)  :: File
+    character(len=*), intent(in)    :: name
+    integer, intent(in)             :: type
+    integer, intent(in)             :: dimids(:)
+    integer, intent(in)		    :: ts
+    integer, intent(in), optional   :: lod
+    integer, intent(in), optional   :: reflevel
+    type (vdc_var_desc_t), intent(inout) :: vardesc
+    type(iosystem_desc_t), pointer :: ios
+    !------------------
+    ! Local variables
+    !------------------
+
+#ifdef _COMPRESSION
+    integer :: iotype, mpierr, nlen
+    integer :: msg = PIO_MSG_DEF_VAR
+
+    iotype = File%iotype
+
+    ierr=PIO_noerr
+
+    vardesc%type = type
+    vardesc%ts = ts
+    vardesc%name = TRIM(name)
+    if(present(lod)) then
+        vardesc%lod = lod
+    else
+	vardesc%lod = -1
+    endif
+    
+    if(present(reflevel)) then
+    	vardesc%reflevel = reflevel
+    else
+	vardesc%reflevel = -1
+    endif
+
+    ios => file%iosystem
+    nlen = len_trim(name)
+
+    if(ios%async_interface) then
+       if( .not. ios%ioproc) then
+          if(ios%comp_rank==0) call mpi_send(msg, 1, mpi_integer, ios%ioroot, 1, ios%union_comm, ierr)
+          call mpi_bcast(file%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       end if
+       call mpi_bcast(type, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       
+       call mpi_bcast(nlen, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       call mpi_bcast(name, nlen, mpi_character, ios%compmaster, ios%intercomm, ierr)
+       call mpi_bcast(vardesc%ndims, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       call mpi_bcast(dimids, vardesc%ndims, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+    endif
+    if(ios%IOproc) then
+       select case(iotype)
+       case(pio_iotype_vdc2)
+	  if(ios%comp_rank .eq. ios%compmaster) then
+	  	  call defvdfvar(TRIM(name))
+	  endif
+       case default
+          call bad_iotype(iotype,__PIO_FILE__,__LINE__)
+
+       end select
+    endif
+    if(ios%async_interface  .or. ios%num_tasks> ios%num_iotasks) then  
+       call MPI_BCAST(vardesc%varid, 1, MPI_INTEGER, ios%Iomaster, ios%my_Comm, ierr)
+    end if
+#endif
+  end function def_var_md_vdc
+
 
 !>
 !! @public

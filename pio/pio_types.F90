@@ -190,8 +190,7 @@ module pio_types
 	sequence
 #endif	
 	character(len=*) :: name
-	character(len=*) :: vdf
-	integer(i4)     :: cur_ts, num_ts, lod, bs(3), dims(3), reflevel
+	integer(i4)     :: ts, lod, reflevel
 	integer(i4)     :: type
     end type 
 #endif
