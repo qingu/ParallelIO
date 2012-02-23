@@ -1413,6 +1413,10 @@ contains
           ierr=nf90_enddef(File%fh)
 #endif
 
+#ifdef _COMPRESSION
+       case(pio_iotype_vdc2)
+          call endvdfdef
+#endif
        case default
           call bad_iotype(iotype,__PIO_FILE__,__LINE__)
 
