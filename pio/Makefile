@@ -4,7 +4,7 @@
 #   INCLUDES
 #   LIBS
 #   MPICC
-#   MPIFC
+#   MPIF90
 #   COPTS
 #   FOPTS
 #   CFLAGS
@@ -13,7 +13,7 @@
 #   AR
 
 RM=/bin/rm -f
-FDEPENDS=$(SRCDIR)/fdepends.awk
+FDEPENDS=fdepends.awk
 DEPSUF = .d
 MODSUF = .mod
 CPPSUF = .f90
@@ -27,22 +27,23 @@ export PIOARCH
 
 SRCS_C = topology.c 
 
-SRCS_FC =  pio.F90 \
+SRCS_F90 =  pio.F90 \
             pio_kinds.F90  \
             nf_mod.F90     \
             ionf_mod.F90 \
             pio_types.F90  \
-            calcdecomp.F90 \
             piolib_mod.F90 \
 	    pio_mpi_utils.F90 \
             pio_nf_utils.F90 \
 	    pio_utils.F90 \
             pio_quicksort.F90 \
             pio_msg_mod.F90 \
-	    calcdisplace_mod.F90 \
-	    pio_msg_callbacks.F90 
+	    pio_msg_callbacks.F90 \
+            calcdecomp.F90 \
+            calcdisplace_mod.F90
+           
 
-TEMPLATES_FC = pionfatt_mod.F90.in \
+TEMPLATES_F90 = pionfatt_mod.F90.in \
 	        pionfread_mod.F90.in \
                 pionfwrite_mod.F90.in \
                 pionfput_mod.F90.in \
@@ -51,22 +52,23 @@ TEMPLATES_FC = pionfatt_mod.F90.in \
                 box_rearrange.F90.in \
                 rearrange.F90.in \
                 pio_support.F90.in \
+	        mct_rearrange.F90.in \
 	        iompi_mod.F90.in  \
 	        piodarray.F90.in \
 	        pio_spmd_utils.F90.in \
 	        pio_msg_getput_callbacks.F90.in
 
-TEMPSRCFC = $(TEMPLATES_FC:.in=)
-SRCS_FC += $(TEMPSRCFC)
+TEMPSRCF90 = $(TEMPLATES_F90:.in=)
+SRCS_F90 += $(TEMPSRCF90)
 
 OBJS=  $(SRCS_C:.c=.o) \
-       $(SRCS_FC:.F90=.o)
+       $(SRCS_F90:.F90=.o)
 
 
-MODFILES := $(SRCS_FC:.F90=$(MODSUF))
+MODFILES := $(SRCS_F90:.F90=$(MODSUF))
 
 # File foo.DEPSUF will contain make dependency for foo.F90
-DEPENDS := $(SRCS_FC:.F90=$(DEPSUF))
+DEPENDS := $(SRCS_F90:.F90=$(DEPSUF))
 PERL = /usr/bin/perl
 
 LIB= libpio.a
@@ -98,16 +100,26 @@ depends: $(DEPENDS)
 	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@
 
 
+ifeq ($(EXPLICIT_CPP),yes)
+SRCS_CPP= $(SRCS_F90:.F90=$(CPPSUF))
+.F90.o:
+	@if [ -w $*.f90 ] ; then echo "ERROR: file $*.f90 is writable - the .f90 suffix is reserved for temporary cpp output" ; exit 1; fi
+	$(RM) $*.f90
+	$(CPP) $(CPPFLAGS) $(CFLAGS) $(COPTS) $(INCLUDES) -o $*.f90 $*.F90 
+	chmod a-w $*.f90
+	$(MPIF90) -c $(FFLAGS) $(FOPTS) $(INCLUDES) $*.f90
+else
 SRCS_CPP=
 .F90.o:
-	$(MPIFC) -c $(FPPDEFS) $(FFLAGS) $(FOPTS) $(INCLUDES) $<
+	$(MPIF90) -c $(FFLAGS) $(FOPTS) $(INCLUDES) $*.F90
+endif
 
 .c.o:
-	$(MPICC) -c $(CPPDEFS) $(CFLAGS) $(COPTS) $(INCLUDES) $<
+	$(MPICC) -c $(CFLAGS) $(COPTS) $(INCLUDES) $*.c
 
 
-$(TEMPSRCFC): $(TEMPLATE_FC)
-	$(PERL) $(SRCDIR)/genf90.pl $< > $*.F90
+$(TEMPSRCF90): $(TEMPLATE_F90)
+	$(PERL) genf90.pl $@.in > $*.F90
 
 
 
@@ -116,17 +128,13 @@ $(LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $(OBJS)
 
 
-predist: predistclean $(TEMPSRCFC)
-
+predist: predistclean $(TEMPSRCF90)
+     
 clean:
 	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)
 
 predistclean: clean
-	$(RM) $(TEMPSRCFC)
-
-
-startandcount: calcdecomp.F90
-	$(FC) $(FC_DEFINE)TESTCALCDECOMP $(FFLAGS) $< -o $@
+	$(RM) $(TEMPSRCF90)
 
 #
 # Automatically generated module dependencies
@@ -139,6 +147,7 @@ endif
 alloc_mod.o : alloc_mod.F90
 box_rearrange.o : box_rearrange.F90
 iompi_mod.o : iompi_mod.F90
+mct_rearrange.o : mct_rearrange.F90
 piodarray.o : piodarray.F90
 pionfatt_mod.o : pionfatt_mod.F90
 pionfget_mod.o : pionfget_mod.F90
@@ -151,6 +160,7 @@ rearrange.o : rearrange.F90
 alloc_mod.F90 : alloc_mod.F90.in
 box_rearrange.F90 : box_rearrange.F90.in
 iompi_mod.F90 : iompi_mod.F90.in
+mct_rearrange.F90 : mct_rearrange.F90.in
 piodarray.F90 : piodarray.F90.in
 pionfatt_mod.F90 : pionfatt_mod.F90.in
 pionfget_mod.F90 : pionfget_mod.F90.in
@@ -159,6 +169,3 @@ pionfread_mod.F90 : pionfread_mod.F90.in
 pionfwrite_mod.F90 : pionfwrite_mod.F90.in
 pio_support.F90 : pio_support.F90.in
 rearrange.F90 : rearrange.F90.in
-pio_spmd_utils.F90: pio_spmd_utils.F90.in
-pio_msg_getput_callbacks.F90 : pio_msg_getput_callbacks.F90.in
-
