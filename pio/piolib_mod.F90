@@ -167,8 +167,6 @@ module piolib_mod
      module procedure initdecomp_2dof_nf_i8
      module procedure initdecomp_2dof_bin_i4
      module procedure initdecomp_2dof_bin_i8
-     module procedure initdecomp_dof_vdc_i4
-     module procedure initdecomp_dof_vdc_i8
      module procedure PIO_initdecomp_bc
      module procedure PIO_initdecomp_dof_dof
   end interface
@@ -939,9 +937,15 @@ contains
     
     if(present(iostart) .and. present(iocount) ) then
        call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc, iostart, iocount)
+#ifdef _COMPRESSION
+    else 
+  	call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc, vdc_iostart, vdc_iocount)
+    endif
+#else
     else
        call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc)
     endif
+#endif
     deallocate(internal_compdof)
 
   end subroutine PIO_initdecomp_dof_i4
@@ -1064,10 +1068,17 @@ contains
        else if(present(iostart) .or. present(iocount)) then
           call piodie( __PIO_FILE__,__LINE__, &
                'both optional parameters start and count must be provided')
+#ifdef _COMPRESSION
+       else
+	  iodesc%start = vdc_iostart
+	  iodesc%count = vdc_iocount
+ 	endif
+#else
        else
           call calcstartandcount(basepiotype, ndims, dims, iosystem%num_iotasks, iosystem%io_rank,&
                  iodesc%start, iodesc%count,iosystem%num_aiotasks)
        end if
+#endif
        iosize=1
        do i=1,ndims
           iosize=iosize*iodesc%count(i)
