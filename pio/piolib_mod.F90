@@ -2165,8 +2165,10 @@ contains
        if(debug) print *,__PIO_FILE__,__LINE__,' open: ', trim(myfname), amode
        ierr = create_nf(file,trim(myfname), amode)	
        if(debug .and. iosystem%io_rank==0)print *,__PIO_FILE__,__LINE__,' open: ', myfname, file%fh
+#ifdef _COMPRESSION
     case(pio_iotype_vdc2)
 	call createvdf(vdc_dims, vdc_bsize, fname)
+#endif
     case(pio_iotype_binary)
        print *,'createfile: io type not supported'
     end select
