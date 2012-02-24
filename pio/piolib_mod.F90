@@ -2178,7 +2178,9 @@ contains
        if(debug .and. iosystem%io_rank==0)print *,__PIO_FILE__,__LINE__,' open: ', myfname, file%fh
 #ifdef _COMPRESSION
     case(pio_iotype_vdc2)
-	call createvdf(vdc_dims, vdc_bsize, fname)
+	  if(ios%comp_rank .eq. ios%compmaster) then
+	  	call createvdf(vdc_dims, vdc_bsize, fname)
+	  endif
 #endif
     case(pio_iotype_binary)
        print *,'createfile: io type not supported'
