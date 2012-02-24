@@ -1416,7 +1416,10 @@ contains
 
 #ifdef _COMPRESSION
        case(pio_iotype_vdc2)
-          call endvdfdef
+	  if(ios%comp_rank .eq. ios%compmaster) then
+		  call endvdfdef
+	  endif
+
 #endif
        case default
           call bad_iotype(iotype,__PIO_FILE__,__LINE__)
