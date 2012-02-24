@@ -493,6 +493,7 @@ fi
 
 if test "$USE_COMPRESSION" = "yes"
    then
+	AC_FC_WRAPPERS	
 	CPPDEFS="$CPPDEFS -D_COMPRESSION"
 fi
 
