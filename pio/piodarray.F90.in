@@ -4,7 +4,7 @@ module piodarray
   use pio_types, only : file_desc_t, io_desc_t, var_desc_t, pio_noerr, iosystem_desc_t, &
 	pio_iotype_pbinary, pio_iotype_binary, pio_iotype_direct_pbinary, &
 	pio_iotype_netcdf, pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, &
-        PIO_MAX_VAR_DIMS, pio_iotype_vdc2
+        PIO_MAX_VAR_DIMS, pio_iotype_vdc2, vdc_var_desc_t
   use pio_kinds
   use pio_support
   use pionfwrite_mod, only : write_nf
@@ -12,6 +12,9 @@ module piodarray
   use iompi_mod
   use alloc_mod
   use rearrange
+#ifdef _COMPRESSION
+  use piovdc
+#endif
 #ifdef TIMING
   use perf_mod, only : t_startf, t_stopf   !_EXTERNAL
 #endif
@@ -105,25 +108,22 @@ contains
        if(debugasync) print *,__PIO_FILE__,__LINE__
        if(ios%comp_rank==0) call mpi_send(msg, 1, mpi_integer, ios%ioroot, 1, ios%union_comm, ierr)
        call mpi_bcast(file%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%varid, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%rec, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%ndims, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       call mpi_bcast(3, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(iodesc%async_id, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast({MPITYPE}, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       if(debugasync) print *,__PIO_FILE__,__LINE__, {MPITYPE}
+       call mpi_bcast(MPI_REAL4, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       if(debugasync) print *,__PIO_FILE__,__LINE__, MPI_REAL4
        
        if(present(fillval)) then
           call mpi_bcast(1, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-          call mpi_bcast(fillval, 1, {MPITYPE}, ios%compmaster, ios%intercomm, ierr)
+          call mpi_bcast(fillval, 1, MPI_REAL4, ios%compmaster, ios%intercomm, ierr)
        else
           call mpi_bcast(0, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        end if
        if(debugasync) print *,__PIO_FILE__,__LINE__
     endif
-
-       select case(File%iotype)
-       case(pio_iotype_vdc2)
+       if(File%iotype .EQ. pio_iotype_vdc2) then
           call write_vdc2_real(File, Vardesc, iodesc, array, iostat)
+       end if
 #endif
   end subroutine write_darray_1d_vdc
 
@@ -179,11 +179,9 @@ contains
        if(DebugAsync) print *,__PIO_FILE__,__LINE__
        if(ios%comp_rank==0) call mpi_send(msg, 1, mpi_integer, ios%ioroot, 1, ios%union_comm, ierr)
        call mpi_bcast(file%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%varid, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%rec, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(iodesc%async_id, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast({MPITYPE}, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       if(DebugAsync) print *,__PIO_FILE__,__LINE__, {MPITYPE}       
+       call mpi_bcast(MPI_REAL4, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       if(DebugAsync) print *,__PIO_FILE__,__LINE__, MPI_REAL4
     endif
 
     select case(File%iotype)

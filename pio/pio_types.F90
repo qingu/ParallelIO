@@ -189,7 +189,7 @@ module pio_types
 #ifdef SEQUENCE
 	sequence
 #endif	
-	character(len=*) :: name
+	character(len=50) :: name
 	integer(i4)     :: ts, lod, reflevel
 	integer(i4)     :: type
     end type 

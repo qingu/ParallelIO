@@ -18,6 +18,9 @@ module nf_mod
 #endif
   use pio_support, only : CheckMPIReturn
   use pio_msg_mod
+#ifdef _COMPRESSION
+  use piovdc
+#endif
 #ifndef NO_MPIMOD
   use mpi ! _EXTERNAL
 #endif
@@ -1756,8 +1759,8 @@ contains
        
        call mpi_bcast(nlen, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(name, nlen, mpi_character, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%ndims, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(dimids, vardesc%ndims, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       call mpi_bcast(3, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       call mpi_bcast(dimids, 3, mpi_integer, ios%compmaster, ios%intercomm, ierr)
     endif
     if(ios%IOproc) then
        select case(iotype)
@@ -1770,9 +1773,6 @@ contains
 
        end select
     endif
-    if(ios%async_interface  .or. ios%num_tasks> ios%num_iotasks) then  
-       call MPI_BCAST(vardesc%varid, 1, MPI_INTEGER, ios%Iomaster, ios%my_Comm, ierr)
-    end if
 #endif
   end function def_var_md_vdc
 

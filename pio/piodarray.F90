@@ -8,7 +8,7 @@ module piodarray
   use pio_types, only : file_desc_t, io_desc_t, var_desc_t, pio_noerr, iosystem_desc_t, &
 	pio_iotype_pbinary, pio_iotype_binary, pio_iotype_direct_pbinary, &
 	pio_iotype_netcdf, pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, &
-        PIO_MAX_VAR_DIMS, pio_iotype_vdc2
+        PIO_MAX_VAR_DIMS, pio_iotype_vdc2, vdc_var_desc_t
   use pio_kinds
   use pio_support
   use pionfwrite_mod, only : write_nf
@@ -16,6 +16,9 @@ module piodarray
   use iompi_mod
   use alloc_mod
   use rearrange
+#ifdef _COMPRESSION
+  use piovdc
+#endif
 #ifdef TIMING
   use perf_mod, only : t_startf, t_stopf   !_EXTERNAL
 #endif
@@ -33,7 +36,7 @@ module piodarray
 !! @defgroup PIO_write_darray PIO_write_darray
 !! @brief The overloaded PIO_write_darray writes a distributed array to disk.
 !<
-# 32 "piodarray.F90.in"
+# 35 "piodarray.F90.in"
   interface PIO_write_darray
 ! TYPE real,int,double
 ! DIMS 1,2,3,4,5,6,7
@@ -104,10 +107,10 @@ module piodarray
 
 !> 
 !! @defgroup PIO_read_darray PIO_read_darray
-# 42 "piodarray.F90.in"
+# 45 "piodarray.F90.in"
 !! @brief The overloaded PIO_read_darray function reads a distributed array from disk.
 !<
-# 44 "piodarray.F90.in"
+# 47 "piodarray.F90.in"
   interface PIO_read_darray
 ! TYPE real,int,double
 ! DIMS 1,2,3,4,5,6,7
@@ -180,7 +183,7 @@ module piodarray
 !<
   character(len=*), parameter, private  :: modName='piodarray'
 
-# 56 "piodarray.F90.in"
+# 59 "piodarray.F90.in"
 contains
 
 ! TYPE real
@@ -196,7 +199,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 71 "piodarray.F90.in"
+# 74 "piodarray.F90.in"
   subroutine write_darray_1d_vdc (File,varDesc,ioDesc, array, iostat, fillval)
     use pio_msg_mod, only : pio_msg_writedarray
     ! !DESCRIPTION:
@@ -234,25 +237,22 @@ contains
        if(debugasync) print *,__PIO_FILE__,__LINE__
        if(ios%comp_rank==0) call mpi_send(msg, 1, mpi_integer, ios%ioroot, 1, ios%union_comm, ierr)
        call mpi_bcast(file%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%varid, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%rec, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%ndims, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       call mpi_bcast(3, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(iodesc%async_id, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast({MPITYPE}, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       if(debugasync) print *,__PIO_FILE__,__LINE__, {MPITYPE}
+       call mpi_bcast(MPI_REAL4, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       if(debugasync) print *,__PIO_FILE__,__LINE__, MPI_REAL4
        
        if(present(fillval)) then
           call mpi_bcast(1, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-          call mpi_bcast(fillval, 1, {MPITYPE}, ios%compmaster, ios%intercomm, ierr)
+          call mpi_bcast(fillval, 1, MPI_REAL4, ios%compmaster, ios%intercomm, ierr)
        else
           call mpi_bcast(0, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        end if
        if(debugasync) print *,__PIO_FILE__,__LINE__
     endif
-
-       select case(File%iotype)
-       case(pio_iotype_vdc2)
+       if(File%iotype .EQ. pio_iotype_vdc2) then
           call write_vdc2_real(File, Vardesc, iodesc, array, iostat)
+       end if
 #endif
   end subroutine write_darray_1d_vdc
 
@@ -309,11 +309,9 @@ contains
        if(DebugAsync) print *,__PIO_FILE__,__LINE__
        if(ios%comp_rank==0) call mpi_send(msg, 1, mpi_integer, ios%ioroot, 1, ios%union_comm, ierr)
        call mpi_bcast(file%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%varid, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(vardesc%rec, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(iodesc%async_id, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast({MPITYPE}, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       if(DebugAsync) print *,__PIO_FILE__,__LINE__, {MPITYPE}       
+       call mpi_bcast(MPI_REAL4, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+       if(DebugAsync) print *,__PIO_FILE__,__LINE__, MPI_REAL4
     endif
 
     select case(File%iotype)
@@ -338,7 +336,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 211 "piodarray.F90.in"
+# 209 "piodarray.F90.in"
   subroutine write_darray_1d_real (File,varDesc,ioDesc, array, iostat, fillval)
     use pio_msg_mod, only : pio_msg_writedarray
     ! !DESCRIPTION:
@@ -426,7 +424,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 211 "piodarray.F90.in"
+# 209 "piodarray.F90.in"
   subroutine write_darray_1d_int (File,varDesc,ioDesc, array, iostat, fillval)
     use pio_msg_mod, only : pio_msg_writedarray
     ! !DESCRIPTION:
@@ -514,7 +512,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 211 "piodarray.F90.in"
+# 209 "piodarray.F90.in"
   subroutine write_darray_1d_double (File,varDesc,ioDesc, array, iostat, fillval)
     use pio_msg_mod, only : pio_msg_writedarray
     ! !DESCRIPTION:
@@ -601,7 +599,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_2d_real (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -622,7 +620,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_real (File, varDesc, iodesc, dumbvar, iostat)
@@ -648,7 +646,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_3d_real (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -669,7 +667,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_real (File, varDesc, iodesc, dumbvar, iostat)
@@ -695,7 +693,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_4d_real (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -716,7 +714,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_real (File, varDesc, iodesc, dumbvar, iostat)
@@ -742,7 +740,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_5d_real (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -763,7 +761,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_real (File, varDesc, iodesc, dumbvar, iostat)
@@ -789,7 +787,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_6d_real (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -810,7 +808,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_real (File, varDesc, iodesc, dumbvar, iostat)
@@ -836,7 +834,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_7d_real (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -857,7 +855,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_real (File, varDesc, iodesc, dumbvar, iostat)
@@ -883,7 +881,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_2d_int (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -904,7 +902,7 @@ contains
     integer(i4), intent(out) :: iostat
     integer(i4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_int (File, varDesc, iodesc, dumbvar, iostat)
@@ -930,7 +928,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_3d_int (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -951,7 +949,7 @@ contains
     integer(i4), intent(out) :: iostat
     integer(i4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_int (File, varDesc, iodesc, dumbvar, iostat)
@@ -977,7 +975,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_4d_int (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -998,7 +996,7 @@ contains
     integer(i4), intent(out) :: iostat
     integer(i4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_int (File, varDesc, iodesc, dumbvar, iostat)
@@ -1024,7 +1022,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_5d_int (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1045,7 +1043,7 @@ contains
     integer(i4), intent(out) :: iostat
     integer(i4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_int (File, varDesc, iodesc, dumbvar, iostat)
@@ -1071,7 +1069,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_6d_int (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1092,7 +1090,7 @@ contains
     integer(i4), intent(out) :: iostat
     integer(i4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_int (File, varDesc, iodesc, dumbvar, iostat)
@@ -1118,7 +1116,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_7d_int (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1139,7 +1137,7 @@ contains
     integer(i4), intent(out) :: iostat
     integer(i4) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_int (File, varDesc, iodesc, dumbvar, iostat)
@@ -1165,7 +1163,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_2d_double (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1186,7 +1184,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r8) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_double (File, varDesc, iodesc, dumbvar, iostat)
@@ -1212,7 +1210,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_3d_double (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1233,7 +1231,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r8) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_double (File, varDesc, iodesc, dumbvar, iostat)
@@ -1259,7 +1257,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_4d_double (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1280,7 +1278,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r8) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_double (File, varDesc, iodesc, dumbvar, iostat)
@@ -1306,7 +1304,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_5d_double (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1327,7 +1325,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r8) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_double (File, varDesc, iodesc, dumbvar, iostat)
@@ -1353,7 +1351,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_6d_double (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1374,7 +1372,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r8) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_double (File, varDesc, iodesc, dumbvar, iostat)
@@ -1400,7 +1398,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 297 "piodarray.F90.in"
+# 295 "piodarray.F90.in"
   subroutine write_darray_7d_double (File,varDesc,ioDesc, array, iostat, fillval)
     ! !INPUT PARAMETERS:
 
@@ -1421,7 +1419,7 @@ contains
     integer(i4), intent(out) :: iostat
     real(r8) :: transvar(1), dumbvar(0)
 
-# 317 "piodarray.F90.in"
+# 315 "piodarray.F90.in"
 ! cannot call transfer function with a 0 sized array
     if(size(array)==0) then
        call write_darray_1d_double (File, varDesc, iodesc, dumbvar, iostat)
@@ -1445,7 +1443,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 340 "piodarray.F90.in"
+# 338 "piodarray.F90.in"
   subroutine read_darray_1d_real (File,varDesc, ioDesc, array, iostat)
     use pio_msg_mod, only : pio_msg_readdarray
     ! !DESCRIPTION:
@@ -1515,7 +1513,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 340 "piodarray.F90.in"
+# 338 "piodarray.F90.in"
   subroutine read_darray_1d_int (File,varDesc, ioDesc, array, iostat)
     use pio_msg_mod, only : pio_msg_readdarray
     ! !DESCRIPTION:
@@ -1585,7 +1583,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 340 "piodarray.F90.in"
+# 338 "piodarray.F90.in"
   subroutine read_darray_1d_double (File,varDesc, ioDesc, array, iostat)
     use pio_msg_mod, only : pio_msg_readdarray
     ! !DESCRIPTION:
@@ -1656,7 +1654,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_2d_real (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1695,7 +1693,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_3d_real (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1734,7 +1732,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_4d_real (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1773,7 +1771,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_5d_real (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1812,7 +1810,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_6d_real (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1851,7 +1849,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_7d_real (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1890,7 +1888,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_2d_int (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1929,7 +1927,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_3d_int (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -1968,7 +1966,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_4d_int (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2007,7 +2005,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_5d_int (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2046,7 +2044,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_6d_int (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2085,7 +2083,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_7d_int (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2124,7 +2122,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_2d_double (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2163,7 +2161,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_3d_double (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2202,7 +2200,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_4d_double (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2241,7 +2239,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_5d_double (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2280,7 +2278,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_6d_double (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2319,7 +2317,7 @@ contains
 !! @param array  : The read data  
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 410 "piodarray.F90.in"
+# 408 "piodarray.F90.in"
   subroutine read_darray_7d_double (File,varDesc,ioDesc, array, iostat)
     ! !INPUT PARAMETERS:
 
@@ -2357,7 +2355,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<
-# 447 "piodarray.F90.in"
+# 445 "piodarray.F90.in"
   subroutine write_darray_nf_real (File,varDesc,ioDesc,array, iostat, fillval)
 
     ! !DESCRIPTION:
@@ -2584,7 +2582,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<
-# 447 "piodarray.F90.in"
+# 445 "piodarray.F90.in"
   subroutine write_darray_nf_int (File,varDesc,ioDesc,array, iostat, fillval)
 
     ! !DESCRIPTION:
@@ -2811,7 +2809,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<
-# 447 "piodarray.F90.in"
+# 445 "piodarray.F90.in"
   subroutine write_darray_nf_double (File,varDesc,ioDesc,array, iostat, fillval)
 
     ! !DESCRIPTION:
@@ -3038,7 +3036,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 673 "piodarray.F90.in"
+# 671 "piodarray.F90.in"
   subroutine write_darray_bin_real(File,varDesc,ioDesc,array, iostat, fillval)
 
     ! !DESCRIPTION:
@@ -3223,7 +3221,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 673 "piodarray.F90.in"
+# 671 "piodarray.F90.in"
   subroutine write_darray_bin_int(File,varDesc,ioDesc,array, iostat, fillval)
 
     ! !DESCRIPTION:
@@ -3408,7 +3406,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-# 673 "piodarray.F90.in"
+# 671 "piodarray.F90.in"
   subroutine write_darray_bin_double(File,varDesc,ioDesc,array, iostat, fillval)
 
     ! !DESCRIPTION:
@@ -3593,7 +3591,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 857 "piodarray.F90.in"
+# 855 "piodarray.F90.in"
   subroutine read_darray_nf_real (File,varDesc,ioDesc,array, iostat)
     !
     ! !DESCRIPTION:
@@ -3784,7 +3782,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 857 "piodarray.F90.in"
+# 855 "piodarray.F90.in"
   subroutine read_darray_nf_int (File,varDesc,ioDesc,array, iostat)
     !
     ! !DESCRIPTION:
@@ -3975,7 +3973,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 857 "piodarray.F90.in"
+# 855 "piodarray.F90.in"
   subroutine read_darray_nf_double (File,varDesc,ioDesc,array, iostat)
     !
     ! !DESCRIPTION:
@@ -4166,7 +4164,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 1047 "piodarray.F90.in"
+# 1045 "piodarray.F90.in"
   subroutine read_darray_bin_real (File,varDesc,ioDesc,array, iostat)
     !
     ! !DESCRIPTION:
@@ -4336,7 +4334,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 1047 "piodarray.F90.in"
+# 1045 "piodarray.F90.in"
   subroutine read_darray_bin_int (File,varDesc,ioDesc,array, iostat)
     !
     ! !DESCRIPTION:
@@ -4506,7 +4504,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-# 1047 "piodarray.F90.in"
+# 1045 "piodarray.F90.in"
   subroutine read_darray_bin_double (File,varDesc,ioDesc,array, iostat)
     !
     ! !DESCRIPTION:
@@ -4665,7 +4663,7 @@ contains
   end subroutine read_darray_bin_double
 
 ! TYPE real
-# 1205 "piodarray.F90.in"
+# 1203 "piodarray.F90.in"
  subroutine write_vdc2_real(File,varDesc,ioDesc,array, iostat)
     use pio_support, only : piodie
     ! !DESCRIPTION:
@@ -4758,7 +4756,7 @@ contains
   end subroutine write_vdc2_real
 
 ! TYPE real
-# 1297 "piodarray.F90.in"
+# 1295 "piodarray.F90.in"
 subroutine read_vdc2_real(File,varDesc,ioDesc,array, iostat)
     use pio_support, only : piodie
     ! !DESCRIPTION:

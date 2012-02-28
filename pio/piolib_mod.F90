@@ -1310,12 +1310,18 @@ contains
 !! @param rearr @copydoc PIO_rearr_method
 !! @param iosystem a derived type which can be used in subsequent pio operations (defined in PIO_types).
 !! @param base @em optional argument can be used to offset the first io task - default base is task 1.
+!! @param dims @optional argument that indicates to PIO that compression should be setup, represents comp grid size
+!! @param bsize @optional argument that indicates to PIO that compression should be setup, represents block size
 !<
   subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base, dims, bsize)
     use pio_types, only : pio_internal_error, pio_rearr_none
     integer(i4), intent(in) :: comp_rank
     integer(i4), intent(in) :: comp_comm
+#ifdef _COMPRESSION
+    integer(i4), intent(inout) :: num_iotasks
+#else
     integer(i4), intent(in) :: num_iotasks 
+#endif
     integer(i4), intent(in) :: num_aggregator
     integer(i4), intent(in) :: stride
     integer(i4), intent(in) :: rearr
@@ -1346,7 +1352,7 @@ contains
 #endif
 
 #ifdef _COMPRESSION
-    call init_vdc2(comp_rank, dims, bsize, vdc_iostart, vdc_iocount, num_ioprocs)
+    call init_vdc2(comp_rank, dims, bsize, vdc_iostart, vdc_iocount, num_iotasks)
     vdc_dims = dims
     vdc_bsize = bsize
 #endif
@@ -2176,14 +2182,14 @@ contains
        if(debug) print *,__PIO_FILE__,__LINE__,' open: ', trim(myfname), amode
        ierr = create_nf(file,trim(myfname), amode)	
        if(debug .and. iosystem%io_rank==0)print *,__PIO_FILE__,__LINE__,' open: ', myfname, file%fh
-#ifdef _COMPRESSION
-    case(pio_iotype_vdc2)
-	  if(ios%comp_rank .eq. ios%compmaster) then
-	  	call createvdf(vdc_dims, vdc_bsize, fname)
-	  endif
-#endif
     case(pio_iotype_binary)
        print *,'createfile: io type not supported'
+#ifdef _COMPRESSION
+    case(pio_iotype_vdc2)
+      if(iosystem%comp_rank == iosystem%compmaster) then
+  	call createvdf(vdc_dims, vdc_bsize, fname)
+	end if	
+#endif
     end select
     if(ierr==0) file%file_is_open=.true.
 
