@@ -1709,12 +1709,11 @@ contains
 !! @param vdc_desc @copydoc vdc_var_desc_t
 !! @retval ierr @copydoc error_return
 !<
-  integer function def_var_md_vdc(File,name,type,dimids,vardesc, ts, lod, reflevel) result(ierr)
+  integer function def_var_md_vdc(File,name,type, vardesc, ts, lod, reflevel) result(ierr)
 
     type (File_desc_t), intent(in)  :: File
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
-    integer, intent(in)             :: dimids(:)
     integer, intent(in)		    :: ts
     integer, intent(in), optional   :: lod
     integer, intent(in), optional   :: reflevel
@@ -1760,7 +1759,6 @@ contains
        call mpi_bcast(nlen, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(name, nlen, mpi_character, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(3, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
-       call mpi_bcast(dimids, 3, mpi_integer, ios%compmaster, ios%intercomm, ierr)
     endif
     if(ios%IOproc) then
        select case(iotype)
