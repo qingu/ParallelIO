@@ -1,42 +1,46 @@
 program Test_Lib
 	use pio
 	use pio_kinds
-	use piovdc
+	!use piovdc
 	implicit none
 	
 	include 'mpif.h'
-	type (Var_desc_t)	:: var_handle, var_handle_no_comp
-	character		:: vdf_path*100, binary_path*100, var*50
+	type (Var_desc_t)	:: var_handle_no_comp
+	type (VDC_Var_desc_t)	:: var_handle
+	character		:: vdf_path*100, binary_path*100
 	type (File_desc_t)	:: file_handle, file_handle_no_comp
 	type (IOsystem_desc_t)	:: iosystem
 	type (io_desc_t)	:: iodesc
-	integer(i4)		:: rank, ierr, iostat,  dim_ids(3), nioprocs, nprocs, dims(3), dpp, n, bsize
+	integer(i4)		:: rank, ierr, iostat,  dim_ids(3), nioprocs, nprocs, dims(3), dpp, n, bsize(3)
 	integer(i4),allocatable		:: compdof(:)
-	integer(kind=PIO_OFFSET) :: iocount(3), iostart(3)
 	real (r4),  allocatable :: array(:), read_array(:)
 #ifdef 	DEBUG
-	double precision	:: start, end
+	double precision	:: start, end, temp
 #endif
+	
+	!set locals for vdc compression
+	dims = (/2048, 2048, 2048/)
+	vdf_path = '/lustre/janus_scratch/ypolius/piovdc/libbench.vdf'
+	binary_path = '/lustre/janus_scratch/ypolius/piovdc/benchdata.nc'
+	nioprocs = 64
+	
+	!call PIO_SetDebugLevel(1)
 
-
-	vdf_path = '/ptmp/ypolius/Data/libbench.vdf' //CHAR(0)
-	binary_path = '/ptmp/ypolius/Data/benchdata.nc'
-	var = 'vx' // CHAR(0)
-
-	nioprocs = 32
+	call MPI_init(ierr)
+	call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
 
 #ifdef DEBUG
 	if(rank .eq. 0 ) then
 	    print *, 'Initiating PIO...'
 	endif
 #endif
-	dims = (/1024, 1024, 1024/)
-	bsize = (/64, 64, 64)
-	call PIO_init(rank, MPI_COMM_WORLD, nioprocs, nioprocs, 1, PIO_rearr_box, iosystem, 0, dims, bsize)		
+
+	call PIO_init(rank, MPI_COMM_WORLD, nioprocs, nioprocs, 1, PIO_rearr_box, iosystem, 0, dims)		
+
 
 #ifdef DEBUG
 	if(rank .eq. 0 ) then
-	    print *, 'PIO Initiated'
+	    print *, 'PIO Initiated procs: ', nioprocs
 	endif
 #endif
 	call MPI_COMM_SIZE(MPI_COMM_WORLD, nprocs, ierr)
@@ -96,24 +100,22 @@ program Test_Lib
 	call PIO_initdecomp(iosystem, PIO_real, dims, compdof, iodesc)
 
 #ifdef DEBUG
-	print *, 'Decomp initialized'
-#endif
-
-#ifdef DEBUG
-	end = MPI_WTIME()
-	print *, 'Got time, writing darray'
-#endif
-
-#ifdef DEBUG
 	if(rank .eq. 0) then 
 	    print *, 'Decomposition initialized'
-	    print *, 'Opening var for writing...(vx0)'
+	    print *, 'Creating vdf file'
 	endif
+        print *, 'Rank: ', rank, 'Decomposition rearrangment runtime: ' , MPI_WTIME() - start
 #endif
 	ierr = PIO_CreateFile(iosystem, file_handle, PIO_iotype_vdc2, vdf_path, PIO_clobber)
 
+#ifdef DEBUG
+	if(rank .eq. 0) then 
+	    print *, 'VDF file created'
+	    print *, 'Opening vdf var for writing...(vx0)'
+	endif
+#endif
 	!VDC WRITING DOES NOT REQUIRE CREATING DIMS, THERE ARE ALWAYS 3, dims = (/x, y, z/)
-	iostat = PIO_def_var(file_handle, 'vx', PIO_real,var_handle, 0, -1, -1)
+	iostat = PIO_def_var(file_handle, 'vx' , PIO_real,var_handle)
 
 #ifdef DEBUG
 	if(rank .eq. 0 ) then
@@ -121,32 +123,28 @@ program Test_Lib
 	endif
 #endif
 
-	call PIO_write_darray(file_handle, var_handle, iodesc,  array, iostat)
+	ierr = PIO_enddef(file_handle)
 
 #ifdef DEBUG
 	if(rank .eq. 0 ) then
-	    print *, 'Wrote data array'
+	    print *, 'Ended VDF definition'
 	endif
+	start = MPI_WTIME()
 #endif
 
-#ifdef DEBUG
-	print *, 'Rank: ', rank, ' vdc write time: ', MPI_WTIME() - end
-	print *, 'Rank: ', rank, 'Decomposition rearrangment runtime: ' , end - start
-#endif
+	call PIO_write_darray(file_handle, var_handle, iodesc,  array, iostat, 0)
 
 #ifdef DEBUG
-	print *, 'Rank: ', rank, 'Aggregate runtime: ' , MPI_WTIME() - start
+	print *, 'Rank: ', rank, ' vdc write time: ', MPI_WTIME() - start
 #endif
 
 #ifdef DEBUG
 	if(rank .eq. 0) then
 		print *, 'Attempting to read back data'
 	endif
-#endif
-#ifdef DEBUG
 	start = MPI_WTIME()
 #endif
-	call PIO_read_darray(file_handle, var_handle, iodesc,  read_array, iostat)
+	call PIO_read_darray(file_handle, var_handle, iodesc,  read_array, iostat, 0)
 
 #ifdef DEBUG
 	print *, 'Rank: ', rank, ' vdc read time: ' , MPI_WTIME() - start
@@ -165,15 +163,9 @@ program Test_Lib
 	call pio_write_darray(file_handle_no_comp, var_handle_no_comp, iodesc, array, iostat)
 
 #ifdef DEBUG
-	if(rank .eq. 0) then
-		print *, 'Pure NC write_darray runtime: ' , MPI_WTIME() - start
-	endif
-#endif
 
-#ifdef DEBUG
-	if(rank .eq. 0 ) then
-	    print *, 'Wrote data array'
-	end if
+	print *, 'Rank: ', rank , ' pure NC write_darray runtime: ' , MPI_WTIME() - start
+
 #endif
 
 	!clean up PIO and MPI
