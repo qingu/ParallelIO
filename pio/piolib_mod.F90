@@ -936,14 +936,17 @@ contains
     internal_compdof = int(compdof,kind=pio_offset)
     
     if(present(iostart) .and. present(iocount) ) then
-       call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc, iostart, iocount)
+       call pio_initdecomp_dof_i8(iosystem, basepiotype, dims, internal_compdof, iodesc, iostart, iocount)
 #ifdef _COMPRESSION
     else 
-  	call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc, vdc_iostart, vdc_iocount)
+	if(debug) then
+		print *, 'pio_initdecomp iostart: ' , vdc_iostart, ' iocount: ', vdc_iocount
+	endif
+  	call pio_initdecomp_dof_i8(iosystem, basepiotype, dims, internal_compdof, iodesc, vdc_iostart, vdc_iocount)
     endif
 #else
     else
-       call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc)
+       call pio_initdecomp_dof_i8(iosystem, basepiotype, dims, internal_compdof, iodesc)
     endif
 #endif
     deallocate(internal_compdof)
@@ -1021,7 +1024,7 @@ contains
 
     if(DebugAsync) print*,__PIO_FILE__,__LINE__
     piotype=PIO_type_to_mpi_type(basepiotype)
-       
+
     !-------------------------------------------
     ! for testing purposes set the iomap
     ! (decompmap_t) to something basic for
@@ -1034,6 +1037,7 @@ contains
        print *,__PIO_FILE__,__LINE__,'mem=',rss
     end if
 #endif
+
     userearranger = iosystem%userearranger
     !---------------------
     ! number of dimensions
@@ -1043,9 +1047,9 @@ contains
     ! total global size
     !---------------------
     glength= product(int(dims,kind=PIO_OFFSET))
-    if(glength > int(huge(i),kind=pio_offset)) then
-       call piodie( __PIO_FILE__,__LINE__, &
-            'requested array size too large for this interface ')       
+    if(glength > huge(int(i,kind=pio_offset))) then !not sure if this works, glength is pio_offset, if its > pio_offset range then 
+       call piodie( __PIO_FILE__,__LINE__, & !it will simply wrap around rather than be > max_int(pio_offset)
+            'requested array size too large for this interface ') !might be better to use a temp 8 byte int to store results of dims product and compare to the maxint(pio_offset)       
     endif
 
        
@@ -1070,6 +1074,9 @@ contains
                'both optional parameters start and count must be provided')
 #ifdef _COMPRESSION
        else
+	if(debug) then
+		print *, 'pio_initdecomp iostart: ' , vdc_iostart, ' iocount: ', vdc_iocount
+	endif
 	  iodesc%start = vdc_iostart
 	  iodesc%count = vdc_iocount
  	endif
@@ -1134,6 +1141,7 @@ contains
        if(DebugAsync) print*,__PIO_FILE__,__LINE__
        call rearrange_create( iosystem,compdof,dims,ndims,iodesc)
     endif
+
     if(DebugAsync) print*,__PIO_FILE__,__LINE__
 #ifdef MEMCHK	
     call get_memusage(msize, rss, mshare, mtext, mstack)
@@ -1142,7 +1150,7 @@ contains
        print *,__PIO_FILE__,__LINE__,'mem=',rss
     end if
 #endif
-    
+
     !---------------------------------------------
     !  the setup for the mpi-io type information 
     !---------------------------------------------
@@ -1162,7 +1170,7 @@ contains
        iodesc%write%elemtype = mpi_datatype_null
        iodesc%write%filetype = mpi_datatype_null
     endif
-    
+
 #ifdef MEMCHK	
     call get_memusage(msize, rss, mshare, mtext, mstack)
     if(rss>lastrss) then
@@ -1179,7 +1187,7 @@ contains
 !       print *, __PIO_FILE__,__LINE__,iodesc%write%filetype,iodesc%write%elemtype,&
 !            iodesc%write%n_elemtype,iodesc%write%n_words
 !    end if
-    
+
     if (iosystem%ioproc) then
        call dealloc_check(displace)
     endif
@@ -1313,7 +1321,7 @@ contains
 !! @param dims @optional argument that indicates to PIO that compression should be setup, represents comp grid size
 !! @param bsize @optional argument that indicates to PIO that compression should be setup, represents block size
 !<
-  subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base, dims, bsize)
+  subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base, dims, bsize, num_ts)
     use pio_types, only : pio_internal_error, pio_rearr_none
     integer(i4), intent(in) :: comp_rank
     integer(i4), intent(in) :: comp_comm
@@ -1326,8 +1334,12 @@ contains
     integer(i4), intent(in) :: stride
     integer(i4), intent(in) :: rearr
     type (iosystem_desc_t), intent(out)  :: iosystem  ! io descriptor to initalize
-    integer(i4), intent(in),optional :: base, dims(3), bsize(3)
 
+    !vdf optionals
+    integer(i4), intent(in),optional :: base
+    integer(i4), intent(in),optional :: dims(3)
+    integer(i4), intent(in), optional:: num_ts, bsize(3)
+    
     integer(i4) :: n_iotasks
     integer(i4) :: length
     integer(i4) :: ngseg,io_rank,i,lbase, io_comm,ierr 
@@ -1352,9 +1364,27 @@ contains
 #endif
 
 #ifdef _COMPRESSION
-    call init_vdc2(comp_rank, dims, bsize, vdc_iostart, vdc_iocount, num_iotasks)
-    vdc_dims = dims
-    vdc_bsize = bsize
+    if(present(dims)) then
+	if(.not. present(bsize)) then
+		vdc_bsize = (/64, 64, 64/) !default bsize of 64^3 if none is given
+	else
+		vdc_bsize = bsize
+	endif
+	if(.not. present(num_ts)) then
+	    	vdc_ts = 10 !default to having 10 timesteps for the vdf
+	else
+		vdc_ts = num_ts
+	endif
+	call init_vdc2(comp_rank, dims, vdc_bsize, vdc_iostart, vdc_iocount, num_iotasks)
+
+	if(debug) then
+		print *, 'rank: ', comp_rank, ' pio_init iostart: ' , vdc_iostart, ' iocount: ', vdc_iocount
+	endif
+
+    	vdc_dims = dims
+    else
+       call piodie(__PIO_FILE__,__LINE__,'compression enabled but no dims option passed to init')
+    endif
 #endif
     iosystem%error_handling = PIO_internal_error
     iosystem%union_comm = comp_comm
@@ -2106,6 +2136,9 @@ contains
     character(len=4) :: stripestr
     character(len=9) :: stripestr2
     character(len=char_len)  :: myfname
+#ifdef _COMPRESSION
+    integer :: restart
+#endif
 #ifdef TIMING
     call t_startf("PIO_createfile")
 #endif
@@ -2186,13 +2219,18 @@ contains
        print *,'createfile: io type not supported'
 #ifdef _COMPRESSION
     case(pio_iotype_vdc2)
-      if(iosystem%comp_rank == iosystem%compmaster) then
-  	call createvdf(vdc_dims, vdc_bsize, fname)
-	end if	
+	if(amode == PIO_CLOBBER) then
+		restart = 1
+	  	call createvdf(vdc_dims, vdc_bsize, vdc_ts, restart , TRIM(fname) // CHAR(0))
+	else
+		restart = 0
+	  	call createvdf(vdc_dims, vdc_bsize, vdc_ts, restart , TRIM(fname) // CHAR(0))
+	endif
+
 #endif
     end select
     if(ierr==0) file%file_is_open=.true.
-
+	
     if(debug .and. file%iosystem%io_rank==0) print *,__PIO_FILE__,__LINE__,'open: ',file%fh, myfname
 
 #ifdef TIMING

@@ -71,7 +71,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<  
-  subroutine write_darray_1d_vdc (File,varDesc,ioDesc, array, iostat, fillval)
+  subroutine write_darray_1d_vdc (File,varDesc,ioDesc, array, iostat, ts, fillval, lod, reflevel)
     use pio_msg_mod, only : pio_msg_writedarray
     ! !DESCRIPTION:
     !  Writes a 2-d slab of TYPE to a netcdf file.
@@ -95,12 +95,26 @@ contains
 
     real(r4), optional, intent(in) :: fillval    ! rearrange receiver fill value
     type(iosystem_desc_t), pointer :: ios
+    integer(i4), intent(in) :: ts
+    integer(i4), intent(inout), optional :: lod, reflevel
 
     integer(i4), intent(out) :: iostat
     integer :: msg, ierr
 
     character(len=*), parameter :: subName=modName//'::write_darray_vdc_real'
 #ifdef _COMPRESSION
+    if(present(lod)) then
+        vardesc%lod = lod
+    else
+	vardesc%lod = -1
+    endif
+    
+    if(present(reflevel)) then
+    	vardesc%reflevel = reflevel
+    else
+	vardesc%reflevel = -1
+    endif
+    vardesc%ts = ts
     ios => file%iosystem
     if(ios%async_interface .and. .not. ios%ioproc) then
        msg = PIO_MSG_WRITEDARRAY
@@ -139,7 +153,7 @@ contains
 !! @param array  : The read data
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !<
-  subroutine read_darray_1d_vdc (File,varDesc, ioDesc, array, iostat)
+  subroutine read_darray_1d_vdc (File,varDesc, ioDesc, array, iostat, ts, lod, reflevel)
     use pio_msg_mod, only : pio_msg_readdarray
     ! !DESCRIPTION:
     !  Reads a 2-d slab of TYPE to a netcdf file.
@@ -164,12 +178,26 @@ contains
     integer(i4), intent(out) :: iostat
 
     character(len=*), parameter :: subName=modName//'::read_darray_vdc'
+
+    integer(i4), intent(in) :: ts
+    integer(i4), intent(inout), optional :: lod, reflevel
 	
     type(iosystem_desc_t), pointer :: ios
     integer :: ierr, msg
 
 #ifdef _COMPRESSION
-
+    if(present(lod)) then
+        vardesc%lod = lod
+    else
+	vardesc%lod = -1
+    endif
+    
+    if(present(reflevel)) then
+    	vardesc%reflevel = reflevel
+    else
+	vardesc%reflevel = -1
+    endif
+    vardesc%ts = ts
     array = 0	
     ios => File%iosystem
 

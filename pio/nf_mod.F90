@@ -1419,7 +1419,7 @@ contains
 
 #ifdef _COMPRESSION
        case(pio_iotype_vdc2)
-	  if(ios%comp_rank .eq. ios%compmaster) then
+	  if(ios%comp_rank .eq. 0) then
 		  call endvdfdef
 	  endif
 
@@ -1709,14 +1709,12 @@ contains
 !! @param vdc_desc @copydoc vdc_var_desc_t
 !! @retval ierr @copydoc error_return
 !<
-  integer function def_var_md_vdc(File,name,type, vardesc, ts, lod, reflevel) result(ierr)
+  integer function def_var_md_vdc(File,name,type, vardesc) result(ierr)
 
     type (File_desc_t), intent(in)  :: File
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
-    integer, intent(in)		    :: ts
-    integer, intent(in), optional   :: lod
-    integer, intent(in), optional   :: reflevel
+
     type (vdc_var_desc_t), intent(inout) :: vardesc
     type(iosystem_desc_t), pointer :: ios
     !------------------
@@ -1732,19 +1730,8 @@ contains
     ierr=PIO_noerr
 
     vardesc%type = type
-    vardesc%ts = ts
-    vardesc%name = TRIM(name)
-    if(present(lod)) then
-        vardesc%lod = lod
-    else
-	vardesc%lod = -1
-    endif
-    
-    if(present(reflevel)) then
-    	vardesc%reflevel = reflevel
-    else
-	vardesc%reflevel = -1
-    endif
+
+    vardesc%name = TRIM(name // CHAR(0))
 
     ios => file%iosystem
     nlen = len_trim(name)
@@ -1764,7 +1751,7 @@ contains
        select case(iotype)
        case(pio_iotype_vdc2)
 	  if(ios%comp_rank .eq. ios%compmaster) then
-	  	  call defvdfvar(TRIM(name))
+	  	  call defvdfvar(TRIM(name) // CHAR(0))
 	  endif
        case default
           call bad_iotype(iotype,__PIO_FILE__,__LINE__)
