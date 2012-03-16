@@ -11,8 +11,9 @@ program Test_Lib
 	type (File_desc_t)	:: file_handle, file_handle_no_comp
 	type (IOsystem_desc_t)	:: iosystem
 	type (io_desc_t)	:: iodesc
-	integer(i4)		:: rank, ierr, iostat,  dim_ids(3), nioprocs, nprocs, dims(3), dpp, n, bsize(3)
-	integer(i4),allocatable		:: compdof(:)
+	integer(i4)		:: rank, ierr, iostat,  dim_ids(3), nioprocs, nprocs, dims(3), n, bsize(3)
+	integer(kind=PIO_Offset) :: dpp
+	integer(kind=PIO_Offset),allocatable		:: compdof(:)
 	real (r4),  allocatable :: array(:), read_array(:)
 #ifdef 	DEBUG
 	double precision	:: start, end, temp
@@ -22,7 +23,7 @@ program Test_Lib
 	dims = (/2048, 2048, 2048/)
 	vdf_path = '/lustre/janus_scratch/ypolius/piovdc/libbench.vdf'
 	binary_path = '/lustre/janus_scratch/ypolius/piovdc/benchdata.nc'
-	nioprocs = 64
+	nioprocs = 256
 	
 	!call PIO_SetDebugLevel(1)
 
@@ -34,7 +35,7 @@ program Test_Lib
 	    print *, 'Initiating PIO...'
 	endif
 #endif
-
+	
 	call PIO_init(rank, MPI_COMM_WORLD, nioprocs, nioprocs, 1, PIO_rearr_box, iosystem, 0, dims)		
 
 
@@ -44,8 +45,9 @@ program Test_Lib
 	endif
 #endif
 	call MPI_COMM_SIZE(MPI_COMM_WORLD, nprocs, ierr)
-
-	dpp = product(dims) / nprocs !INT(temp_dpp)
+	
+	!conversions to PIO_Offset to allow for extremely large dims, ex 2048 x 2048 x 2048
+	dpp = int(dims(1), kind=PIO_Offset) * int(dims(2), kind=PIO_Offset) * int(dims(3), kind=PIO_Offset) / int(nprocs, kind=PIO_Offset)
 	
 	if(allocated(array)) then
 		deallocate(array)
@@ -69,12 +71,12 @@ program Test_Lib
 #ifdef DEBUG	
 	if(rank .eq. 0 ) then
 	    print *, 'Allocated compdof'
-	    print *, 'Filling compdof array...dpp-comp: ', dpp, ' dpp-io: ', product(dims)/nioprocs, ' dims: ' , dims, ' int limit: ' , huge(dims(1))
+	    print *, 'Filling compdof array...dpp-comp: ', dpp, ' dpp-io: ', product(dims)/nioprocs, ' dims: ' , dims, ' int limit: ' , huge(compdof(1)), ' sample calc: ' , product(dims)
 	endif
 #endif
 
 	do n = 1, dpp
-	    compdof(n) =  n + rank * dpp !INT(REAL(n) + REAL(rank) * REAL(dpp))
+	    compdof(n) =  int(n + rank * dpp,kind=pio_offset) !INT(REAL(n) + REAL(rank) * REAL(dpp))
 	    array(n) = 53.0
 		if(compdof(n) .lt. 0) then
 			print *, ' n: ' , n , ' compdof(n): ' , compdof(n), ' array(n): ', array(n)
@@ -83,8 +85,8 @@ program Test_Lib
 
 #ifdef DEBUG
 	if(rank .eq. 0 ) then
-	    print *, 'Filled compdof array'
-	    print *, 'Filled data array'
+	    print *, 'Filled compdof array: ', compdof(1) , '-', compdof(2)
+	    print *, 'Filled data array: '!, array(1), '-' , array(2)
 	endif
 #endif
 	
@@ -97,7 +99,7 @@ program Test_Lib
 #ifdef DEBUG
 	start = MPI_WTIME()
 #endif
-	call PIO_initdecomp(iosystem, PIO_real, dims, compdof, iodesc)
+	call PIO_initdecomp(iosystem, PIO_real, dims, compdof, iodesc) !no iostart/count necessary if using compressed files
 
 #ifdef DEBUG
 	if(rank .eq. 0) then 
@@ -149,6 +151,8 @@ program Test_Lib
 #ifdef DEBUG
 	print *, 'Rank: ', rank, ' vdc read time: ' , MPI_WTIME() - start
 #endif
+
+	!Setup for UNCOMPRESSED files
 	ierr = PIO_CreateFile(iosystem, file_handle_no_comp, PIO_iotype_pnetcdf, binary_path, PIO_clobber)
 	iostat = PIO_def_dim(file_handle_no_comp, 'z', dims(3), dim_ids(3))
 	iostat = PIO_def_dim(file_handle_no_comp, 'y', dims(2), dim_ids(2))
