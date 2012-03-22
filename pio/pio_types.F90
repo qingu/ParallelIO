@@ -179,7 +179,7 @@ module pio_types
         integer(i4)     :: ndims ! number of dimensions as defined on the netcdf file.
     end type 
 
-#ifdef _COMPRESSION
+
 !>
 !! @public
 !! @struct VDC_var_desc_t VDC_var_desc_t
@@ -193,7 +193,7 @@ module pio_types
 	integer(i4)     :: ts, lod, reflevel
 	integer(i4)     :: type
     end type 
-#endif
+
 
 !>
 !! @defgroup PIO_iotype PIO_iotype
