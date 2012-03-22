@@ -7,7 +7,7 @@ module nf_mod
   use alloc_mod
 
   use pio_kinds, only: i4,r4,r8,pio_offset
-  use pio_types, only: file_desc_t, iosystem_desc_t, var_desc_t, pio_noerr, pio_iotype_netcdf, &
+  use pio_types, only: file_desc_t, iosystem_desc_t, var_desc_t, pio_noerr, pio_iotype_netcdf, vdc_var_desc_t, &
 	pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, pio_max_name
 
   use pio_support, only : Debug, DebugIO, DebugAsync, piodie   
