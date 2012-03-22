@@ -1319,7 +1319,8 @@ contains
 !! @param iosystem a derived type which can be used in subsequent pio operations (defined in PIO_types).
 !! @param base @em optional argument can be used to offset the first io task - default base is task 1.
 !! @param dims @optional argument that indicates to PIO that compression should be setup, represents comp grid size
-!! @param bsize @optional argument that indicates to PIO that compression should be setup, represents block size
+!! @param bsize @optional compression argument that represents block size for the VDC
+!! @param num_ts @optional compression argument that represents the number of timesteps the user have in the VDC
 !<
   subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base, dims, bsize, num_ts)
     use pio_types, only : pio_internal_error, pio_rearr_none
@@ -1335,8 +1336,8 @@ contains
     integer(i4), intent(in) :: rearr
     type (iosystem_desc_t), intent(out)  :: iosystem  ! io descriptor to initalize
 
-    !vdf optionals
     integer(i4), intent(in),optional :: base
+    !vdf optionals
     integer(i4), intent(in),optional :: dims(3)
     integer(i4), intent(in), optional:: num_ts, bsize(3)
     

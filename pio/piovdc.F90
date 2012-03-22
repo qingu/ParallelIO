@@ -1,7 +1,7 @@
 !> @file libpiovdc.F90
 !> @author  Yannick Polius <ypolius@ucar.edu>
 !> @version 1.0
-!> @date 02/08/2012
+!> @date 03/22/2012
 !> @brief The piovdc library for writing Vapor Data Collection (VDC) 2 data files
 !> 
 !> <br>
@@ -11,13 +11,14 @@
 !> data to an on disk VDC2 collection.<br>
 !> PRE-REQUISITES: <br>
 !> 	VDF meta-file must be generated, using either rawtovdf or vdfcreate
+!>	if advanced features (wavelet type, compression ratios, or boundary type) are needed
 !> 	VDF file requires VDC version to be 2, and requires the Waveletname,
 !>	WaveletBoundaryMode, CompressionRations, and NumTransforms to be set.<br>
 !> POST-EFFECTS: <br>
 !>	After a successful write, VDC2 data will be in a directory located in
 !>	the same directory as the vdf file, using the vdf name, appended with _data
 !> 	(ex. ghost.vdf generates VDC2 data in the dir ghost_data in the vdf dir)
-!>	If no compression is enabled, a single, uncompressed .nc file will be 
+!>	If no compression is enabled, a single, uncompressed file will be 
 !>	generated using PIO instead of a VDC
 module piovdc
 	use pio_kinds
@@ -27,9 +28,9 @@ module piovdc
 	integer (kind=PIO_OFFSET)  :: vdc_iostart(3), vdc_iocount(3)	
 contains
 
-!> @brief subroutine checks start/count for out of bounds, adjusts if the start/count is too high, negates start if it is invalid
+!> @brief subroutine checks start/count for out of bounds, adjusts if the start/count is too high, zeroes start if it is invalid
 !> POST-EFFECTS:
-!>	<br>all start/counts are now legal, non-IO tasks have negated start counts
+!>	<br>all start/counts are now legal, non-IO tasks have zeroed start counts
 !> @param[in] global_dims int(3) global grid dimensions
 !> @param[in] rank int rank of current MPI task
 !> @param[inout] start int(3) current MPI task global start
@@ -70,7 +71,7 @@ end subroutine
 !> automatically create an VDC optimized IO decomposition that uses the most possible IO tasks
 !
 !> POST-EFFECTS:
-!>	<br>Each MPI Task is now either and IO task or a computational task. IO tasks have valid start/counts
+!>	<br>Each MPI Task is now either and IO task or a computational task. IO tasks have nonzero start/counts
 !> @param[in] rank int rank of the current MPI task
 !> @param[inout] nioprocs int represents the max possible # of IO procs, algorithm will try to get as close as possible to this # and return it in nioprocs
 !> @param[in] blockdims int(3) global grid dimensions represented as VDC blocks

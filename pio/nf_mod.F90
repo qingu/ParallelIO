@@ -1700,7 +1700,7 @@ contains
 !> 
 !! @public
 !! @ingroup PIO_def_var
-!! @brief Defines the a netcdf variable
+!! @brief Defines a VDC variable, non-thread safe
 !! @details
 !! @param File @copydoc file_desc_t
 !! @param name : The name of the variable to define
@@ -1750,7 +1750,7 @@ contains
     if(ios%IOproc) then
        select case(iotype)
        case(pio_iotype_vdc2)
-	  if(ios%comp_rank .eq. ios%compmaster) then
+	  if(ios%comp_rank .eq. 0) then
 	  	  call defvdfvar(TRIM(name) // CHAR(0))
 	  endif
        case default
