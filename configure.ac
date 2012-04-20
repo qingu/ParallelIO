@@ -50,6 +50,11 @@ AC_HELP_STRING([--enable-timing],
 [Turn on the gptl timing library interface]),
 [USE_TIMING=$enableval],[USE_TIMING=no])
 
+AC_ARG_ENABLE(piocpp,
+AC_HELP_STRING([--enable-piocpp],
+[Build the C++ interfaces to PIO]),
+[BUILD_PIOCPP=$enableval],[BUILD_PIOCPP=no])
+
 AC_ARG_ENABLE(mpiserial,
 AC_HELP_STRING([--enable-mpiserial],
 [Build for use with mpi-serial lib (default no)]),
@@ -490,8 +495,8 @@ fi
 if test "$USE_TIMING" = "yes"
   then
     CPPDEFS=" $CPPDEFS -DTIMING"
-    INCLUDEPATH=" $INCLUDEPATH -I../timing"
-    LDLIBS=" $LDLIBS -L../timing -ltiming"
+    INCLUDEPATH=" $INCLUDEPATH -Itiming"
+    LDLIBS=" $LDLIBS -Ltiming -ltiming"
 fi
 
 
