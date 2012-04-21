@@ -381,7 +381,7 @@ if test "$USE_NETCDF" = "yes"
 
        CPPDEFS=" $CPPDEFS -D_NETCDF $NETCDF_CPPFLAGS"
        FCFLAGS=" $FCFLAGS $NETCDF_FCFLAGS"
-       LDLIBS=" $LDLIBS $NETCDF_LDFLAGS $NETCDF_LIBS "
+       LDLIBS=" $NETCDF_LDFLAGS $NETCDF_LIBS $LDLIBS"
 
        if test ! -f $NETCDF_PATH/include/netcdf.mod && \
           test ! -f $NETCDF_PATH/include/NETCDF.mod
@@ -405,7 +405,7 @@ if test "$USE_NETCDF4" = "yes"
      then
      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$NETCDF_PATH/lib/pkgconfig/"
      PKG_CHECK_MODULES([NETCDF4], netcdf)
-     LDLIBS=" $LDLIBS $NETCDF4_LIBS"
+     LDLIBS=" $NETCDF4_LIBS $LDLIBS"
    else
      # Did the user specify a location for the HDF5 library?
      AC_MSG_CHECKING([whether a location for the HDF5 library was specified])
@@ -480,7 +480,7 @@ if test "$USE_PNETCDF" = "yes"
        AC_MSG_CHECKING([for pnetcdf])
         CPPDEFS="$CPPDEFS -D_PNETCDF"
         INCLUDEPATH=" $INCLUDEPATH -I$PNETCDF_PATH/include"
-        LDLIBS=" $LDLIBS -L$PNETCDF_PATH/lib -lpnetcdf"
+        LDLIBS=" -L$PNETCDF_PATH/lib -lpnetcdf $LDLIBS"
   else
        CPPDEFS="$CPPDEFS -D_NOPNETCDF"
        USE_PNETCDF=no
@@ -491,7 +491,7 @@ if test "$USE_TIMING" = "yes"
   then
     CPPDEFS=" $CPPDEFS -DTIMING"
     INCLUDEPATH=" $INCLUDEPATH -I../timing"
-    LDLIBS=" $LDLIBS -L../timing -ltiming"
+    LDLIBS=" -L../timing -ltiming $LDLIBS"
 fi
 
 

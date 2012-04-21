@@ -1444,7 +1444,7 @@ contains
     call identity(comp_comm,iotask)
 
 #else
-
+	print *,__FILE__,__LINE__,n_iotasks
     iosystem%num_iotasks = n_iotasks
     call alloc_check(iosystem%ioranks,n_iotasks,'init:n_ioranks')
 
@@ -1461,7 +1461,7 @@ contains
        if(comp_rank == iosystem%ioranks(i))  iosystem%ioproc = .true.
     enddo
 #endif
-
+	print *,__FILE__,__LINE__,iosystem%ioranks
     iosystem%iomaster = iosystem%ioranks(1)
     iosystem%ioroot = iosystem%ioranks(1)
 
