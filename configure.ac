@@ -1,13 +1,30 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_INIT(PIO, 1.3.0)
+AC_PREREQ([2.65])
+#AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([m4])
+
 #
 # take input from Makefile.am
 # output to Makefile.in
 #
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_HEADER(config.h)
+
+#AC_PREFIX_DEFAULT(/usr/local)
+
+#
+# Include local m4 macros
+#
+builtin(include, m4/acx_hdf5.m4)
+builtin(include, m4/acx_mpi.m4)
+builtin(include, m4/ax_fc_version.m4)
+builtin(include, m4/fortran.m4)
+builtin(include, m4/netcdf.m4)
+builtin(include, m4/pkg.m4)
+
+AM_INIT_AUTOMAKE
 
 #
 # configure options
@@ -562,6 +579,11 @@ fi
 
 PIO_PATH=`pwd`
 
+##
+## Automake variables
+##
+AM_CONDITIONAL([BUILD_TIMING], [test "$TIMING" = yes])
+AM_CONDITIONAL([BUILD_PIOCPP], [test "$PIOCPP" = yes])
 
 #############################################################################
 
@@ -601,7 +623,7 @@ AC_SUBST(PIO_PATH)
 AC_SUBST(CPPDEFS)
 AC_SUBST(LDLIBS)
 
-AC_OUTPUT
+AC_OUTPUT(Makefile, pio/Makefile, piocpp/Makefile)
 
 echo Please check the Makefile.conf
 echo Have a nice day!
