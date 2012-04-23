@@ -3,10 +3,10 @@
 AC_INIT(PIO, 1.3.0)
 AC_CONFIG_MACRO_DIR([m4])
 #
-# take input from Makefile.conf.in
-# output to Makefile.conf.out
+# take input from Makefile.am
+# output to Makefile.in
 #
-AC_CONFIG_FILES(Makefile.conf)
+AC_CONFIG_FILES(Makefile)
 AC_CONFIG_HEADER(config.h)
 
 #

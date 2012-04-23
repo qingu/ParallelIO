@@ -1,0 +1,17 @@
+PIO
+
+A high-level Parallel I/O Library for structured grid applications
+
+PIO is an intermediate software layer the allows you to write data in 
+either binary or netcdf format using either serial writes or parallel 
+libraries such as MPI-IO and PnetCDF through a single interface.
+
+License: GPL v3.0 (http://www.gnu.org/licenses/gpl.html)
+
+DISCLAIMER
+----------
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+Merchantability or fitness for a particular purpose. Please use it AT
+YOUR OWN RISK.

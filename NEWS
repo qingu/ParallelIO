@@ -1,0 +1,18 @@
+PIO
+A high-level Parallel I/O Library for structured grid applications
+
+PIO is an intermediate software layer the allows you to write data in 
+either binary or netcdf format using either serial writes or parallel 
+libraries such as MPI-IO and PnetCDF through a single interface.
+
+We have a mailing list through Google Groups.
+
+PIO is written in Fortran90.
+
+NEW inline documentation with doxygen 
+http://web.ncar.teragrid.org/~dennis/pio_doc/html/
+
+Source Code Available
+
+Obtain the source code by svn checkout: 
+svn co http://parallelio.googlecode.com/svn/trunk 
