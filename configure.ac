@@ -9,7 +9,9 @@ AC_CONFIG_MACRO_DIR([m4])
 # take input from Makefile.am
 # output to Makefile.in
 #
-AC_CONFIG_FILES(Makefile)
+AC_CONFIG_FILES([Makefile Makefile.conf:pio/Makefile.conf.in
+                 pio/Makefile piocpp/Makefile])
+AC_CONFIG_SUBDIRS([pio piocpp])
 AC_CONFIG_HEADER(config.h)
 
 #AC_PREFIX_DEFAULT(/usr/local)
@@ -584,6 +586,46 @@ PIO_PATH=`pwd`
 ##
 AM_CONDITIONAL([BUILD_TIMING], [test "$TIMING" = yes])
 AM_CONDITIONAL([BUILD_PIOCPP], [test "$PIOCPP" = yes])
+AM_CONDITIONAL([PIOARCH_DEFAULT], [test -z "$PIOARCH"])
+
+##
+## A bunch of substitution strings to get around automake insisting
+## on parsing endif but not ifeq
+## While I'm at it, also put in gmake extensions (might come in handy if
+## we ever need to do without them).
+##
+INCLUDEDEPENDS='
+ifneq (0,$(LEVEL))
+  include $(DEPENDS)
+endif
+'
+AC_SUBST([INCLUDEDEPENDS])
+AM_SUBST_NOTMAKE([INCLUDEDEPENDS])
+
+MODFILES='MODFILES := $(SRCS_FC:.F90=$(MODSUF))'
+AC_SUBST([MODFILES])
+AM_SUBST_NOTMAKE([MODFILES])
+
+DEPENDS='DEPENDS := $(SRCS_FC:.F90=$(DEPSUF))'
+AC_SUBST([DEPENDS])
+AM_SUBST_NOTMAKE([DEPENDS])
+
+SUFFIXES='
+.SUFFIXES:
+.SUFFIXES: .o .c .F90 $(DEPSUF)
+'
+AC_SUBST([SUFFIXES])
+AM_SUBST_NOTMAKE([SUFFIXES])
+
+MKDEPEND='
+# For each file foo.F90, make the depency file foo.d
+%$(DEPSUF): %.F90
+	@echo \'Making dependencies for\' $< \'-->\' $@
+	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $\<) -v SUF=$(suffix $\<) $\< \> $@
+'
+AC_SUBST([MKDEPEND])
+AM_SUBST_NOTMAKE([MKDEPEND])
+
 
 #############################################################################
 
@@ -623,7 +665,7 @@ AC_SUBST(PIO_PATH)
 AC_SUBST(CPPDEFS)
 AC_SUBST(LDLIBS)
 
-AC_OUTPUT(Makefile, pio/Makefile, piocpp/Makefile)
+AC_OUTPUT()
 
 echo Please check the Makefile.conf
 echo Have a nice day!

@@ -19,10 +19,10 @@ MODSUF = .mod
 CPPSUF = .f90
 
 
-ifeq (,$(PIOARCH))
+if PIOARCH_DEFAULT
   PIOARCH=conf
 endif
-include Makefile.$(PIOARCH)
+include ../Makefile.$(PIOARCH)
 export PIOARCH
 
 SRCS_C = topology.c 
@@ -63,10 +63,10 @@ OBJS=  $(SRCS_C:.c=.o) \
        $(SRCS_FC:.F90=.o)
 
 
-MODFILES := $(SRCS_FC:.F90=$(MODSUF))
+@MODFILES@
 
 # File foo.DEPSUF will contain make dependency for foo.F90
-DEPENDS := $(SRCS_FC:.F90=$(DEPSUF))
+@DEPENDS@
 PERL = /usr/bin/perl
 
 LIB= libpio.a
@@ -87,15 +87,9 @@ depends: $(DEPENDS)
 # Suffix rules
 #
 
-.SUFFIXES:
-.SUFFIXES: .o .c .F90 $(DEPSUF)
+SUFFIXES = .o .c .F90 $(DEPSUF)
 
-
-# For each file foo.F90, make the depency file foo.d
-
-%$(DEPSUF): %.F90
-	@echo 'Making dependencies for' $< '-->' $@
-	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@
+@MKDEPEND@
 
 
 SRCS_CPP=
@@ -132,9 +126,7 @@ startandcount: calcdecomp.F90
 # Automatically generated module dependencies
 #
 
-ifneq (0,$(LEVEL))
-  include $(DEPENDS)
-endif
+@INCLUDEDEPENDS@
 
 alloc_mod.o : alloc_mod.F90
 box_rearrange.o : box_rearrange.F90

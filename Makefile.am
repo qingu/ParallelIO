@@ -1,13 +1,16 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-AC_CONFIG_FILES([Makefile pio/Makefile timing/Makefile piocpp/Makefile])
-
-SUBDIRS = pio
 
 if BUILD_TIMING
-  SUBDIRS: += $(SUBDIRS) timing
+  TIMINGDIR = timing
+else
+  TIMINGDIR =
 endif
 
 if BUILD_PIOCPP
-  SUBDIRS:+= $(SUBDIRS) piocpp
+  PIOCPPDIR = piocpp
+else
+  PIOCPPDIR =
 endif
+
+SUBDIRS = pio $(TIMINGDIR) $(PIOCPPDIR)
