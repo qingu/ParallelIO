@@ -617,15 +617,20 @@ SUFFIXES='
 AC_SUBST([SUFFIXES])
 AM_SUBST_NOTMAKE([SUFFIXES])
 
-MKDEPEND='
 # For each file foo.F90, make the depency file foo.d
+MKDEPEND='
 %$(DEPSUF): %.F90
-	@echo \'Making dependencies for\' $< \'-->\' $@
-	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $\<) -v SUF=$(suffix $\<) $\< \> $@
+	@echo "Making dependencies for" \$< "-->" $@
+	@echo "$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@"
+	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@
 '
 AC_SUBST([MKDEPEND])
 AM_SUBST_NOTMAKE([MKDEPEND])
 
+# Look for foo.mod.o in pio subdir (e.g., piocpp)
+ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(SRCDIR)/pio'
+AC_SUBST([ADDPIOINC])
+AM_SUBST_NOTMAKE([ADDPIOINC])
 
 #############################################################################
 

@@ -606,6 +606,7 @@ LIBOBJS
 LDLIBS
 CPPDEFS
 PIO_PATH
+ADDPIOINC
 MKDEPEND
 SUFFIXES
 DEPENDS
@@ -5432,7 +5433,7 @@ _ACEOF
 # 1 to this macro) to the Fortran 90 compiler in order to get "version" output
 ac_save_FCFLAGS=$FCFLAGS
 FCFLAGS="$FCFLAGS $ac_version"
-(eval echo $as_me:5435: \"$ac_link\") >&5
+(eval echo $as_me:5436: \"$ac_link\") >&5
 ac_fc_version_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_fc_version_output" >&5
 FCFLAGS=$ac_save_FCFLAGS
@@ -7124,13 +7125,18 @@ SUFFIXES='
 
 
 
-MKDEPEND='
 # For each file foo.F90, make the depency file foo.d
+MKDEPEND='
 %$(DEPSUF): %.F90
-	@echo \'Making dependencies for\' $< \'-->\' $@
-	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $\<) -v SUF=$(suffix $\<) $\< \> $@
+	@echo "Making dependencies for" \$< "-->" $@
+	@echo "$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@"
+	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@
 '
 
+
+
+# Look for foo.mod.o in pio subdir (e.g., piocpp)
+ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(SRCDIR)/pio'
 
 
 

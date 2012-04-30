@@ -38,7 +38,13 @@ SRCS = alloc_mod.f90        \
        pionfwrite_mod.f90   \
        rearrange.f90
 
-OBJS = $(SRCSC:.f90=.o
+PIODIR = $(SRCDIR)/pio
+
+PIOMODS = $(PIODIR)/libpio.a
+
+VPATH = $(PIODIR)
+
+OBJS = $(SRCS:.f90=.o)
 
 # check_kinds depends on pio_kinds.mod
 CHECK_KINDS_SRC = check_kinds.f90
@@ -46,16 +52,30 @@ CHECK_KINDS_SRC = check_kinds.f90
 # size_of_types depends on pio_types.mod
 SIZE_OF_TYPES_SRC = size_of_types.f90
 
+# Include pio subdirectory
+@ADDPIOINC@
 
 LIB= libpiocpp.a
 
 LEVEL=0
 
+#
+# Suffix rules
+#
+
+SUFFIXES = .o .cpp .f90 $(DEPSUF)
+
+.f90.o:
+	$(MPIFC) -c $(FPPDEFS) $(FCFLAGS) $(FOPTS) $(INCLUDES) $<
+
+.cpp.o:
+	$(MPICXX) -c $(CPPDEFS) $(CXXFLAGS) $(COPTS) $(INCLUDES) $<
+
 all: depends
 	@$(MAKE) LEVEL=1 $(LIB)
 
 
-depends: $(DEPENDS)
+depends: $(PIOMODS)
 	@echo "Done updating dependencies"
 
 $(LIB): $(OBJS)

@@ -13,7 +13,7 @@
 #   AR
 
 RM=/bin/rm -f
-FDEPENDS=$(SRCDIR)/fdepends.awk
+FDEPENDS=$(SRCDIR)/pio/fdepends.awk
 DEPSUF = .d
 MODSUF = .mod
 CPPSUF = .f90
@@ -89,8 +89,9 @@ depends: $(DEPENDS)
 
 SUFFIXES = .o .c .F90 $(DEPSUF)
 
-@MKDEPEND@
+# For each file foo.F90, make the depency file foo.d
 
+@MKDEPEND@
 
 SRCS_CPP=
 .F90.o:
@@ -101,7 +102,7 @@ SRCS_CPP=
 
 
 $(TEMPSRCFC): $(TEMPLATE_FC)
-	$(PERL) $(SRCDIR)/genf90.pl $< > $*.F90
+	$(PERL) $(SRCDIR)/pio/genf90.pl $< > $*.F90
 
 
 
