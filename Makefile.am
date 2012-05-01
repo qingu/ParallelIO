@@ -1,13 +1,13 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 
-if BUILD_TIMING
+if TIMING
   TIMINGDIR = timing
 else
   TIMINGDIR =
 endif
 
-if BUILD_PIOCPP
+if PIOCPP
   PIOCPPDIR = piocpp
 else
   PIOCPPDIR =

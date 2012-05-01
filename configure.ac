@@ -32,6 +32,8 @@ AM_INIT_AUTOMAKE
 # configure options
 #
 
+AC_PRESERVE_HELP_ORDER
+
 # example:
 #   AC_ARG_ENABLE(myvar,
 #   AC_HELP_STRING([--enable-myvar],[turn on myvar]),
@@ -579,13 +581,13 @@ if test "$DEBUG" = "yes"
 fi
 
 
-PIO_PATH=`pwd`
+PIO_PATH=`pwd -P`
 
 ##
 ## Automake variables
 ##
-AM_CONDITIONAL([BUILD_TIMING], [test "$TIMING" = yes])
-AM_CONDITIONAL([BUILD_PIOCPP], [test "$PIOCPP" = yes])
+AM_CONDITIONAL([TIMING], [test "$BUILD_TIMING" = yes])
+AM_CONDITIONAL([PIOCPP], [test "$BUILD_PIOCPP" = yes])
 AM_CONDITIONAL([PIOARCH_DEFAULT], [test -z "$PIOARCH"])
 
 ##

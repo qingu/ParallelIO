@@ -18,7 +18,7 @@ endif
 include ../Makefile.$(PIOARCH)
 export PIOARCH
 
-SRCS = alloc_mod.f90        \
+SRCS = pio_kinds.f90        \
        box_rearrange.f90    \
        calcdecomp.f90       \
        calcdisplace_mod.f90 \
@@ -26,7 +26,7 @@ SRCS = alloc_mod.f90        \
        ionf_mod.f90         \
        nf_mod.f90           \
        pio_cpp_binding.f90  \
-       pio_kinds.f90        \
+       alloc_mod.f90        \
        pio_mpi_utils.f90    \
        pio_msg_mod.f90      \
        pio_sizes.f90        \
