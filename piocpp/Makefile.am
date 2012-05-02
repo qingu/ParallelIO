@@ -25,7 +25,6 @@ SRCS = pio_kinds.f90        \
        iompi_mod.f90        \
        ionf_mod.f90         \
        nf_mod.f90           \
-       pio_cpp_binding.f90  \
        alloc_mod.f90        \
        pio_mpi_utils.f90    \
        pio_msg_mod.f90      \
@@ -36,7 +35,8 @@ SRCS = pio_kinds.f90        \
        piolib_mod.f90       \
        pionfread_mod.f90    \
        pionfwrite_mod.f90   \
-       rearrange.f90
+       rearrange.f90        \
+       pio_cpp_binding.f90
 
 PIODIR = $(SRCDIR)/pio
 
@@ -81,3 +81,11 @@ depends: $(PIOMODS)
 $(LIB): $(OBJS)
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(OBJS)
+
+clean:
+	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)
+
+predistclean: clean
+
+predist: predistclean
+
