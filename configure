@@ -648,7 +648,6 @@ CPP
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
-am__nodep
 AMDEPBACKSLASH
 AMDEP_FALSE
 AMDEP_TRUE
@@ -3283,11 +3282,11 @@ MAKEINFO=${MAKEINFO-"${am_missing_run}makeinfo"}
 
 # We need awk for the "check" target.  The system "awk" is bad on
 # some platforms.
-# Always define AMTAR for backward compatibility.  Yes, it's still used
-# in the wild :-(  We should find a proper way to deprecate it ...
-AMTAR='$${TAR-tar}'
+# Always define AMTAR for backward compatibility.
 
-am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
+AMTAR=${AMTAR-"${am_missing_run}tar"}
+
+am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
@@ -4136,7 +4135,6 @@ fi
 if test "x$enable_dependency_tracking" != xno; then
   am_depcomp="$ac_aux_dir/depcomp"
   AMDEPBACKSLASH='\'
-  am__nodep='_no'
 fi
  if test "x$enable_dependency_tracking" != xno; then
   AMDEP_TRUE=
@@ -4161,7 +4159,6 @@ else
   # instance it was reported that on HP-UX the gcc test will end up
   # making a dummy file named `D' -- because `-MD' means `put the output
   # in D'.
-  rm -rf conftest.dir
   mkdir conftest.dir
   # Copy depcomp to subdir because otherwise we won't find it if we're
   # using a relative directory.
@@ -4221,7 +4218,7 @@ else
 	break
       fi
       ;;
-    msvc7 | msvc7msys | msvisualcpp | msvcmsys)
+    msvisualcpp | msvcmsys)
       # This compiler won't grok `-c -o', but also, the minuso test has
       # not run yet.  These depmodes are late enough in the game, and
       # so weak that their functioning should not be impacted.
@@ -5435,7 +5432,7 @@ _ACEOF
 # 1 to this macro) to the Fortran 90 compiler in order to get "version" output
 ac_save_FCFLAGS=$FCFLAGS
 FCFLAGS="$FCFLAGS $ac_version"
-(eval echo $as_me:5438: \"$ac_link\") >&5
+(eval echo $as_me:5435: \"$ac_link\") >&5
 ac_fc_version_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_fc_version_output" >&5
 FCFLAGS=$ac_save_FCFLAGS
@@ -5893,6 +5890,58 @@ fi
 if test "$USE_MPIIO" = "yes"
   then
        CPPDEFS="$CPPDEFS -DUSEMPIIO"
+fi
+
+if test "$BUILD_PIOCPP" = "$enableval"
+  then { $as_echo "$as_me:${as_lineno-$LINENO}: checking Fortran support for allocatable character length" >&5
+$as_echo_n "checking Fortran support for allocatable character length... " >&6; }
+       ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+
+       cat > conftest.$ac_ext <<_ACEOF
+program allocatecharcheck
+                           character( len= 32) :: c_filename
+                           character( len= :), allocatable :: filename
+                           end program
+_ACEOF
+if ac_fn_fc_try_compile "$LINENO"; then :
+  ALLOC_CHARLEN_OK="yes"
+else
+  ALLOC_CHARLEN_OK="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+       if test "$ALLOC_CHARLEN_OK" = "yes"
+         then { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+         else { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+       fi
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking Fortran support for storage_size" >&5
+$as_echo_n "checking Fortran support for storage_size... " >&6; }
+       cat > conftest.$ac_ext <<_ACEOF
+program storagesizecheck
+                           integer, save, public :: size_ios = storage_size( ios)
+                           end program
+_ACEOF
+if ac_fn_fc_try_compile "$LINENO"; then :
+  STORAGESIZE_OK="yes"
+else
+  STORAGESIZE_OK="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+       if test "$STORAGESIZE_OK" = "yes"
+         then { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+         else { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+       fi
+       ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+
 fi
 
 #####

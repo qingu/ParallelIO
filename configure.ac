@@ -301,6 +301,30 @@ if test "$USE_MPIIO" = "yes"
        CPPDEFS="$CPPDEFS -DUSEMPIIO"
 fi
 
+if test "$BUILD_PIOCPP" = "$enableval"
+  then AC_MSG_CHECKING(Fortran support for allocatable character length)
+       AC_LANG_PUSH(Fortran)
+       AC_COMPILE_IFELSE( [program allocatecharcheck
+                           character( len= 32) :: c_filename
+                           character( len= :), allocatable :: filename
+                           end program],
+                           ALLOC_CHARLEN_OK="yes", ALLOC_CHARLEN_OK="no" )
+       if test "$ALLOC_CHARLEN_OK" = "yes"
+         then AC_MSG_RESULT(yes)
+         else AC_MSG_RESULT(no)
+       fi
+       AC_MSG_CHECKING(Fortran support for storage_size)
+       AC_COMPILE_IFELSE( [program storagesizecheck
+                           integer, save, public :: size_ios = storage_size( ios)
+                           end program],
+                           STORAGESIZE_OK="yes", STORAGESIZE_OK="no" )
+       if test "$STORAGESIZE_OK" = "yes"
+         then AC_MSG_RESULT(yes)
+         else AC_MSG_RESULT(no)
+       fi
+       AC_LANG_POP(Fortran)
+fi
+
 #####
 
 
