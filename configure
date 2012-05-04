@@ -650,6 +650,7 @@ CPP
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
+am__nodep
 AMDEPBACKSLASH
 AMDEP_FALSE
 AMDEP_TRUE
@@ -681,8 +682,11 @@ ENDIAN
 BIT64
 REAL8
 OPT
+MPICXX
+CXX
 MPICC
 CC
+CXXFLAGS
 CFLAGS
 FFLAGS
 MPIFC
@@ -788,8 +792,11 @@ FC
 MPIFC
 FFLAGS
 CFLAGS
+CXXFLAGS
 CC
 MPICC
+CXX
+MPICXX
 OPT
 REAL8
 BIT64
@@ -1489,8 +1496,11 @@ Some influential environment variables:
   MPIFC       The MPI Fortran compiler
   FFLAGS      User-defined Fortran compiler flags
   CFLAGS      Customized C source compilation flags
+  CXXFLAGS    Customized C++ source compilation flags
   CC          The C compiler
   MPICC       The MPI C compiler
+  CXX         The C++ compiler
+  MPICXX      The MPI C++ compiler
   OPT         Fortran compiler flag for optimization level
   REAL8       Fortran compiler flag for setting the default REAL size to
               REAL(KIND=8)
@@ -3284,11 +3294,11 @@ MAKEINFO=${MAKEINFO-"${am_missing_run}makeinfo"}
 
 # We need awk for the "check" target.  The system "awk" is bad on
 # some platforms.
-# Always define AMTAR for backward compatibility.
+# Always define AMTAR for backward compatibility.  Yes, it's still used
+# in the wild :-(  We should find a proper way to deprecate it ...
+AMTAR='$${TAR-tar}'
 
-AMTAR=${AMTAR-"${am_missing_run}tar"}
-
-am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
+am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
 
 
 
@@ -3430,6 +3440,10 @@ fi
 # declare "precious" environment variables
 # (implicit AC_SUBST)
 #
+
+
+
+
 
 
 
@@ -4137,6 +4151,7 @@ fi
 if test "x$enable_dependency_tracking" != xno; then
   am_depcomp="$ac_aux_dir/depcomp"
   AMDEPBACKSLASH='\'
+  am__nodep='_no'
 fi
  if test "x$enable_dependency_tracking" != xno; then
   AMDEP_TRUE=
@@ -4161,6 +4176,7 @@ else
   # instance it was reported that on HP-UX the gcc test will end up
   # making a dummy file named `D' -- because `-MD' means `put the output
   # in D'.
+  rm -rf conftest.dir
   mkdir conftest.dir
   # Copy depcomp to subdir because otherwise we won't find it if we're
   # using a relative directory.
@@ -4220,7 +4236,7 @@ else
 	break
       fi
       ;;
-    msvisualcpp | msvcmsys)
+    msvc7 | msvc7msys | msvisualcpp | msvcmsys)
       # This compiler won't grok `-c -o', but also, the minuso test has
       # not run yet.  These depmodes are late enough in the game, and
       # so weak that their functioning should not be impacted.
@@ -5434,7 +5450,7 @@ _ACEOF
 # 1 to this macro) to the Fortran 90 compiler in order to get "version" output
 ac_save_FCFLAGS=$FCFLAGS
 FCFLAGS="$FCFLAGS $ac_version"
-(eval echo $as_me:5437: \"$ac_link\") >&5
+(eval echo $as_me:5453: \"$ac_link\") >&5
 ac_fc_version_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_fc_version_output" >&5
 FCFLAGS=$ac_save_FCFLAGS
@@ -5478,6 +5494,7 @@ if test "$USE_MPISERIAL" = "yes"
   then CPPDEFS="$CPPDEFS -D_MPISERIAL -DNO_MPIMOD "
        echo "building for use with mpi-serial"
   MPICC=$CC
+  MPICXX=$CXX
 
   if test -z "$MPI_INC"; then
     if test -n "$MCT_PATH"
@@ -7121,6 +7138,18 @@ fi
 PIO_PATH=`pwd -P`
 
 ##
+## Set preprocessor flags to control compilation of features which are not
+##   supported (based on earlier tests)
+##
+if test "$ALLOC_CHARLEN_OK" != "no"; then
+  FCFLAGS="$FCFLAGS -DALLOC_CHARLEN_OK"
+fi
+
+if test "$STORAGESIZE_OK" != "no"; then
+  FCFLAGS="$FCFLAGS -DSTORAGESIZE_OK"
+fi
+
+##
 ## Automake variables
 ##
  if test "$BUILD_TIMING" = yes; then
@@ -7208,6 +7237,7 @@ echo Temp variables: {FC=$FC} {MPIFC=$MPIFC}
 echo
 echo Output Variables: {CC=$CC} \
 {MPICC=$MPICC} \
+{MPICXX=$MPICXX} \
 {ALLCFLAGS=$ALLCFLAGS} \
 {EXPLICIT_FPP=$EXPLICIT_FPP} {FPP=$FPP} {FPPFLAGS=$FPPFLAGS} \
 {FC=$FC} \
@@ -7218,6 +7248,7 @@ echo Output Variables: {CC=$CC} \
 {ENDIAN=$ENDIAN} \
 {FFLAGS=$FFLAGS} \
 {CFLAGS=$CFLAGS} \
+{CXXFLAGS=$CXXFLAGS} \
 {FCFLAGS=$FCFLAGS} \
 {FC_DEFINE=$FC_DEFINE} \
 {MPI_INC=$MPI_INC} {MPI_LIB=$MPI_LIB} \

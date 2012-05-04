@@ -129,9 +129,13 @@ AC_ARG_VAR(MPIFC,The MPI Fortran compiler)
 
 AC_ARG_VAR(FFLAGS,User-defined Fortran compiler flags)
 AC_ARG_VAR(CFLAGS,Customized C source compilation flags)
+AC_ARG_VAR(CXXFLAGS,Customized C++ source compilation flags)
 
 AC_ARG_VAR(CC,The C compiler)
 AC_ARG_VAR(MPICC,The MPI C compiler)
+
+AC_ARG_VAR(CXX,The C++ compiler)
+AC_ARG_VAR(MPICXX,The MPI C++ compiler)
 
 # fortran flags
 
@@ -214,6 +218,7 @@ if test "$USE_MPISERIAL" = "yes"
   then CPPDEFS="$CPPDEFS -D_MPISERIAL -DNO_MPIMOD "
        echo "building for use with mpi-serial"
   MPICC=$CC
+  MPICXX=$CXX
 
   if test -z "$MPI_INC"; then
     if test -n "$MCT_PATH"
@@ -607,6 +612,18 @@ fi
 PIO_PATH=`pwd -P`
 
 ##
+## Set preprocessor flags to control compilation of features which are not
+##   supported (based on earlier tests)
+##
+if test "$ALLOC_CHARLEN_OK" != "no"; then
+  FCFLAGS="$FCFLAGS -DALLOC_CHARLEN_OK"
+fi
+
+if test "$STORAGESIZE_OK" != "no"; then
+  FCFLAGS="$FCFLAGS -DSTORAGESIZE_OK"
+fi
+
+##
 ## Automake variables
 ##
 AM_CONDITIONAL([TIMING], [test "$BUILD_TIMING" = yes])
@@ -673,6 +690,7 @@ echo Temp variables: {FC=$FC} {MPIFC=$MPIFC}
 echo
 echo Output Variables: {CC=$CC} \
 {MPICC=$MPICC} \
+{MPICXX=$MPICXX} \
 {ALLCFLAGS=$ALLCFLAGS} \
 {EXPLICIT_FPP=$EXPLICIT_FPP} {FPP=$FPP} {FPPFLAGS=$FPPFLAGS} \
 {FC=$FC} \
@@ -683,6 +701,7 @@ echo Output Variables: {CC=$CC} \
 {ENDIAN=$ENDIAN} \
 {FFLAGS=$FFLAGS} \
 {CFLAGS=$CFLAGS} \
+{CXXFLAGS=$CXXFLAGS} \
 {FCFLAGS=$FCFLAGS} \
 {FC_DEFINE=$FC_DEFINE} \
 {MPI_INC=$MPI_INC} {MPI_LIB=$MPI_LIB} \

@@ -39,6 +39,7 @@ public :: pio_cpp_file_is_open
 !  constants
 
 integer, parameter :: max_string_len = 10000
+integer, parameter :: max_filename_len = 128
 
 ! ---------------------------------------------------------------------
 
@@ -374,11 +375,11 @@ integer( c_int), value :: mode
 
    type( iosystem_desc_t), pointer :: iosystem_desc
    type( file_desc_t), pointer :: file_desc
-   character( kind= c_char, len= max_string_len), pointer :: c_filename
+   character( kind= c_char, len= max_filename_len), pointer :: c_filename
 #ifdef ALLOC_CHARLEN_OK
    character( len= :), allocatable :: filename
 #else
-   character( len= max_string_len) :: filename
+   character( len= max_filename_len) :: filename
 #endif
 
    integer :: clen
@@ -496,11 +497,11 @@ integer( c_int), value :: amode_in
 
    type( iosystem_desc_t), pointer :: iosystem_desc
    type( file_desc_t), pointer :: file_desc
-   character( kind= c_char, len= max_string_len), pointer :: c_filename
-#if ALLOC_CHARLEN_OK
+   character( kind= c_char, len= max_filename_len), pointer :: c_filename
+#ifdef ALLOC_CHARLEN_OK
    character( len= :), allocatable :: filename
 #else
-   character( len= max_string_len) :: filename
+   character( len= max_filename_len) :: filename
 #endif
 
    integer :: clen
@@ -519,7 +520,7 @@ continue
 
    clen = c_len( c_filename)
 
-#if ALLOC_CHARLEN_OK
+#ifdef ALLOC_CHARLEN_OK
    allocate( filename, mold= filename( 1: clen))
 #endif
 
@@ -1241,7 +1242,7 @@ type( c_ptr), value :: hintval
    character( kind= c_char, len= max_string_len), pointer :: c_hint
    character( kind= c_char, len= max_string_len), pointer :: c_hintval
 
-#if ALLOC_CHARLEN_OK
+#ifdef ALLOC_CHARLEN_OK
    character( len= :), allocatable :: hint_str
    character( len= :), allocatable :: hintval_str
 #else
@@ -1264,13 +1265,13 @@ continue
 !  convert the C string to Fortran characters
 
    clen = c_len( c_hint)
-#if ALLOC_CHARLEN_OK
+#ifdef ALLOC_CHARLEN_OK
    allocate( hint_str, mold= hint_str( 1: clen))
 #endif
    call f_chars( hint_str, c_hint( 1: clen))
 
    clen = c_len( c_hintval)
-#if ALLOC_CHARLEN_OK
+#ifdef ALLOC_CHARLEN_OK
    allocate( hintval_str, mold= hintval_str( 1: clen))
 #endif
    call f_chars( hintval_str, c_hintval( 1: clen))

@@ -84,10 +84,10 @@ LEVEL=0
 # For each file foo.F90, make the depency file foo.d
 @MKDEPEND@
 
-.F90.o:
+%.o: %.F90
 	$(MPIFC) -c $(FPPDEFS) $(FCFLAGS) $(FOPTS) $(INCLUDES) $<
 
-.cpp.o:
+%.o: %.cpp
 	$(MPICXX) -c $(CPPDEFS) $(CXXFLAGS) $(COPTS) $(INCLUDES) $<
 
 $(TEMPSRCFC): $(TEMPLATE_FC)
@@ -103,6 +103,11 @@ depends: $(DEPENDS)
 $(LIB): $(OBJS)
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(OBJS)
+
+test: testpio_cpp
+
+testpio_cpp: testpio_cpp.o
+	$(MPICXX) $(CXXFLAGS) $(COPTS) -o $@ $<
 
 clean:
 	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)
@@ -151,5 +156,7 @@ pio_cpp_binding.o : pio_cpp_binding.F90
 pio_cpp_binding.o : $(PIOBUILDDIR)/pio_kinds.mod
 pio_cpp_binding.o : $(PIOBUILDDIR)/pio_types.mod
 pio_cpp_binding.o : $(PIOBUILDDIR)/piolib_mod.mod
+
+testpio_cpp.o: testpio_cpp.cpp pio.h $(LIB)
 
 #pio_sizes.o : pio_sizes.F90.in
