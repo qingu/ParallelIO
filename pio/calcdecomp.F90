@@ -13,13 +13,26 @@ module calcdecomp
   implicit none 
 #endif
 
-  public :: CalcStartandCount
-
+  public :: CalcStartandCount, pio_set_blocksize
+  integer, parameter :: default_blocksize=884736
+  integer :: blocksize=default_blocksize
 contains 
+  subroutine pio_set_blocksize(newsize)
+    integer, intent(in) :: newsize
+
+    if(newsize<0) then
+       call piodie(__PIO_FILE__,__LINE__,'bad value to blocksize: ',newsize)
+    end if
+
+    blocksize=newsize
+
+
+  end subroutine pio_set_blocksize
+
 
 !
 !  Determine start and kount values for an array of global size gdims over at most num_io_procs tasks.
-!  The algorythm creates contigous blocks of approximate size stripesize.  Stripesize should be adjusted
+!  The algorythm creates contigous blocks of approximate size stripesize.  Blocksize should be adjusted
 !  to be optimal for the filesystem being used.   The actual number of io tasks used is output in variable
 !  use_io_procs
 !
@@ -32,13 +45,14 @@ contains
     integer :: i,  dims(ndims), lb, ub, inc
     integer(kind=pio_offset) :: p
     integer :: extras, subrank, tioprocs, rem
-
-    integer, parameter :: stripeSize = 864*1024
-    integer :: minbytes = stripeSize-256   ! minimum number of contigous blocks in bytes to put on a IO task
-    integer :: maxbytes = stripeSize+256   ! maximum length of contigous block in bytes to put on a IO task
+    integer :: minbytes, maxbytes
 
     integer :: minblocksize, basesize, maxiosize, ioprocs, tiorank
     integer :: ldims
+
+
+    minbytes = blocksize-256   ! minimum number of contigous blocks in bytes to put on a IO task
+    maxbytes = blocksize+256   ! maximum length of contigous block in bytes to put on a IO task
 
     select case(basetype)
     case(PIO_int)
@@ -59,7 +73,7 @@ contains
 
     start(:)=1
     kount(:)=0
-    if(iorank>=use_io_procs) return 
+
     ldims=ndims
     p=basesize
     do i=1,ndims
@@ -77,7 +91,7 @@ contains
           use_io_procs=use_io_procs-1
        end do
     end if
-
+    if(iorank>=use_io_procs) return 
 
 
     kount=gdims
@@ -89,6 +103,14 @@ contains
        if(gdims(i)>1) then
           if(gdims(i)>=ioprocs) then
              call computestartandcount(gdims(i),ioprocs,tiorank,start(i),kount(i))
+             if(start(i)+kount(i)>gdims(i)+1) then
+                print *,__PIO_FILE__,__LINE__,i,ioprocs,gdims(i),start(i),kount(i)
+#if TESTCALCDECOMP
+                stop
+#else
+                call piodie(__PIO_FILE__,__LINE__,'Start plus count exceeds dimension bound')
+#endif
+             endif
              exit  ! Decomposition is complete
           else
              ! The current dimension cannot complete the decomposition.   Decompose this 
@@ -144,8 +166,8 @@ program sandctest
 !  integer, parameter :: ndims=4
 !  integer, parameter :: gdims(ndims) = (/66,199,10,8/)
   integer, parameter :: ndims=3
-  integer, parameter :: gdims(ndims) = (/3600,2400,40/)
-  integer, parameter :: num_io_procs=8
+  integer, parameter :: gdims(ndims) = (/3600,2400,60/)
+  integer, parameter :: num_io_procs=240
 !  integer :: gdims(ndims)
   integer :: psize, n, i,j,k,m
   integer, parameter :: imax=200,jmax=200,kmax=30,mmax=7

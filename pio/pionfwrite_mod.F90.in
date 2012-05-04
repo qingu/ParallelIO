@@ -80,11 +80,10 @@ contains
 #endif
           if(file%iosystem%io_rank==0) print *,__FILE__,__LINE__,start,count,size(iobuf),iodesc%write%n_elemtype,iodesc%write%elemtype
 
-          ierr=nfmpi_put_vara_all( File%fh,varDesc%varid,start, &
-               count,IOBUF, &
+          ierr=nfmpi_iput_vara( File%fh,varDesc%varid,start, &
+               count, IOBUF , &
                iodesc%Write%n_ElemTYPE, &
-               iodesc%Write%ElemTYPE)
-
+               iodesc%Write%ElemTYPE, request)
           if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
                '  IAM: ',File%iosystem%io_rank,' start: ',start,' count: ',count,&
                ' size :',iodesc%Write%n_ElemTYPE, ' error: ',ierr, &

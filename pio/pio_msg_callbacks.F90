@@ -74,6 +74,29 @@ subroutine pio_callback_handler(iosystem, msg)
 
 end subroutine pio_callback_handler
 
+subroutine freedecomp_handler(iosystem)
+  use pio, only : iosystem_desc_t, io_desc_t, pio_freedecomp
+#ifndef NO_MPIMOD
+  use mpi !_EXTERNAL
+#endif
+  use pio_msg_mod, only : delete_from_iodesc_list
+  implicit none
+#ifdef NO_MPIMOD
+  include 'mpif.h' !_EXTERNAL
+#endif
+  type(iosystem_desc_t) :: iosystem
+  type(io_desc_t), pointer :: iodesc
+  integer :: async_id, ierr
+
+
+  call mpi_bcast(async_id, 1, mpi_integer, iosystem%compmaster, iosystem%intercomm, ierr)
+  iodesc=>delete_from_iodesc_list(async_id)
+  call pio_freedecomp(iosystem, iodesc)
+
+
+end subroutine freedecomp_handler
+
+
 subroutine create_file_handler(iosystem)
   use pio, only : iosystem_desc_t, file_desc_t, pio_createfile
   use pio_kinds, only : char_len
