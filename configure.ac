@@ -305,7 +305,6 @@ if test "$BUILD_PIOCPP" = "$enableval"
   then AC_MSG_CHECKING(Fortran support for allocatable character length)
        AC_LANG_PUSH(Fortran)
        AC_COMPILE_IFELSE( [program allocatecharcheck
-                           character( len= 32) :: c_filename
                            character( len= :), allocatable :: filename
                            end program],
                            ALLOC_CHARLEN_OK="yes", ALLOC_CHARLEN_OK="no" )
@@ -636,12 +635,12 @@ DEPENDS='DEPENDS := $(SRCS_FC:.F90=$(DEPSUF))'
 AC_SUBST([DEPENDS])
 AM_SUBST_NOTMAKE([DEPENDS])
 
-SUFFIXES='
+SUFFIXRULES='
 .SUFFIXES:
 .SUFFIXES: .o .c .F90 $(DEPSUF)
 '
-AC_SUBST([SUFFIXES])
-AM_SUBST_NOTMAKE([SUFFIXES])
+AC_SUBST([SUFFIXRULES])
+AM_SUBST_NOTMAKE([SUFFIXRULES])
 
 # For each file foo.F90, make the depency file foo.d
 MKDEPEND='
@@ -653,8 +652,16 @@ MKDEPEND='
 AC_SUBST([MKDEPEND])
 AM_SUBST_NOTMAKE([MKDEPEND])
 
+TOPBILDDIR='TOPBUILDDIR = $(abs_top_builddir)'
+AC_SUBST([TOPBILDDIR])
+AM_SUBST_NOTMAKE([TOPBILDDIR])
+
+TOPSRCDIR='TOPSOURCEDIR = $(abs_top_srcdir)'
+AC_SUBST([TOPSRCDIR])
+AM_SUBST_NOTMAKE([TOPSRCDIR])
+
 # Look for foo.mod.o in pio subdir (e.g., piocpp)
-ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(SRCDIR)/pio'
+ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(TOPBUILDDIR)/pio'
 AC_SUBST([ADDPIOINC])
 AM_SUBST_NOTMAKE([ADDPIOINC])
 

@@ -12,8 +12,11 @@
 #   AWK
 #   AR
 
+@TOPBILDDIR@
+@TOPSRCDIR@
+
 RM=/bin/rm -f
-FDEPENDS=$(SRCDIR)/pio/fdepends.awk
+FDEPENDS=$(TOPSOURCEDIR)/pio/fdepends.awk
 DEPSUF = .d
 MODSUF = .mod
 CPPSUF = .f90
@@ -22,7 +25,7 @@ CPPSUF = .f90
 if PIOARCH_DEFAULT
   PIOARCH=conf
 endif
-include ../Makefile.$(PIOARCH)
+include $(TOPBUILDDIR)/Makefile.$(PIOARCH)
 export PIOARCH
 
 SRCS_C = topology.c 
@@ -73,10 +76,8 @@ LIB= libpio.a
 
 LEVEL=0
 
-
 all: depends
 	@$(MAKE) LEVEL=1 $(LIB)
-
 
 
 depends: $(DEPENDS)
@@ -87,7 +88,7 @@ depends: $(DEPENDS)
 # Suffix rules
 #
 
-SUFFIXES = .o .c .F90 $(DEPSUF)
+@SUFFIXRULES@
 
 # For each file foo.F90, make the depency file foo.d
 
@@ -102,7 +103,7 @@ SRCS_CPP=
 
 
 $(TEMPSRCFC): $(TEMPLATE_FC)
-	$(PERL) $(SRCDIR)/pio/genf90.pl $< > $*.F90
+	$(PERL) $(TOPSOURCEDIR)/pio/genf90.pl $< > $*.F90
 
 
 

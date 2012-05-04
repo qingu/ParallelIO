@@ -375,7 +375,11 @@ integer( c_int), value :: mode
    type( iosystem_desc_t), pointer :: iosystem_desc
    type( file_desc_t), pointer :: file_desc
    character( kind= c_char, len= max_string_len), pointer :: c_filename
+#ifdef ALLOC_CHARLEN_OK
    character( len= :), allocatable :: filename
+#else
+   character( len= max_string_len) :: filename
+#endif
 
    integer :: clen
 
@@ -393,8 +397,9 @@ continue
 
    clen = c_len( c_filename)
 
+#ifdef ALLOC_CHARLEN_OK
    allocate( filename, mold= filename( 1: clen))
-
+#endif
    call f_chars( filename, c_filename( 1: clen))
 
 !  call the Fortran procedure
@@ -492,7 +497,11 @@ integer( c_int), value :: amode_in
    type( iosystem_desc_t), pointer :: iosystem_desc
    type( file_desc_t), pointer :: file_desc
    character( kind= c_char, len= max_string_len), pointer :: c_filename
+#if ALLOC_CHARLEN_OK
    character( len= :), allocatable :: filename
+#else
+   character( len= max_string_len) :: filename
+#endif
 
    integer :: clen
 
@@ -510,7 +519,9 @@ continue
 
    clen = c_len( c_filename)
 
+#if ALLOC_CHARLEN_OK
    allocate( filename, mold= filename( 1: clen))
+#endif
 
    call f_chars( filename, c_filename( 1: clen))
 
@@ -1230,8 +1241,13 @@ type( c_ptr), value :: hintval
    character( kind= c_char, len= max_string_len), pointer :: c_hint
    character( kind= c_char, len= max_string_len), pointer :: c_hintval
 
+#if ALLOC_CHARLEN_OK
    character( len= :), allocatable :: hint_str
    character( len= :), allocatable :: hintval_str
+#else
+   character( len= max_string_len) :: hint_str
+   character( len= max_string_len) :: hintval_str
+#endif
 
    integer :: clen
 
@@ -1248,11 +1264,15 @@ continue
 !  convert the C string to Fortran characters
 
    clen = c_len( c_hint)
+#if ALLOC_CHARLEN_OK
    allocate( hint_str, mold= hint_str( 1: clen))
+#endif
    call f_chars( hint_str, c_hint( 1: clen))
 
    clen = c_len( c_hintval)
+#if ALLOC_CHARLEN_OK
    allocate( hintval_str, mold= hintval_str( 1: clen))
+#endif
    call f_chars( hintval_str, c_hintval( 1: clen))
 
 !  call the Fortran procedure

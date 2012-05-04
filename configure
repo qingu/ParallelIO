@@ -607,8 +607,10 @@ LDLIBS
 CPPDEFS
 PIO_PATH
 ADDPIOINC
+TOPSRCDIR
+TOPBILDDIR
 MKDEPEND
-SUFFIXES
+SUFFIXRULES
 DEPENDS
 MODFILES
 INCLUDEDEPENDS
@@ -5432,7 +5434,7 @@ _ACEOF
 # 1 to this macro) to the Fortran 90 compiler in order to get "version" output
 ac_save_FCFLAGS=$FCFLAGS
 FCFLAGS="$FCFLAGS $ac_version"
-(eval echo $as_me:5435: \"$ac_link\") >&5
+(eval echo $as_me:5437: \"$ac_link\") >&5
 ac_fc_version_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_fc_version_output" >&5
 FCFLAGS=$ac_save_FCFLAGS
@@ -5902,7 +5904,6 @@ ac_compiler_gnu=$ac_cv_fc_compiler_gnu
 
        cat > conftest.$ac_ext <<_ACEOF
 program allocatecharcheck
-                           character( len= 32) :: c_filename
                            character( len= :), allocatable :: filename
                            end program
 _ACEOF
@@ -7169,7 +7170,7 @@ DEPENDS='DEPENDS := $(SRCS_FC:.F90=$(DEPSUF))'
 
 
 
-SUFFIXES='
+SUFFIXRULES='
 .SUFFIXES:
 .SUFFIXES: .o .c .F90 $(DEPSUF)
 '
@@ -7186,8 +7187,16 @@ MKDEPEND='
 
 
 
+TOPBILDDIR='TOPBUILDDIR = $(abs_top_builddir)'
+
+
+
+TOPSRCDIR='TOPSOURCEDIR = $(abs_top_srcdir)'
+
+
+
 # Look for foo.mod.o in pio subdir (e.g., piocpp)
-ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(SRCDIR)/pio'
+ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(TOPBUILDDIR)/pio'
 
 
 

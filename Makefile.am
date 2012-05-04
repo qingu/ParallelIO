@@ -1,5 +1,7 @@
 MAINTAINERCLEANFILES = Makefile.in
 
+TOPDIR=.
+export TOPDIR
 
 if TIMING
   TIMINGDIR = timing
