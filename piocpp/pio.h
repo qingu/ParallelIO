@@ -1,36 +1,18 @@
 #ifndef __PIO_H_INCLUDED_
 #define __PIO_H_INCLUDED_
 
-// ---------------------------------------------------------------------
-
-// types for and sizes of the PIO Fortran derived types
-
-// sizeof( iosystem_desc_t)
-typedef void *iosystem_desc_t;
-#define SIZE_IOSYSTEM_DESC  144
-
-// sizeof( file_desc_t)
-typedef void *file_desc_t;
-#define SIZE_FILE_DESC   24
-
-// sizeof( io_desc_t)
-typedef void *io_desc_t;
-#define SIZE_IO_DESC  472
-
-// sizeof( var_desc_t)
-typedef void *var_desc_t;
-#define SIZE_VAR_DESC   16
+#include "pio_kinds.h"
 
 // ---------------------------------------------------------------------
-
 // the pio function prototypes
+// ---------------------------------------------------------------------
 
 extern "C" {
 
 // subroutine pio_cpp_init_intracom( comp_rank, comp_comm, num_iotasks, num_aggregator, stride, rearr, iosystem, base) bind( c)
 
 void pio_cpp_init_intracom( int comp_rank,
-                            int comp_comm,
+                            void* comp_comm,
                             int num_tasks,
                             int num_aggregator,
                             int stride,
@@ -41,7 +23,7 @@ void pio_cpp_init_intracom( int comp_rank,
 // subroutine pio_cpp_init_intercom( component_count, peer_comm, comp_comms, io_comm, iosystem) bind( c)
 
 void pio_cpp_init_intercom( int component_count,
-                            int peer_comm,
+                            void* peer_comm,
                             int* comp_comms,
                             int io_comm,
                             iosystem_desc_t iosystem);

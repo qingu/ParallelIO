@@ -12,8 +12,8 @@
  * License: GPL v3.0 (http://www.gnu.org/licenses/gpl.html)
  */
 
-#ifndef _NAMELIST_H_
-#define _NAMELIST_H_
+#ifndef __NAMELIST_H_INCLUDED_
+#define __NAMELIST_H_INCLUDED_
 
 #ifdef BGP
 #define BGx
@@ -21,6 +21,9 @@
 #ifdef BGL
 #define BGx
 #endif
+
+#include <iostream>
+#include <fstream>
 
 #include "kinds.h"
 
@@ -36,6 +39,9 @@
 class io_nml {
 public:
   // Functions for dealing with PIO namelists
+
+  io_nml(int nprocs);
+
   void Broadcast_Namelist(char * caller, i4 myID, i4 root,
                           i4 comm, i4 &ierror);
 
@@ -44,10 +50,13 @@ public:
 private:
   std::string trim(const std::string& pString,
                    const std::string& pWhitespace = " \t");
-  std::string readInputLine(ifstream &infile, i4 &ierror,
+
+  std::string readInputLine(std::ifstream &infile, i4 &ierror,
                             const char *filename);
+
   bool parseInputLine(std::string &line,
                       std::string &varString, std::string &varValue);
+
   void assignValue(std::string &varName, std::string &varValue);
   int linenum;
 
@@ -97,3 +106,5 @@ public:
   i4 max_buffer_size;
   i4 block_size;
 };
+
+#endif // __NAMELIST_H_INCLUDED_

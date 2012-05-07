@@ -13,8 +13,6 @@
  */
 
 #include <string>
-#include <iostream>
-#include <fstream>
 #include <algorithm>
 #include <vector>
 #include "namelist.h"
@@ -22,8 +20,8 @@
 
 #define MAX_NAMELIST_LINELENGTH 512
 
-const std::string io_nml::trim(const std::string& pString,
-                               const std::string& pWhitespace = " \t")
+std::string io_nml::trim(const std::string& pString,
+                         const std::string& pWhitespace)
 {
   const size_t beginStr = pString.find_first_not_of(pWhitespace);
   if (beginStr == std::string::npos) {
@@ -36,25 +34,26 @@ const std::string io_nml::trim(const std::string& pString,
 
   return pString.substr(beginStr, range);
 }
-std::string io_nml:: readInputLine(ifstream &infile, i4 &ierror,
+
+std::string io_nml:: readInputLine(std::ifstream &infile, i4 &ierror,
                                    const char *filename) {
-  char *input[MAX_NAMELIST_LINELENGTH];
+  char input[MAX_NAMELIST_LINELENGTH];
   std::string output = "";
-  infile.getline(input, MAX_NAMELIST_LINELENGTH);
+  infile.getline(input, (std::streamsize)MAX_NAMELIST_LINELENGTH);
   linenum++;
-  if (infile.rdstate() & ifstream::failbit) {
+  if (infile.rdstate() & std::ifstream::failbit) {
     std::cerr << "Error reading " << filename << " at line "
               << linenum << ", premature end of file" << std::endl;
     ierror = -1;
-  } else if (ifs.rdstate() & ifstream::bad) {
+  } else if (infile.bad()) {
     std::cerr << "Error reading " << filename << " at line "
               << linenum << std::endl;
     ierror = -1;
-  } else if (ifs.rdstate() & ifstream::eofbit) {
+  } else if (infile.eof()) {
     ierror = 0;
   }
   else {
-    output = trim(input);
+    output = this->trim(input);
   }
   return output;
 }
@@ -67,8 +66,8 @@ bool io_nml::parseInputLine(std::string &line,
   // Find an equal sign
   eqpos = line.find("=");
   if (eqpos != std::string::npos) {
-    varString = trim(line.substr(0, eqpos));
-    varValue = trim(line.substr((eqpos + 1)));
+    varString = this->trim(line.substr(0, eqpos));
+    varValue = this->trim(line.substr((eqpos + 1)));
     retval = true;
   }
   // No else needed, just return false
@@ -76,7 +75,7 @@ bool io_nml::parseInputLine(std::string &line,
   return retval;
 }
 
-io_nml:io_nml() {
+io_nml::io_nml(int nprocs) {
   //--------------------------------------------------
   // set default values for namelist io_nml variables 
   //--------------------------------------------------
@@ -101,11 +100,14 @@ io_nml:io_nml() {
   max_buffer_size = -1;  // use default value;
   block_size = -1;       // use default value;
 
-  npr_yz = { nprocs, 1, 1, nprocs };
+  npr_yz[0] = nprocs;
+  npr_yz[1] = 1;
+  npr_yz[2] = 1;
+  npr_yz[3] = nprocs;
   set_mpi_values = 0 ; // Set to one for true;
   strcpy(mpi_cb_buffer_size, "");
 
-  strcpy(set_romio_values, 0);  // Set to one for true
+  set_romio_values = 0;  // Set to one for true
   strcpy(romio_cb_write, "");   // Default is "automatic"
   strcpy(romio_cb_read, "");    // Default is "automatic"
   strcpy(romio_direct_io, "");  // Default is "automatic"
@@ -148,55 +150,56 @@ void io_nml::assignValue(std::string &varName, std::string &varValue) {
   } else if (0 == varName.compare("nvars")) {
     nvars = atoi(varValue.c_str());
   } else if (0 == varName.compare("dir")) {
-    dir = varValue;
+    strcpy(dir, varValue.c_str());
   } else if (0 == varName.compare("max_buffer_size")) {
     max_buffer_size = atoi(varValue.c_str());
   } else if (0 == varName.compare("block_size")) {
     block_size = atoi(varValue.c_str());
   } else if (0 == varName.compare("casename")) {
-    casename = varValue;
+    strcpy(casename, varValue.c_str());
   } else if (0 == varName.compare("maxiter")) {
     maxiter = atoi(varValue.c_str());
   } else if (0 == varName.compare("ioFMT")) {
-    ioFMT = varValue;
+    strcpy(ioFMT, varValue.c_str());
   } else if (0 == varName.compare("rearr")) {
-    rearr = varValue;
+    strcpy(rearr, varValue.c_str());
   } else if (0 == varName.compare("nprocsIO")) {
     nprocsIO = atoi(varValue.c_str());
   } else if (0 == varName.compare("num_iodofs")) {
     num_iodofs = atoi(varValue.c_str());
   } else if (0 == varName.compare("compdof_input")) {
-    compdof_input = varValue;
+    strcpy(compdof_input, varValue.c_str());
   } else if (0 == varName.compare("compdof_output")) {
-    compdof_output = varValue;
+    strcpy(compdof_output, varValue.c_str());
   } else if (0 == varName.compare("iodof_input")) {
-    iodof_input = varValue;
+    strcpy(iodof_input, varValue.c_str());
   } else if (0 == varName.compare("part_input")) {
-    part_input = varValue;
+    strcpy(part_input, varValue.c_str());
   } else if (0 == varName.compare("DebugLevel")) {
     DebugLevel = atoi(varValue.c_str());
   } else if (0 == varName.compare("npr_yz")) {
-    npr_yz = varValue;
+    error = true;
+//    npr_yz = varValue;
   } else if (0 == varName.compare("set_mpi_values")) {
     set_mpi_values = atoi(varValue.c_str());
   } else if (0 == varName.compare("mpi_cb_buffer_size")) {
-    mpi_cb_buffer_size = atoi(varValue.c_str());
+    strcpy(mpi_cb_buffer_size, varValue.c_str());
   } else if (0 == varName.compare("set_romio_values")) {
     set_romio_values = atoi(varValue.c_str());
   } else if (0 == varName.compare("romio_cb_write")) {
-    romio_cb_write = varValue;
+    strcpy(romio_cb_write, varValue.c_str());
   } else if (0 == varName.compare("romio_cb_read")) {
-    romio_cb_read = varValue;
+    strcpy(romio_cb_read, varValue.c_str());
   } else if (0 == varName.compare("romio_direct_io")) {
-    romio_direct_io = varValue;
+    strcpy(romio_direct_io, varValue.c_str());
   } else if (0 == varName.compare("set_ibm_io_values")) {
     set_ibm_io_values = atoi(varValue.c_str());
   } else if (0 == varName.compare("ibm_io_buffer_size")) {
-    ibm_io_buffer_size = varValue;
+    strcpy(ibm_io_buffer_size, varValue.c_str());
   } else if (0 == varName.compare("ibm_io_largeblock_io")) {
-    ibm_io_largeblock_io = varValue;
+    strcpy(ibm_io_largeblock_io, varValue.c_str());
   } else if (0 == varName.compare("ibm_io_sparse_access")) {
-    ibm_io_sparse_access = varValue;
+    strcpy(ibm_io_sparse_access, varValue.c_str());
   } else if (0 == varName.compare("set_lustre_values")) {
     set_lustre_values = atoi(varValue.c_str());
   } else if (0 == varName.compare("lfs_ost_count")) {
@@ -219,9 +222,9 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
 
   namelist_name = "&" + namelist_name;
 
-  ifstream ifs (filename , ifstream::in);
+  std::ifstream ifs (filename , std::ifstream::in);
 
-  if((ifs.rdstate() & ifstream::failbit) != 0) {
+  if((ifs.rdstate() & std::ifstream::failbit) != 0) {
     std::cerr << caller << "->" << myname << ":: Error opening file "
               << filename << std::endl;
     ierror = -1;
@@ -234,12 +237,12 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
   bool in_namelist = false;
   std::string InputLine;
   while (ierror > 0) {
-    InputLine = readInputLine(ifs, ierror);
+    InputLine = this->readInputLine(ifs, ierror, filename);
     if (ierror > 0) {
       // Process line
       if (in_namelist) {
         // parse line
-        if (0 == inpline.compare("/")) {
+        if (0 == InputLine.compare("/")) {
           in_namelist = false;
           // We are done with the namelist, might as well ignore rest of file
           ierror = 0;
@@ -247,14 +250,14 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
           // We should have a var = value line but if not, ignore
           std::string varName;
           std::string varValue;
-          if (parseInputLine(inpline, varName, varValue)) {
-            assignValue(varName, varValue);
+          if (this->parseInputLine(InputLine, varName, varValue)) {
+            this->assignValue(varName, varValue);
           }
           // No else, just ignore malformed lines (for now).
         }
       } else {
         // Look for namelist tag
-        if (0 == inpline.compare(namelist_name)) {
+        if (0 == InputLine.compare(namelist_name)) {
           in_namelist = true;
         }
         // No else, we just assume we haven't gotten to the namelist yet
@@ -388,7 +391,7 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
     if ((stride <= 0) || (stride > nprocs)) {
       stride = (nprocs - base) / num_iotasks;
     }
-  } else (nprocsIO <= 0) {
+  } else if (nprocsIO <= 0) {
 #ifdef BGx 
       // A negative value for num_iotasks has a special meaning on Blue Gene
       num_iotasks = nprocsIO;
@@ -398,7 +401,7 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
         stride = 1;
         base=0;
       } else {
-        num_iotasks = max(1, (nprocs - base) / stride);
+        num_iotasks = std::max(1, (nprocs - base) / stride);
       }
 #endif
     }
@@ -407,7 +410,7 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
   // reset stride if there are not enough processors 
   //------------------------------------------------
   if (base + num_iotasks * (stride-1) > nprocs-1) {
-    stride = FLOOR(real((nprocs - 1 - base),kind=r8)/real(num_iotasks,kind=r8));
+    stride = (int)((double)(nprocs - 1 - base) / (double)(num_iotasks));
   }
 
   //-------------------------------------------------------
@@ -429,6 +432,8 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
 //    print *,"ReadTestPIO_Namelist: at the end"
 
 }
+
+#if 0
 
 subroutine Broadcast_Namelist(caller, myID, root, comm, ierror)
 
@@ -607,3 +612,4 @@ subroutine Broadcast_Namelist(caller, myID, root, comm, ierror)
      if(myid==0) print *,"Setting blocksize to : ",block_size
      call pio_set_blocksize(block_size)
   end if
+#endif // 0

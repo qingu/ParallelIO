@@ -3,6 +3,7 @@
 #include <mpi.h>
 
 #include "pio.h"
+#include "pio_types.h"
 
 #define CHECK_MPI_FUNC(_rval, _fname) \
   printMPIErr((_rval), (_fname), __FILE__, (__LINE__ - 1))
@@ -202,6 +203,10 @@ int main(int argc, char *argv[]) {
   int mode;
   int ip;
   int numPhases ;
+  int num_aggregators;
+  int stride = 1;
+  int base = 1;
+  int rearr_type = PIO_rearr_box;
 
   iosystem_desc_t PIOSYS;
   iosystem_desc_t piosystems[1];
@@ -234,7 +239,8 @@ int main(int argc, char *argv[]) {
   CHECK_MPI_FUNC(rval, "MPI_Comm_size");
   master_task = 0;
   is_master_task = (my_task == master_task);
-  num_iotasks = nprocs;
+  num_iotasks = std::min((nprocs / 2), 1);
+  num_aggregators = num_iotasks;
 
   std::cout << "My rank is " << my_task << "/" << nprocs << ": "
             << "I am" << (is_master_task ? "" : " not")
@@ -242,16 +248,15 @@ int main(int argc, char *argv[]) {
 
   rval = MPI_Finalize();
 
-  pio_cpp_init_intracom( my_task, MPI_COMM_WORLD, num_iotasks, num_aggregator, stride, &
-!          rearr_type, PIOSYS, base, async=.true.,mpi_comm_compute=mpi_comm_compute
-                            int comp_comm,
-                            int num_tasks,
-                            int num_aggregator,
-                            int stride,
-                            int rearr,
-                            iosystem_desc_t iosystem,
-                            int base)
+  pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,
+                         num_aggregators, stride, rearr_type, PIOSYS,
+                         base);
 
+  pio_cpp_finalize(PIOSYS, &rval);
+  if (rval != PIO_noerr) {
+    std::cerr << "ERROR: pio_cpp_finalize returned " << rval << std::endl;
+  }
+  rval = MPI_Finalize();
   CHECK_MPI_FUNC(rval, "MPI_Finalize");
   return 0;
 }

@@ -1,0 +1,70 @@
+#ifndef __PIO_H_TYPES_INCLUDED_
+#define __PIO_H_TYPES_INCLUDED_
+
+// ---------------------------------------------------------------------
+// Constants (parameters) defined in pio_types.F90
+// ---------------------------------------------------------------------
+
+// Do not use any form of rearrangement
+#define PIO_rearr_none ((int)0)
+// Use a PIO internal box rearrangement
+#define PIO_rearr_box  ((int)1)
+
+// use MPI-IO with data types to read/write C like binary files
+#define PIO_iotype_pbinary        1
+// use MPI-IO with data types to read/write direct access binary files
+#define PIO_iotype_direct_pbinary 2
+// serial read/write of binary files using 'base_node'
+#define PIO_iotype_binary         4
+// parallel read/write of pNetCDF files
+#define PIO_iotype_pnetcdf        5
+// serial read/write of NetCDF file using 'base_node'
+#define PIO_iotype_netcdf         6
+// netcdf4 (hdf5 format) file opened for compression (serial write access only)
+#define PIO_iotype_netcdf4c       7
+// netcdf4 (hdf5 format) file opened in parallel
+// (all netcdf4 files for read will be opened this way)
+#define PIO_iotype_netcdf4p       8
+
+// Error values may depend on the I/O package in use
+#ifdef _PNETCDF
+#include <pnetcdf.h>   /* _EXTERNAL */
+#define PIO_global        NC_GLOBAL
+#define PIO_unlimited     NC_UNLIMITED
+#define PIO_noerr         NC_NOERR
+#define PIO_WRITE         NC_WRITE
+#define PIO_nowrite       NC_NOWRITE
+#define PIO_CLOBBER       NC_CLOBBER	
+#define PIO_NOCLOBBER     NC_NOCLOBBER	
+#define PIO_NOFILL        NC_NOFILL
+#define PIO_MAX_NAME      NC_MAX_NAME
+#define PIO_MAX_VAR_DIMS  NC_MAX_VAR_DIMS
+#define PIO_64BIT_OFFSET  NC_64BIT_OFFSET
+#define PIO_num_OST       16
+#elif _NETCDF
+#define PIO_global        nf90_global
+#define PIO_unlimited     nf90_unlimited
+#define PIO_noerr         nf90_noerr
+#define PIO_WRITE         nf90_write
+#define PIO_nowrite       nf90_nowrite
+#define PIO_CLOBBER       nf90_clobber	
+#define PIO_NOCLOBBER     nf90_NOclobber	
+#define PIO_NOFILL        nf90_nofill
+#define PIO_MAX_NAME      nf90_max_name
+#define PIO_MAX_VAR_DIMS  nf90_max_var_dims
+#define PIO_64BIT_OFFSET  nf90_64bit_offset
+#define PIO_num_OST       16
+#else
+#define PIO_global         0
+#define PIO_noerr          0
+#define PIO_MAX_NAME      25
+#define PIO_MAX_VAR_DIMS   6
+#define PIO_CLOBBER       10
+#define PIO_NOCLOBBER     11
+#define PIO_WRITE         20
+#define PIO_NOWRITE       21
+#define PIO_64BIT_OFFSET   0
+#define PIO_num_OST       16
+#endif
+
+#endif // __PIO_H_TYPES_INCLUDED_
