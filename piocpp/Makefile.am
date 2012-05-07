@@ -106,7 +106,7 @@ $(LIB): $(OBJS)
 
 test: testpio_cpp
 
-testpio_cpp: testpio_cpp.o
+testpio_cpp: testpio_cpp.o namelist.o
 	$(MPICXX) $(CXXFLAGS) $(COPTS) -o $@ $<
 
 clean:
@@ -158,5 +158,8 @@ pio_cpp_binding.o : $(PIOBUILDDIR)/pio_types.mod
 pio_cpp_binding.o : $(PIOBUILDDIR)/piolib_mod.mod
 
 testpio_cpp.o: testpio_cpp.cpp pio.h $(LIB)
+testpio_cpp.o: kinds.h
+testpio_cpp.o: namelist.o namelist.o
+#testpio_cpp.o:
 
 #pio_sizes.o : pio_sizes.F90.in

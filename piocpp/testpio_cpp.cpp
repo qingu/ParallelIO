@@ -192,6 +192,7 @@ static void printMPIErr(int err, std::string fname,
 
 int main(int argc, char *argv[]) {
   int nprocs;
+  int num_iotasks;
   int my_task;
   int master_task;
   bool is_master_task;
@@ -233,6 +234,7 @@ int main(int argc, char *argv[]) {
   CHECK_MPI_FUNC(rval, "MPI_Comm_size");
   master_task = 0;
   is_master_task = (my_task == master_task);
+  num_iotasks = nprocs;
 
   std::cout << "My rank is " << my_task << "/" << nprocs << ": "
             << "I am" << (is_master_task ? "" : " not")
@@ -240,11 +242,15 @@ int main(int argc, char *argv[]) {
 
   rval = MPI_Finalize();
 
-  pio_cpp_init_intercom( nprocs,
-                            int peer_comm,
-                            int* comp_comms,
-                            int io_comm,
-                            iosystem_desc_t iosystem)
+  pio_cpp_init_intracom( my_task, MPI_COMM_WORLD, num_iotasks, num_aggregator, stride, &
+!          rearr_type, PIOSYS, base, async=.true.,mpi_comm_compute=mpi_comm_compute
+                            int comp_comm,
+                            int num_tasks,
+                            int num_aggregator,
+                            int stride,
+                            int rearr,
+                            iosystem_desc_t iosystem,
+                            int base)
 
   CHECK_MPI_FUNC(rval, "MPI_Finalize");
   return 0;
