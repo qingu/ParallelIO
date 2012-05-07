@@ -1434,6 +1434,7 @@ subroutine read_vdc2_{TYPE}(File,varDesc,ioDesc,array, iostat)
 
   end subroutine read_vdc2_{TYPE}
 
+! TYPE real,int,double
   subroutine add_data_to_buffer_{TYPE} (File, IOBUF, request)
     use pio_types, only : io_data_list
     type(file_desc_t) :: File
