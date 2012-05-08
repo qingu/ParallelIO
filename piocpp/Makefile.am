@@ -73,6 +73,11 @@ OBJS = $(SRCS_FC:.F90=.o)
 
 LIB= libpiocpp.a
 
+LDPATH = -L$(builddir) -L$(TOPBUILDDIR)/pio
+MPILIBS = -lmpi_f90 -lmpi
+NETCDFLIBS = -lnetcdf -lpnetcdf -lhdf5
+LDOPTS = $(LDPATH)  -lpiocpp -lpio $(MPILIBS) $(NETCDFLIBS) -lgfortran
+
 LEVEL=0
 
 #
@@ -107,7 +112,7 @@ $(LIB): $(OBJS)
 test: testpio_cpp
 
 testpio_cpp: testpio_cpp.o namelist.o
-	$(MPICXX) $(CXXFLAGS) $(COPTS) -o $@ $<
+	$(MPICXX) $(CXXFLAGS) $(COPTS) $(LDOPTS) -o $@ $<
 
 clean:
 	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)
