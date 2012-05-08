@@ -622,7 +622,6 @@ TIMING_FALSE
 TIMING_TRUE
 SZLIBDIR
 ZLIBDIR
-HDF5DIR
 NETCDF4_LIBS
 NETCDF4_CFLAGS
 PKG_CONFIG_LIBDIR
@@ -650,6 +649,7 @@ CPP
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
+am__nodep
 AMDEPBACKSLASH
 AMDEP_FALSE
 AMDEP_TRUE
@@ -1476,9 +1476,6 @@ Optional Features and Packages:
                           /usr/local)
   --with-netcdf-include   path to where netcdf header files can be found
   --with-netcdf-lib       path to where netcdf library files can be found
-  --with-hdf5=<directory> Specify location of HDF5 library. HDF5 is required
-                          for netCDF-4. Configure will expect to find subdir
-                          lib.
   --with-zlib=<directory> Specify location of ZLIB library. ZLIB is required
                           for netCDF-4. Configure will expect to find subdir
                           lib.
@@ -3293,11 +3290,11 @@ MAKEINFO=${MAKEINFO-"${am_missing_run}makeinfo"}
 
 # We need awk for the "check" target.  The system "awk" is bad on
 # some platforms.
-# Always define AMTAR for backward compatibility.
+# Always define AMTAR for backward compatibility.  Yes, it's still used
+# in the wild :-(  We should find a proper way to deprecate it ...
+AMTAR='$${TAR-tar}'
 
-AMTAR=${AMTAR-"${am_missing_run}tar"}
-
-am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
+am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
 
 
 
@@ -4150,6 +4147,7 @@ fi
 if test "x$enable_dependency_tracking" != xno; then
   am_depcomp="$ac_aux_dir/depcomp"
   AMDEPBACKSLASH='\'
+  am__nodep='_no'
 fi
  if test "x$enable_dependency_tracking" != xno; then
   AMDEP_TRUE=
@@ -4174,6 +4172,7 @@ else
   # instance it was reported that on HP-UX the gcc test will end up
   # making a dummy file named `D' -- because `-MD' means `put the output
   # in D'.
+  rm -rf conftest.dir
   mkdir conftest.dir
   # Copy depcomp to subdir because otherwise we won't find it if we're
   # using a relative directory.
@@ -4233,7 +4232,7 @@ else
 	break
       fi
       ;;
-    msvisualcpp | msvcmsys)
+    msvc7 | msvc7msys | msvisualcpp | msvcmsys)
       # This compiler won't grok `-c -o', but also, the minuso test has
       # not run yet.  These depmodes are late enough in the game, and
       # so weak that their functioning should not be impacted.
@@ -5447,7 +5446,7 @@ _ACEOF
 # 1 to this macro) to the Fortran 90 compiler in order to get "version" output
 ac_save_FCFLAGS=$FCFLAGS
 FCFLAGS="$FCFLAGS $ac_version"
-(eval echo $as_me:5450: \"$ac_link\") >&5
+(eval echo $as_me:5449: \"$ac_link\") >&5
 ac_fc_version_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_fc_version_output" >&5
 FCFLAGS=$ac_save_FCFLAGS
@@ -6171,6 +6170,8 @@ if test "$USE_NETCDF4" = "yes"
    USE_NETCDF=yes
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: g--> USE_NETCDF=\"$USE_NETCDF\"" >&5
+$as_echo "$as_me: g--> USE_NETCDF=\"$USE_NETCDF\"" >&6;}
 if test "$USE_NETCDF" = "yes"
   then
        if test -n "$NETCDF_PATH"
@@ -6722,7 +6723,6 @@ ac_compiler_gnu=$ac_cv_fc_compiler_gnu
        CPPDEFS=" $CPPDEFS -D_NETCDF $NETCDF_CPPFLAGS"
        FCFLAGS=" $FCFLAGS $NETCDF_FCFLAGS"
        LDLIBS=" $LDLIBS $NETCDF_LDFLAGS $NETCDF_LIBS "
-
        if test ! -f $NETCDF_PATH/include/netcdf.mod && \
           test ! -f $NETCDF_PATH/include/NETCDF.mod
          then as_fn_error $? "netcdf.mod not found in NETCDF_PATH/include \
@@ -6743,6 +6743,8 @@ if test "$USE_NETCDF4" = "yes"
    CPPDEFS="$CPPDEFS -D_NETCDF4"
    if test -e "$NETCDF_PATH/lib/pkgconfig/"
      then
+     { $as_echo "$as_me:${as_lineno-$LINENO}: g--> Using netcdf pkgconfig" >&5
+$as_echo "$as_me: g--> Using netcdf pkgconfig" >&6;}
      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$NETCDF_PATH/lib/pkgconfig/"
 
 
@@ -6957,22 +6959,277 @@ $as_echo "yes" >&6; }
 fi
      LDLIBS=" $LDLIBS $NETCDF4_LIBS"
    else
-     # Did the user specify a location for the HDF5 library?
-     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether a location for the HDF5 library was specified" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: g--> Using acx_hdf5" >&5
+$as_echo "$as_me: g--> Using acx_hdf5" >&6;}
+#   fi
+#   if ! echo $LDLIBS | egrep -q -lhdf5
+#     then
+##
+      # Did the user specify a location for the HDF5 library?
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether a location for the HDF5 library was specified" >&5
 $as_echo_n "checking whether a location for the HDF5 library was specified... " >&6; }
+      ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+
+      ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Fortran flag to compile .F90 files" >&5
+$as_echo_n "checking for Fortran flag to compile .F90 files... " >&6; }
+if ${ac_cv_fc_srcext_F90+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_ext=F90
+ac_fcflags_srcext_save=$ac_fcflags_srcext
+ac_fcflags_srcext=
+ac_cv_fc_srcext_F90=unknown
+for ac_flag in none -qsuffix=f=F90 -Tf; do
+  test "x$ac_flag" != xnone && ac_fcflags_srcext="$ac_flag"
+  cat > conftest.$ac_ext <<_ACEOF
+      program main
+
+      end
+_ACEOF
+if ac_fn_fc_try_compile "$LINENO"; then :
+  ac_cv_fc_srcext_F90=$ac_flag; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+rm -f conftest.$ac_objext conftest.F90
+ac_fcflags_srcext=$ac_fcflags_srcext_save
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_fc_srcext_F90" >&5
+$as_echo "$ac_cv_fc_srcext_F90" >&6; }
+if test "x$ac_cv_fc_srcext_F90" = xunknown; then
+  as_fn_error $? "Fortran could not compile .F90 files" "$LINENO" 5
+else
+  ac_fc_srcext=F90
+  if test "x$ac_cv_fc_srcext_F90" = xnone; then
+    ac_fcflags_srcext=""
+    FCFLAGS_F90=""
+  else
+    ac_fcflags_srcext=$ac_cv_fc_srcext_F90
+    FCFLAGS_F90=$ac_cv_fc_srcext_F90
+  fi
+
+
+fi
+ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+
+      # Check for HDF5, add to flags after ZLIB check
+
+
+acx_hdf5_ok=no
+
+CPPFLAGSsave=$CPPFLAGS
+LIBSsave=$LIBS
+LDFLAGSsave=$LDFLAGS
+HDF5_LIBS=""
+HDF5_LDFLAGS=""
+HDF5_CPPFLAGS=""
+
 
 # Check whether --with-hdf5 was given.
 if test "${with_hdf5+set}" = set; then :
-  withval=$with_hdf5; HDF5DIR=$with_hdf5
+  withval=$with_hdf5;
+else
+  with_hdf5=yes
 fi
 
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HDF5DIR" >&5
-$as_echo "$HDF5DIR" >&6; }
-     HDF5DIR=$HDF5DIR
 
+
+# check whether hdf5 is disabled
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for hdf5" >&5
+$as_echo_n "checking for hdf5... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_hdf5" >&5
+$as_echo "$with_hdf5" >&6; }
+if test "x$with_hdf5" != xno; then :
+
+	hdf5_inc_path=""
+	hdf5_lib_path=""
+        # check if with_hdf5 is a path and if so setup various search paths
+        if test -d "$with_hdf5"; then
+          hdf5_inc_path="$with_hdf5"/include
+          hdf5_lib_path="$with_hdf5"/lib
+        fi
+        # check whether we should use a non standard include path
+
+# Check whether --with-hdf5-include was given.
+if test "${with_hdf5_include+set}" = set; then :
+  withval=$with_hdf5_include;
+           if test -d "$withval"; then
+               hdf5_inc_path=$withval
+           else
+               as_fn_error $? "Cannot find directory \"$withval\"" "$LINENO" 5
+           fi
+
+fi
+
+
+        # check whether we should use a non standard library path
+
+# Check whether --with-hdf5-lib was given.
+if test "${with_hdf5_lib+set}" = set; then :
+  withval=$with_hdf5_lib;
+           if test -d "$withval"; then
+               hdf5_lib_path="$withval"
+           else
+               as_fn_error $? "Cannot find directory \"$withval\"" "$LINENO" 5
+           fi
+
+fi
+
+
+        if test x"$hdf5_inc_path"x != xx ; then
+           HDF5_CPPFLAGS=-I"$hdf5_inc_path"
+        fi
+        if test x"$hdf5_lib_path"x != xx ; then
+           HDF5_LDFLAGS=-L"$hdf5_lib_path"
+        fi
+
+	# check for libraries
+	LDFLAGS="$LDFLAGS $HDF5_LDFLAGS"
+        # we always need to link to the C libraries, so let's look for them
+        ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+        CPPFLAGS="$CPPFLAGS $HDF5_CPPFLAGS"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for H5open in -lhdf5" >&5
+$as_echo_n "checking for H5open in -lhdf5... " >&6; }
+if ${ac_cv_lib_hdf5_H5open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lhdf5  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char H5open ();
+int
+main ()
+{
+return H5open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_hdf5_H5open=yes
+else
+  ac_cv_lib_hdf5_H5open=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_hdf5_H5open" >&5
+$as_echo "$ac_cv_lib_hdf5_H5open" >&6; }
+if test "x$ac_cv_lib_hdf5_H5open" = xyes; then :
+  acx_hdf5_ok=yes; HDF5_LIBS="-lhdf5"
+else
+  acx_hdf5_ok=no
+fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for H5Dclose in -lhdf5_hl" >&5
+$as_echo_n "checking for H5Dclose in -lhdf5_hl... " >&6; }
+if ${ac_cv_lib_hdf5_hl_H5Dclose+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lhdf5_hl $HDF5_LIBS $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char H5Dclose ();
+int
+main ()
+{
+return H5Dclose ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_hdf5_hl_H5Dclose=yes
+else
+  ac_cv_lib_hdf5_hl_H5Dclose=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_hdf5_hl_H5Dclose" >&5
+$as_echo "$ac_cv_lib_hdf5_hl_H5Dclose" >&6; }
+if test "x$ac_cv_lib_hdf5_hl_H5Dclose" = xyes; then :
+  acx_hdf5_ok=yes; HDF5_LIBS="$HDF5_LIBS -lhdf5_hl"
+else
+  acx_hdf5_ok=no
+fi
+
+        ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+
+
+        # figure out how to use HDF5 from various languages
+        { $as_echo "$as_me:${as_lineno-$LINENO}: Fortran not checked for yet" >&5
+$as_echo "$as_me: Fortran not checked for yet" >&6;}
+
+fi
+
+
+
+
+
+# reset variables to original values
+CPPFLAGS=$CPPFLAGSsave
+LIBS=$LIBSsave
+LDFLAGS=$LDFLAGSsave
+
+# Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
+if test x"$acx_hdf5_ok" = xyes; then
+
+$as_echo "#define HAVE_HDF5 1" >>confdefs.h
+
+        :
+else
+        acx_hdf5_ok=no
+
+fi
+
+      ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+
+                    #     AC_MSG_RESULT([$HDF5DIR])
+#     AC_SUBST(HDF5DIR, [$HDF5DIR])
 
      # Did the user specify a location for the ZLIB library?
-     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether a location for the ZLIB library was specified" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether a location for the ZLIB library was specified" >&5
 $as_echo_n "checking whether a location for the ZLIB library was specified... " >&6; }
 
 # Check whether --with-zlib was given.
@@ -6980,13 +7237,13 @@ if test "${with_zlib+set}" = set; then :
   withval=$with_zlib; ZLIBDIR=$with_zlib
 fi
 
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ZLIBDIR" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ZLIBDIR" >&5
 $as_echo "$ZLIBDIR" >&6; }
-     ZLIBDIR=$ZLIBDIR
+      ZLIBDIR=$ZLIBDIR
 
 
-     # Did the user specify a location for the SZLIB library?
-     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether a location for the SZLIB library was specified" >&5
+      # Did the user specify a location for the SZLIB library?
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether a location for the SZLIB library was specified" >&5
 $as_echo_n "checking whether a location for the SZLIB library was specified... " >&6; }
 
 # Check whether --with-szlib was given.
@@ -6994,22 +7251,27 @@ if test "${with_szlib+set}" = set; then :
   withval=$with_szlib; SZLIBDIR=$with_szlib
 fi
 
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SZLIBDIR" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SZLIBDIR" >&5
 $as_echo "$SZLIBDIR" >&6; }
-     SZLIBDIR=$SZLIBDIR
+      SZLIBDIR=$SZLIBDIR
 
 
-     CPPDEFS="$CPPDEFS -D_NETCDF4"
-     if test -n "$HDF5DIR"
-       then LDLIBS=" $LDLIBS -L$HDF5DIR/lib"
-     fi
-     if test -n "$ZLIBDIR"
-       then LDLIBS=" $LDLIBS -L$ZLIBDIR/lib"
-     fi
-     if test -n "$SZLIBDIR"
-       then LDLIBS=" $LDLIBS -L$SZLIBDIR/lib"
-     fi
-     LDLIBS=" $LDLIBS -lhdf5 -lz -lsz"
+      CPPDEFS="$CPPDEFS -D_NETCDF4"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: g--> HDF5_LDFLAGS=\"$HDF5_LDFLAGS\"" >&5
+$as_echo "$as_me: g--> HDF5_LDFLAGS=\"$HDF5_LDFLAGS\"" >&6;}
+      if test -n "$HDF5_LDFLAGS"
+        then LDLIBS=" $LDLIBS $HDF5_LDFLAGS"
+      fi
+      if test -n "$HDF5_LIBS"
+        then LDLIBS=" $LDLIBS $HDF5"
+      fi
+      if test -n "$ZLIBDIR"
+        then LDLIBS=" $LDLIBS -L$ZLIBDIR/lib"
+      fi
+      if test -n "$SZLIBDIR"
+        then LDLIBS=" $LDLIBS -L$SZLIBDIR/lib"
+      fi
+      LDLIBS=" $LDLIBS -lhdf5 -lz -lsz"
    fi
 fi
 
@@ -7018,45 +7280,59 @@ fi
 
 if test ! "$USE_PNETCDF" = "no"
   then
-       if test -n "$PNETCDF_PATH"
-         then echo "using PNETCDF_PATH from environment"
-         else PNETCDF_PATH=/usr/local/pnetcdf
-              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: PNETCDF_PATH not found in environment, \
-                           defaulting to $PNETCDF_PATH" >&5
+   if test -n "$PNETCDF_PATH"
+     then echo "using PNETCDF_PATH from environment"
+     else PNETCDF_PATH=/usr/local/pnetcdf
+          { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: PNETCDF_PATH not found in environment, \
+                       defaulting to $PNETCDF_PATH" >&5
 $as_echo "$as_me: WARNING: PNETCDF_PATH not found in environment, \
-                           defaulting to $PNETCDF_PATH" >&2;}
-       fi
-       USE_PNETCDF="yes"
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pnetcdf.inc in $PNETCDF_PATH/include" >&5
+                       defaulting to $PNETCDF_PATH" >&2;}
+   fi
+   USE_PNETCDF="yes"
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pnetcdf.inc in $PNETCDF_PATH/include" >&5
 $as_echo_n "checking for pnetcdf.inc in $PNETCDF_PATH/include... " >&6; }
-       if test ! -f $PNETCDF_PATH/include/pnetcdf.inc
-         then { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pnetcdf.inc not found in $PNETCDF_PATH/include \
-                             disabling pnetcdf support " >&5
+   if test ! -f $PNETCDF_PATH/include/pnetcdf.inc
+     then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: error" >&5
+$as_echo "error" >&6; }
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pnetcdf.inc not found in $PNETCDF_PATH/include \
+                    disabling pnetcdf support " >&5
 $as_echo "$as_me: WARNING: pnetcdf.inc not found in $PNETCDF_PATH/include \
-                             disabling pnetcdf support " >&2;}
-         USE_PNETCDF=no
-       fi
+                    disabling pnetcdf support " >&2;}
+      USE_PNETCDF=no
+     else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+   fi
 
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libpnetcdf.a in $PNETCDF_PATH/lib" >&5
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libpnetcdf.a in $PNETCDF_PATH/lib" >&5
 $as_echo_n "checking for libpnetcdf.a in $PNETCDF_PATH/lib... " >&6; }
-       if test ! -f $PNETCDF_PATH/lib/libpnetcdf.a
-         then { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libpnetcdf.a not found in $PNETCDF_PATH/lib \
-                             disabling pnetcdf support " >&5
+   if test ! -f $PNETCDF_PATH/lib/libpnetcdf.a
+     then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: error" >&5
+$as_echo "error" >&6; }
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libpnetcdf.a not found in $PNETCDF_PATH/lib \
+                    disabling pnetcdf support " >&5
 $as_echo "$as_me: WARNING: libpnetcdf.a not found in $PNETCDF_PATH/lib \
-                             disabling pnetcdf support " >&2;}
-         USE_PNETCDF=no
-       fi
+                    disabling pnetcdf support " >&2;}
+      USE_PNETCDF=no
+     else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+   fi
 fi
 if test "$USE_PNETCDF" = "yes"
   then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pnetcdf" >&5
-$as_echo_n "checking for pnetcdf... " >&6; }
-        CPPDEFS="$CPPDEFS -D_PNETCDF"
-        INCLUDEPATH=" $INCLUDEPATH -I$PNETCDF_PATH/include"
-        LDLIBS=" $LDLIBS -L$PNETCDF_PATH/lib -lpnetcdf"
+   { $as_echo "$as_me:${as_lineno-$LINENO}: Using pnetcdf" >&5
+$as_echo "$as_me: Using pnetcdf" >&6;}
+   CPPDEFS="$CPPDEFS -D_PNETCDF"
+   INCLUDEPATH=" $INCLUDEPATH -I$PNETCDF_PATH/include"
+   LDLIBS=" $LDLIBS -L$PNETCDF_PATH/lib -lpnetcdf"
   else
-       CPPDEFS="$CPPDEFS -D_NOPNETCDF"
-       USE_PNETCDF=no
+   { $as_echo "$as_me:${as_lineno-$LINENO}: pnetcdf disabled" >&5
+$as_echo "$as_me: pnetcdf disabled" >&6;}
+   CPPDEFS="$CPPDEFS -D_NOPNETCDF"
+   USE_PNETCDF=no
 fi
 
 

@@ -42,17 +42,17 @@
 #define PIO_64BIT_OFFSET  NC_64BIT_OFFSET
 #define PIO_num_OST       16
 #elif _NETCDF
-#define PIO_global        nf90_global
-#define PIO_unlimited     nf90_unlimited
-#define PIO_noerr         nf90_noerr
-#define PIO_WRITE         nf90_write
-#define PIO_nowrite       nf90_nowrite
-#define PIO_CLOBBER       nf90_clobber	
-#define PIO_NOCLOBBER     nf90_NOclobber	
-#define PIO_NOFILL        nf90_nofill
-#define PIO_MAX_NAME      nf90_max_name
-#define PIO_MAX_VAR_DIMS  nf90_max_var_dims
-#define PIO_64BIT_OFFSET  nf90_64bit_offset
+#define PIO_global        NC_GLOBAL
+#define PIO_unlimited     NC_UNLIMITED
+#define PIO_noerr         NC_NOERR
+#define PIO_WRITE         NC_WRITE
+#define PIO_nowrite       NC_NOWRITE
+#define PIO_CLOBBER       NC_CLOBBER	
+#define PIO_NOCLOBBER     NC_NOCLOBBER	
+#define PIO_NOFILL        NC_NOFILL
+#define PIO_MAX_NAME      NC_MAX_NAME
+#define PIO_MAX_VAR_DIMS  NC_MAX_VAR_DIMS
+#define PIO_64BIT_OFFSET  NC_64BIT_OFFSET
 #define PIO_num_OST       16
 #else
 #define PIO_global         0

@@ -112,7 +112,7 @@ $(LIB): $(OBJS)
 test: testpio_cpp
 
 testpio_cpp: testpio_cpp.o namelist.o
-	$(MPICXX) $(CXXFLAGS) $(COPTS) $(LDOPTS) -o $@ $<
+	$(MPICXX) $(CXXFLAGS) $(COPTS) $(LDLIBS) -o $@ $<
 
 clean:
 	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)

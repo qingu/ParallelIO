@@ -419,6 +419,7 @@ if test "$USE_NETCDF4" = "yes"
    USE_NETCDF=yes
 fi
 
+AC_MSG_NOTICE([g--> USE_NETCDF="$USE_NETCDF"])
 if test "$USE_NETCDF" = "yes"
   then  
        if test -n "$NETCDF_PATH"
@@ -436,7 +437,6 @@ if test "$USE_NETCDF" = "yes"
        CPPDEFS=" $CPPDEFS -D_NETCDF $NETCDF_CPPFLAGS"
        FCFLAGS=" $FCFLAGS $NETCDF_FCFLAGS"
        LDLIBS=" $LDLIBS $NETCDF_LDFLAGS $NETCDF_LIBS "
-
        if test ! -f $NETCDF_PATH/include/netcdf.mod && \
           test ! -f $NETCDF_PATH/include/NETCDF.mod
          then AC_MSG_ERROR( [netcdf.mod not found in NETCDF_PATH/include \
@@ -457,49 +457,67 @@ if test "$USE_NETCDF4" = "yes"
    CPPDEFS="$CPPDEFS -D_NETCDF4"
    if test -e "$NETCDF_PATH/lib/pkgconfig/"
      then
+     AC_MSG_NOTICE([g--> Using netcdf pkgconfig])
      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$NETCDF_PATH/lib/pkgconfig/"
      PKG_CHECK_MODULES([NETCDF4], netcdf)
      LDLIBS=" $LDLIBS $NETCDF4_LIBS"
    else
-     # Did the user specify a location for the HDF5 library?
-     AC_MSG_CHECKING([whether a location for the HDF5 library was specified])
-     AC_ARG_WITH([hdf5],
-                 [AS_HELP_STRING([--with-hdf5=<directory>],
-                                 [Specify location of HDF5 library. HDF5 is required for netCDF-4. Configure will expect to find subdir lib.])],
-               [HDF5DIR=$with_hdf5])
-     AC_MSG_RESULT([$HDF5DIR])
-     AC_SUBST(HDF5DIR, [$HDF5DIR])
+     AC_MSG_NOTICE([g--> Using acx_hdf5])
+#   fi
+#   if ! echo $LDLIBS | egrep -q -lhdf5
+#     then
+##
+      # Did the user specify a location for the HDF5 library?
+      AC_MSG_CHECKING([whether a location for the HDF5 library was specified])
+      AC_LANG_PUSH(Fortran)
+      AC_FC_SRCEXT(F90)
+      # Check for HDF5, add to flags after ZLIB check
+      ACX_HDF5()
+      AC_LANG_POP(Fortran)
+     dnl AC_ARG_WITH([hdf5],
+     dnl             [AS_HELP_STRING([--with-hdf5=<directory>],
+     dnl                             [Specify location of HDF5 library. HDF5 is required for netCDF-4. Configure will expect to find subdir lib.])],
+     dnl           [HDF5DIR=$with_hdf5])
+#     AC_MSG_RESULT([$HDF5DIR])
+#     AC_SUBST(HDF5DIR, [$HDF5DIR])
 
      # Did the user specify a location for the ZLIB library?
-     AC_MSG_CHECKING([whether a location for the ZLIB library was specified])
-     AC_ARG_WITH([zlib],
-                 [AS_HELP_STRING([--with-zlib=<directory>],
-                                 [Specify location of ZLIB library. ZLIB is required for netCDF-4. Configure will expect to find subdir lib.])],
-               [ZLIBDIR=$with_zlib])
-     AC_MSG_RESULT([$ZLIBDIR])
-     AC_SUBST(ZLIBDIR, [$ZLIBDIR])
+      AC_MSG_CHECKING([whether a location for the ZLIB library was specified])
+      AC_ARG_WITH([zlib],
+                  [AS_HELP_STRING([--with-zlib=<directory>],
+                                  [Specify location of ZLIB library. ZLIB is required for netCDF-4. Configure will expect to find subdir lib.])],
+                [ZLIBDIR=$with_zlib])
+      AC_MSG_RESULT([$ZLIBDIR])
+      AC_SUBST(ZLIBDIR, [$ZLIBDIR])
 
-     # Did the user specify a location for the SZLIB library?
-     AC_MSG_CHECKING([whether a location for the SZLIB library was specified])
-     AC_ARG_WITH([szlib],
-                 [AS_HELP_STRING([--with-szlib=<directory>],
-                                 [Specify location of SZLIB library. SZLIB is not required for netCDF-4, but you must specify its location \
-   			      if HDF5 was built with SZLIB. Configure will expect to find subdir lib.])],
-               [SZLIBDIR=$with_szlib])
-     AC_MSG_RESULT([$SZLIBDIR])
-     AC_SUBST(SZLIBDIR, [$SZLIBDIR])
+      # Did the user specify a location for the SZLIB library?
+      AC_MSG_CHECKING([whether a location for the SZLIB library was specified])
+      AC_ARG_WITH([szlib],
+                  [AS_HELP_STRING([--with-szlib=<directory>],
+                                  [Specify location of SZLIB library. SZLIB \
+                                   is not required for netCDF-4, but you must \
+                                   specify its location if HDF5 was built \
+                                   with SZLIB. Configure will expect to find \
+                                   subdir lib.])],
+                  [SZLIBDIR=$with_szlib])
+      AC_MSG_RESULT([$SZLIBDIR])
+      AC_SUBST(SZLIBDIR, [$SZLIBDIR])
 	
-     CPPDEFS="$CPPDEFS -D_NETCDF4"
-     if test -n "$HDF5DIR"
-       then LDLIBS=" $LDLIBS -L$HDF5DIR/lib"
-     fi 
-     if test -n "$ZLIBDIR"
-       then LDLIBS=" $LDLIBS -L$ZLIBDIR/lib"
-     fi 
-     if test -n "$SZLIBDIR"
-       then LDLIBS=" $LDLIBS -L$SZLIBDIR/lib"
-     fi 
-     LDLIBS=" $LDLIBS -lhdf5 -lz -lsz"   
+      CPPDEFS="$CPPDEFS -D_NETCDF4"
+      AC_MSG_NOTICE([g--> HDF5_LDFLAGS="$HDF5_LDFLAGS"])
+      if test -n "$HDF5_LDFLAGS"
+        then LDLIBS=" $LDLIBS $HDF5_LDFLAGS"
+      fi 
+      if test -n "$HDF5_LIBS"
+        then LDLIBS=" $LDLIBS $HDF5"
+      fi 
+      if test -n "$ZLIBDIR"
+        then LDLIBS=" $LDLIBS -L$ZLIBDIR/lib"
+      fi 
+      if test -n "$SZLIBDIR"
+        then LDLIBS=" $LDLIBS -L$SZLIBDIR/lib"
+      fi 
+      LDLIBS=" $LDLIBS -lhdf5 -lz -lsz"   
    fi
 fi
 
@@ -508,36 +526,45 @@ fi
 
 if test ! "$USE_PNETCDF" = "no"
   then
-       if test -n "$PNETCDF_PATH"
-         then echo "using PNETCDF_PATH from environment"
-         else PNETCDF_PATH=/usr/local/pnetcdf
-              AC_MSG_WARN( [PNETCDF_PATH not found in environment, \
-                           defaulting to $PNETCDF_PATH])
-       fi
-       USE_PNETCDF="yes"
-       AC_MSG_CHECKING([for pnetcdf.inc in $PNETCDF_PATH/include])
-       if test ! -f $PNETCDF_PATH/include/pnetcdf.inc
-         then AC_MSG_WARN( [pnetcdf.inc not found in $PNETCDF_PATH/include \
-                             disabling pnetcdf support ])
-         USE_PNETCDF=no
-       fi
+   if test -n "$PNETCDF_PATH"
+     then echo "using PNETCDF_PATH from environment"
+     else PNETCDF_PATH=/usr/local/pnetcdf
+          AC_MSG_WARN( [PNETCDF_PATH not found in environment, \
+                       defaulting to $PNETCDF_PATH])
+   fi
+   USE_PNETCDF="yes"
+   AC_MSG_CHECKING([for pnetcdf.inc in $PNETCDF_PATH/include])
+   if test ! -f $PNETCDF_PATH/include/pnetcdf.inc
+     then
+      AC_MSG_RESULT([error])
+      AC_MSG_WARN( [pnetcdf.inc not found in $PNETCDF_PATH/include \
+                    disabling pnetcdf support ])
+      USE_PNETCDF=no
+     else
+      AC_MSG_RESULT([found])
+   fi
 
-       AC_MSG_CHECKING([for libpnetcdf.a in $PNETCDF_PATH/lib])
-       if test ! -f $PNETCDF_PATH/lib/libpnetcdf.a
-         then AC_MSG_WARN( [libpnetcdf.a not found in $PNETCDF_PATH/lib \
-                             disabling pnetcdf support ])
-         USE_PNETCDF=no
-       fi
+   AC_MSG_CHECKING([for libpnetcdf.a in $PNETCDF_PATH/lib])
+   if test ! -f $PNETCDF_PATH/lib/libpnetcdf.a
+     then 
+      AC_MSG_RESULT([error])
+      AC_MSG_WARN( [libpnetcdf.a not found in $PNETCDF_PATH/lib \
+                    disabling pnetcdf support ])
+      USE_PNETCDF=no
+     else
+      AC_MSG_RESULT([found])
+   fi
 fi
 if test "$USE_PNETCDF" = "yes"
   then
-       AC_MSG_CHECKING([for pnetcdf])
-        CPPDEFS="$CPPDEFS -D_PNETCDF"
-        INCLUDEPATH=" $INCLUDEPATH -I$PNETCDF_PATH/include"
-        LDLIBS=" $LDLIBS -L$PNETCDF_PATH/lib -lpnetcdf"
+   AC_MSG_NOTICE([Using pnetcdf])
+   CPPDEFS="$CPPDEFS -D_PNETCDF"
+   INCLUDEPATH=" $INCLUDEPATH -I$PNETCDF_PATH/include"
+   LDLIBS=" $LDLIBS -L$PNETCDF_PATH/lib -lpnetcdf"
   else
-       CPPDEFS="$CPPDEFS -D_NOPNETCDF"
-       USE_PNETCDF=no
+   AC_MSG_NOTICE([pnetcdf disabled])
+   CPPDEFS="$CPPDEFS -D_NOPNETCDF"
+   USE_PNETCDF=no
 fi
 
 
