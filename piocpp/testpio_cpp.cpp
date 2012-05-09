@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
   int numPhases ;
   int num_aggregators;
   int stride = 1;
-  int base = 1;
+  int base = 0;
   int rearr_type = PIO_rearr_box;
 
   iosystem_desc_t PIOSYS;
@@ -239,23 +239,24 @@ int main(int argc, char *argv[]) {
   CHECK_MPI_FUNC(rval, "MPI_Comm_size");
   master_task = 0;
   is_master_task = (my_task == master_task);
-  num_iotasks = std::min((nprocs / 2), 1);
+  num_iotasks = std::max((nprocs / 2), 1);
   num_aggregators = num_iotasks;
 
   std::cout << "My rank is " << my_task << "/" << nprocs << ": "
             << "I am" << (is_master_task ? "" : " not")
             << " the master task." << std::endl;
 
-  rval = MPI_Finalize();
-
-  pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,
+  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = " << PIOSYS << std::endl;
+  pio_cpp_init_intracom(my_task, MPI_Comm_c2f(MPI_COMM_WORLD), num_iotasks,
                          num_aggregators, stride, rearr_type, PIOSYS,
                          base);
+  std::cout << "After pio_cpp_init_intracom, PIOSYS = " << PIOSYS << std::endl;
 
   pio_cpp_finalize(PIOSYS, &rval);
   if (rval != PIO_noerr) {
     std::cerr << "ERROR: pio_cpp_finalize returned " << rval << std::endl;
   }
+
   rval = MPI_Finalize();
   CHECK_MPI_FUNC(rval, "MPI_Finalize");
   return 0;

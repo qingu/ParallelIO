@@ -148,20 +148,27 @@ integer( c_int), value :: base
 
 !  local
 
-   type( iosystem_desc_t), pointer :: iosystem_desc
+   type( iosystem_desc_t), pointer :: iosystem_desc_ptr
+   type( iosystem_desc_t), target :: iosystem_desc
 
 !  text
 
-continue
-
 !  convert the C pointer to a Fortran pointer
+   call c_f_pointer( iosystem, iosystem_desc_ptr)
 
-   call c_f_pointer( iosystem, iosystem_desc)
+continue
+write(*,*) "In pio_cpp_init_intracom"
 
 !  call the Fortran procedure
-
+write(*,*) "Ready to call pio_init"
    call pio_init( int( comp_rank, i4), int( comp_comm, i4), int( num_iotasks, i4), int( num_aggregator, i4), &
                   int( stride, i4), int( rearr, i4), iosystem_desc, int( base, i4))
+write(*,*) "After call to pio_init"
+
+write(*,*) "iosystem_desc%num_iotasks = ", iosystem_desc%num_iotasks
+   iosystem_desc_ptr => iosystem_desc
+   iosystem = iosystem_desc
+write(*,*) "iosystem = ", iosystem
 
 return
 

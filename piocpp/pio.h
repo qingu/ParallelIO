@@ -12,7 +12,7 @@ extern "C" {
 // subroutine pio_cpp_init_intracom( comp_rank, comp_comm, num_iotasks, num_aggregator, stride, rearr, iosystem, base) bind( c)
 
 void pio_cpp_init_intracom( int comp_rank,
-                            void* comp_comm,
+                            int comp_comm,
                             int num_tasks,
                             int num_aggregator,
                             int stride,
@@ -23,7 +23,7 @@ void pio_cpp_init_intracom( int comp_rank,
 // subroutine pio_cpp_init_intercom( component_count, peer_comm, comp_comms, io_comm, iosystem) bind( c)
 
 void pio_cpp_init_intercom( int component_count,
-                            void* peer_comm,
+                            int peer_comm,
                             int* comp_comms,
                             int io_comm,
                             iosystem_desc_t iosystem);

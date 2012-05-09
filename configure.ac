@@ -169,6 +169,25 @@ AC_ARG_VAR(SIZEOF_FLOAT,[Size of float])
 AC_ARG_VAR(SIZEOF_DOUBLE,[Size of double])
 AC_ARG_VAR(SIZEOF_VOID_P,[Size of void*])
 
+############################################################################
+## Set sizeof variables if not already set
+#######
+
+if test -z "$SIZEOF_CHAR"; then
+   AC_CHECK_SIZEOF(char)
+fi
+if test -z "$SIZEOF_INT"; then
+   AC_CHECK_SIZEOF(int)
+fi
+if test -z "$SIZEOF_FLOAT"; then
+   AC_CHECK_SIZEOF(float)
+fi
+if test -z "$SIZEOF_DOUBLE"; then
+   AC_CHECK_SIZEOF(double)
+fi
+if test -z "$SIZEOF_VOID_P"; then
+   AC_CHECK_SIZEOF([void *])
+fi
 
 ############################################################################
 
@@ -411,7 +430,7 @@ fi
 # construct an xlf fortran version of the -D args if necessary
 #
 
-INCLUDEPATH=" $INCLUDEPATH$MPI_INC"
+INCLUDEPATH=" $INCLUDEPATH $MPI_INC"
 PLIBS=""
 
 if test "$USE_NETCDF4" = "yes"
@@ -460,7 +479,8 @@ if test "$USE_NETCDF4" = "yes"
      AC_MSG_NOTICE([g--> Using netcdf pkgconfig])
      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$NETCDF_PATH/lib/pkgconfig/"
      PKG_CHECK_MODULES([NETCDF4], netcdf)
-     LDLIBS=" $LDLIBS $NETCDF4_LIBS"
+     LDLIBS=" $LDLIBS $NETCDF4_LIBS $HDF5_LDFLAGS"
+      AC_MSG_NOTICE([g--> LDFLAGS="$LDFLAGS"])
    else
      AC_MSG_NOTICE([g--> Using acx_hdf5])
 #   fi
