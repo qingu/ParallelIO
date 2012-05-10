@@ -1,51 +1,122 @@
+#define __PIO_FILE__ "pio_cpp_binding.F90"
 ! ---------------------------------------------------------------------
 
 !  procedures for a cpp binding to pio
 
 module pio_cpp_binding
 
-implicit none
+  use :: pio_types, only: iosystem_desc_t
+  use :: mpi, only: MPI_COMM_NULL
 
-!  explicit export
+  implicit none
 
-private
+  !  explicit export
 
-public :: pio_cpp_init_intracom
-public :: pio_cpp_init_intercom
-public :: pio_cpp_finalize
-public :: pio_cpp_initdecomp_dof_i8
-public :: pio_cpp_openfile
-public :: pio_cpp_syncfile
-public :: pio_cpp_createfile
-public :: pio_cpp_closefile
-public :: pio_cpp_setiotype
-public :: pio_cpp_numtoread
-public :: pio_cpp_numtowrite
-public :: pio_cpp_setframe
-public :: pio_cpp_advanceframe
-public :: pio_cpp_setdebuglevel
-public :: pio_cpp_seterrorhandlingf
-public :: pio_cpp_seterrorhandlingi
-public :: pio_cpp_get_local_array_size
-public :: pio_cpp_freedecomp_ios
-public :: pio_cpp_freedecomp_file
-public :: pio_cpp_dupiodesc
-public :: pio_cpp_getnumiotasks
-public :: pio_cpp_set_hint
-public :: pio_cpp_getnum_ost
-public :: pio_cpp_setnum_ost
-public :: pio_cpp_file_is_open
+  private
 
-!  constants
+  ! public interface
 
-integer, parameter :: max_string_len = 10000
-integer, parameter :: max_filename_len = 128
+  public :: pio_cpp_init_intracom
+  public :: pio_cpp_init_intercom
+  public :: pio_cpp_finalize
+  public :: pio_cpp_initdecomp_dof_i8
+  public :: pio_cpp_openfile
+  public :: pio_cpp_syncfile
+  public :: pio_cpp_createfile
+  public :: pio_cpp_closefile
+  public :: pio_cpp_setiotype
+  public :: pio_cpp_numtoread
+  public :: pio_cpp_numtowrite
+  public :: pio_cpp_setframe
+  public :: pio_cpp_advanceframe
+  public :: pio_cpp_setdebuglevel
+  public :: pio_cpp_seterrorhandlingf
+  public :: pio_cpp_seterrorhandlingi
+  public :: pio_cpp_get_local_array_size
+  public :: pio_cpp_freedecomp_ios
+  public :: pio_cpp_freedecomp_file
+  public :: pio_cpp_dupiodesc
+  public :: pio_cpp_getnumiotasks
+  public :: pio_cpp_set_hint
+  public :: pio_cpp_getnum_ost
+  public :: pio_cpp_setnum_ost
+  public :: pio_cpp_file_is_open
 
-! ---------------------------------------------------------------------
+  ! Utility functions for managing C handles for iosystem_desc_t instances
 
-!  library
+  type, private :: PIO_C_HANDLE_NODE
+     integer :: c_handle
+     type(iosystem_desc_t), pointer :: PIO_descriptor_p
+     type(PIO_C_HANDLE_NODE), pointer :: next
+  end type PIO_C_HANDLE_NODE
+
+  type(PIO_C_HANDLE_NODE), private, pointer :: PIO_Intracom_handles
+  integer, private :: PIO_c_handle_num = 0
+
+  private :: get_pio_iosys_handle
+
+  !  constants
+
+  integer, parameter :: max_string_len = 1024
+  integer, parameter :: max_path_len = 1024
+
+  ! ---------------------------------------------------------------------
+
+  !  library
 
 contains
+
+  ! ---------------------------------------------------------------------
+
+  !  Obtain a PIO iosystem_desc_t object given its integer handle
+
+subroutine get_pio_iosys_handle( iosystem_handle, iosystem)
+
+  use pio_support, only : piodie, debug
+
+  !  dummy arguments
+  integer, intent(in) :: iosystem_handle
+  type( iosystem_desc_t), intent(out) :: iosystem
+
+  ! local
+  type(iosystem_desc_t), allocatable, target :: new_iosystem_desc(:)
+  type(PIO_C_HANDLE_NODE), allocatable, target :: new_pio_c_handle_node(:)
+  type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
+  integer stat
+
+  if (iosystem_handle .le. 0) then
+     ! We expect an unused handle, create one and link it in
+     ! First, create a new iosystem_desc_t
+     allocate(new_iosystem_desc(1), stat=stat)
+     if (stat .ne. 0) then
+        call piodie(__PIO_FILE__,__LINE__,'unable to allocate iosystem_desc_t')
+     endif
+     allocate(new_pio_c_handle_node(1), stat=stat)
+     if (stat .ne. 0) then
+        deallocate(new_iosystem_desc)
+        call piodie(__PIO_FILE__,__LINE__,       &
+        'unable to allocate PIO_C_HANDLE_NODE')
+     endif
+     new_pio_c_handle_node(1)%PIO_descriptor_p => new_iosystem_desc(1)
+     new_pio_c_handle_node(1)%next => PIO_Intracom_handles
+     PIO_Intracom_handles => new_pio_c_handle_node(1)
+     PIO_c_handle_num = PIO_c_handle_num + 1
+     new_pio_c_handle_node(1)%c_handle = PIO_c_handle_num
+     iosystem = new_iosystem_desc(1)
+  else
+     ! We expect to find a structure with the correct handle number
+     pio_handle_node => PIO_Intracom_handles
+     do while (associated(pio_handle_node))
+        if (iosystem_handle .eq. pio_handle_node%c_handle) then
+           iosystem = pio_handle_node%PIO_descriptor_p
+           exit
+        else
+           pio_handle_node => pio_handle_node%next
+        end if
+     end do
+  end if
+
+end subroutine get_pio_iosys_handle
 
 ! ---------------------------------------------------------------------
 
@@ -167,8 +238,6 @@ write(*,*) "After call to pio_init"
 
 write(*,*) "iosystem_desc%num_iotasks = ", iosystem_desc%num_iotasks
    iosystem_desc_ptr => iosystem_desc
-   iosystem = iosystem_desc
-write(*,*) "iosystem = ", iosystem
 
 return
 
@@ -382,11 +451,11 @@ integer( c_int), value :: mode
 
    type( iosystem_desc_t), pointer :: iosystem_desc
    type( file_desc_t), pointer :: file_desc
-   character( kind= c_char, len= max_filename_len), pointer :: c_filename
+   character( kind= c_char, len= max_path_len), pointer :: c_filename
 #ifdef ALLOC_CHARLEN_OK
    character( len= :), allocatable :: filename
 #else
-   character( len= max_filename_len) :: filename
+   character( len= max_path_len) :: filename
 #endif
 
    integer :: clen
@@ -504,11 +573,11 @@ integer( c_int), value :: amode_in
 
    type( iosystem_desc_t), pointer :: iosystem_desc
    type( file_desc_t), pointer :: file_desc
-   character( kind= c_char, len= max_filename_len), pointer :: c_filename
+   character( kind= c_char, len= max_path_len), pointer :: c_filename
 #ifdef ALLOC_CHARLEN_OK
    character( len= :), allocatable :: filename
 #else
-   character( len= max_filename_len) :: filename
+   character( len= max_path_len) :: filename
 #endif
 
    integer :: clen
