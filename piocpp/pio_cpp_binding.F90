@@ -45,8 +45,8 @@ module pio_cpp_binding
   ! Utility functions for managing C handles for iosystem_desc_t instances
 
   type, private :: PIO_C_HANDLE_NODE
-     integer :: c_handle
-     type(iosystem_desc_t), pointer :: PIO_descriptor_p
+     integer :: c_handle_start
+     type(iosystem_desc_t), allocatable :: PIO_descriptors(:)
      type(PIO_C_HANDLE_NODE), pointer :: next
   end type PIO_C_HANDLE_NODE
 
@@ -54,6 +54,7 @@ module pio_cpp_binding
   integer, private :: PIO_c_handle_num = 0
 
   private :: get_pio_iosys_handle
+  private :: new_pio_iosys_handles
 
   !  constants
 
@@ -70,50 +71,87 @@ contains
 
   !  Obtain a PIO iosystem_desc_t object given its integer handle
 
-subroutine get_pio_iosys_handle( iosystem_handle, iosystem)
+subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
+
+   use pio_support, only : piodie, debug
+
+   !  dummy arguments
+   integer, intent(in) :: iosystem_handles(:)
+   type(iosystem_desc_t), intent(out) :: iosystem(:)
+
+   ! local
+   type(PIO_C_HANDLE_NODE), allocatable, target :: new_pio_c_handle_node(:)
+   type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
+   integer :: stat
+   integer :: num_handles
+
+   num_handles = size(iosystem_handles, 1)
+
+   ! First, create a new iosystem handle node
+   allocate(new_pio_c_handle_node(1), stat=stat)
+   if (stat .ne. 0) then
+      call piodie(__PIO_FILE__,__LINE__,       &
+                 'unable to allocate PIO_C_HANDLE_NODE')
+   endif
+   ! Now, create the new iosystem_desc_t array
+   allocate(new_pio_c_handle_node(1)%PIO_descriptors(num_handles), stat=stat)
+   if (stat .ne. 0) then
+      deallocate(new_pio_c_handle_node)
+      call piodie(__PIO_FILE__,__LINE__,'unable to allocate iosystem_desc_t')
+   endif
+   ! Fill in C starting handle number and increment
+   new_pio_c_handle_node(1)%c_handle_start = PIO_c_handle_num
+   PIO_c_handle_num = PIO_c_handle_num + num_handles
+   ! Find the end of the chain and insert new node
+   if (.not. associated(PIO_Intracom_handles)) then
+      PIO_Intracom_handles => new_pio_c_handle_node(1)
+   else
+      pio_handle_node => PIO_Intracom_handles
+      do while (associated(pio_handle_node%next))
+      end do
+      pio_handle_node%next => new_pio_c_handle_node(1)
+   end if
+  iosystem = new_pio_c_handle_node(1)%PIO_descriptors
+
+end subroutine new_pio_iosys_handles
+
+  !  Obtain a PIO iosystem_desc_t object given its integer handle
+
+subroutine get_pio_iosys_handle(iosystem_handle, iosystem)
 
   use pio_support, only : piodie, debug
 
   !  dummy arguments
   integer, intent(in) :: iosystem_handle
-  type( iosystem_desc_t), intent(out) :: iosystem
+  type(iosystem_desc_t), intent(out) :: iosystem
+  logical :: found_handle = .false.
 
   ! local
   type(iosystem_desc_t), allocatable, target :: new_iosystem_desc(:)
   type(PIO_C_HANDLE_NODE), allocatable, target :: new_pio_c_handle_node(:)
   type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
-  integer stat
+  integer :: stat
+  integer :: num_handles
+  integer :: handle0
 
-  if (iosystem_handle .le. 0) then
-     ! We expect an unused handle, create one and link it in
-     ! First, create a new iosystem_desc_t
-     allocate(new_iosystem_desc(1), stat=stat)
-     if (stat .ne. 0) then
-        call piodie(__PIO_FILE__,__LINE__,'unable to allocate iosystem_desc_t')
-     endif
-     allocate(new_pio_c_handle_node(1), stat=stat)
-     if (stat .ne. 0) then
-        deallocate(new_iosystem_desc)
-        call piodie(__PIO_FILE__,__LINE__,       &
-        'unable to allocate PIO_C_HANDLE_NODE')
-     endif
-     new_pio_c_handle_node(1)%PIO_descriptor_p => new_iosystem_desc(1)
-     new_pio_c_handle_node(1)%next => PIO_Intracom_handles
-     PIO_Intracom_handles => new_pio_c_handle_node(1)
-     PIO_c_handle_num = PIO_c_handle_num + 1
-     new_pio_c_handle_node(1)%c_handle = PIO_c_handle_num
-     iosystem = new_iosystem_desc(1)
-  else
-     ! We expect to find a structure with the correct handle number
-     pio_handle_node => PIO_Intracom_handles
-     do while (associated(pio_handle_node))
-        if (iosystem_handle .eq. pio_handle_node%c_handle) then
-           iosystem = pio_handle_node%PIO_descriptor_p
-           exit
-        else
-           pio_handle_node => pio_handle_node%next
-        end if
-     end do
+  ! Search for a structure with the correct handle number
+  pio_handle_node => PIO_Intracom_handles
+  do while (associated(pio_handle_node))
+     num_handles = size(pio_handle_node%PIO_descriptors, 1)
+     handle0 = pio_handle_node%c_handle_start
+     if ((iosystem_handle .gt. handle0) .and.   &
+         (iosystem_handle .le. (handle0 + num_handles))) then
+        iosystem = pio_handle_node%PIO_descriptors(iosystem_handle - handle0)
+        found_handle = .true.
+        exit
+     else
+        pio_handle_node => pio_handle_node%next
+     end if
+  end do
+
+  if (.not. found_handle) then
+     print *,__PIO_FILE__,__LINE__,'No descriptor for ',iosystem_handle
+     call piodie(__PIO_FILE__,__LINE__,'Could not find descriptor')
   end if
 
 end subroutine get_pio_iosys_handle
