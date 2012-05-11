@@ -46,7 +46,7 @@ module pio_cpp_binding
 
   type, private :: PIO_C_HANDLE_NODE
      integer :: c_handle_start
-     type(iosystem_desc_t), allocatable, target :: PIO_descriptors(:)
+     type(iosystem_desc_t), pointer :: PIO_descriptors(:)
      type(PIO_C_HANDLE_NODE), pointer :: next
   end type PIO_C_HANDLE_NODE
 
@@ -136,21 +136,23 @@ subroutine get_pio_iosys_handle(iosystem_handle, iosystem)
   !  dummy arguments
   integer, intent(in) :: iosystem_handle
   type(iosystem_desc_t), intent(out) :: iosystem
-  logical :: found_handle = .false.
 
   ! local
-  type(iosystem_desc_t), allocatable, target :: new_iosystem_desc(:)
-  type(PIO_C_HANDLE_NODE), allocatable, target :: new_pio_c_handle_node(:)
+  logical :: found_handle = .false.
   type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
-  integer :: stat
   integer :: num_handles
   integer :: handle0
 
+continue
+  write(*,*) "In get_pio_iosys_handle"
   ! Search for a structure with the correct handle number
+  write(*,*) "get_pio_iosys_handle: PIO_Intracom_handles = ", associated(PIO_Intracom_handles)
   pio_handle_node => PIO_Intracom_handles
+  write(*,*) "get_pio_iosys_handle: Starting search for ", iosystem_handle
   do while (associated(pio_handle_node))
      num_handles = size(pio_handle_node%PIO_descriptors, 1)
      handle0 = pio_handle_node%c_handle_start
+     write(*,*) "get_pio_iosys_handle: checking match for ", handle0
      if ((iosystem_handle .gt. handle0) .and.   &
          (iosystem_handle .le. (handle0 + num_handles))) then
         iosystem = pio_handle_node%PIO_descriptors(iosystem_handle - handle0)
@@ -300,7 +302,9 @@ end function c_len
 !  extern "C" void pio_cpp_init_intracom( int comp_rank, int comp_comm, int num_tasks, int num_aggregator,
 !                                         int stride, int rearr, void* iosystem, int base);
 
-subroutine pio_cpp_init_intracom( comp_rank, comp_comm, num_iotasks, num_aggregator, stride, rearr, iosystem_handle, base) bind( c)
+subroutine pio_cpp_init_intracom(comp_rank, comp_comm, num_iotasks,      &
+                                 num_aggregator, stride, rearr,          &
+                                 iosystem_handle, base) bind(c)
 
 !  bind to C
 
@@ -326,13 +330,14 @@ integer( c_int), value :: num_iotasks
 integer( c_int), value :: num_aggregator
 integer( c_int), value :: stride
 integer( c_int), value :: rearr
-integer( c_int), value :: iosystem_handle
+integer(c_int), intent(inout) :: iosystem_handle
 integer( c_int), value :: base
 
 !  local
 
    type( iosystem_desc_t), pointer :: iosystem_desc_p(:)
-   integer :: iosystem_handles(1)
+   integer, pointer :: iosys_handle
+   integer, target :: iosystem_handles(1)
 
 !  text
 
@@ -412,7 +417,7 @@ end subroutine pio_cpp_init_intercom
 
 !  extern "C" void pio_cpp_finalize( void* iosystem, int* ierror);
 
-subroutine pio_cpp_finalize( iosystem, ierr) bind( c)
+subroutine pio_cpp_finalize( iosystem_handle, ierr) bind( c)
 
 !  bind to C
 
@@ -432,26 +437,27 @@ use :: piolib_mod, only: pio_finalize
 
 !  dummy arguments
 
-type( c_ptr), value :: iosystem
-integer( c_int), intent( out) :: ierr
+integer(c_int), intent(inout) :: iosystem_handle
+integer(c_int), intent(out) :: ierr
 
 !  local
 
+   integer, pointer :: iosys_handle
    integer( i4) :: ierror
 
-   type( iosystem_desc_t), pointer :: iosystem_desc
+   type( iosystem_desc_t), pointer :: iosystem_desc_p
 
 !  text
 
 continue
 
-!  convert the C pointer to a Fortran pointer
-
-   call c_f_pointer( iosystem, iosystem_desc)
+!  get a new iosystem_desc_t for this connection
+write(*,*) "Ready to call get_pio_iosys_handle for c handle = ", iosystem_handle
+   call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
 !  call the Fortran procedure
 
-   call pio_finalize( iosystem_desc, ierror)
+   call pio_finalize( iosystem_desc_p, ierror)
 
 !  convert the arguments back to C
 
