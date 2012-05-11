@@ -46,15 +46,17 @@ module pio_cpp_binding
 
   type, private :: PIO_C_HANDLE_NODE
      integer :: c_handle_start
-     type(iosystem_desc_t), allocatable :: PIO_descriptors(:)
+     type(iosystem_desc_t), allocatable, target :: PIO_descriptors(:)
      type(PIO_C_HANDLE_NODE), pointer :: next
   end type PIO_C_HANDLE_NODE
 
   type(PIO_C_HANDLE_NODE), private, pointer :: PIO_Intracom_handles
   integer, private :: PIO_c_handle_num = 0
 
-  private :: get_pio_iosys_handle
   private :: new_pio_iosys_handles
+  private :: get_pio_iosys_handle
+  private :: delete_pio_iosys_handle
+!  private :: delete_all_pio_iosys_handles
 
   !  constants
 
@@ -76,16 +78,21 @@ subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
    use pio_support, only : piodie, debug
 
    !  dummy arguments
-   integer, intent(in) :: iosystem_handles(:)
-   type(iosystem_desc_t), intent(out) :: iosystem(:)
+   integer, intent(inout) :: iosystem_handles(:)
+   type(iosystem_desc_t), pointer :: iosystem(:)
 
    ! local
    type(PIO_C_HANDLE_NODE), allocatable, target :: new_pio_c_handle_node(:)
    type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
    integer :: stat
    integer :: num_handles
+   integer :: i
+
+   write(*,*) "In new_pio_iosys_handles"
 
    num_handles = size(iosystem_handles, 1)
+
+   write(*,*) "num_handles = ", num_handles
 
    ! First, create a new iosystem handle node
    allocate(new_pio_c_handle_node(1), stat=stat)
@@ -111,7 +118,12 @@ subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
       end do
       pio_handle_node%next => new_pio_c_handle_node(1)
    end if
-  iosystem = new_pio_c_handle_node(1)%PIO_descriptors
+   ! Set the PIO iosystem_desc_t output
+  iosystem => new_pio_c_handle_node(1)%PIO_descriptors
+  ! Fill in the c handle numbers
+  do i = 1, num_handles
+     iosystem_handles(i) = new_pio_c_handle_node(1)%c_handle_start + i
+  end do
 
 end subroutine new_pio_iosys_handles
 
@@ -155,6 +167,68 @@ subroutine get_pio_iosys_handle(iosystem_handle, iosystem)
   end if
 
 end subroutine get_pio_iosys_handle
+
+  !  Delete a node containing a PIO iosystem object and corresponding C handle
+
+subroutine delete_pio_iosys_handle(iosystem_handle)
+
+  use pio_support, only : piodie, debug
+
+  !  dummy arguments
+  integer, intent(in) :: iosystem_handle
+  logical :: found_handle = .false.
+
+  ! local
+  type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
+  type(PIO_C_HANDLE_NODE), pointer :: prev_handle_node
+  integer :: stat
+  integer :: num_handles
+  integer :: handle0
+
+  ! Search for a structure with the correct handle number
+  pio_handle_node => PIO_Intracom_handles
+  do while (associated(pio_handle_node))
+     num_handles = size(pio_handle_node%PIO_descriptors, 1)
+     handle0 = pio_handle_node%c_handle_start
+     if ((iosystem_handle .gt. handle0) .and.   &
+         (iosystem_handle .le. (handle0 + num_handles))) then
+        if (num_handles .gt. 1) then
+           print *,__PIO_FILE__,__LINE__,'WARNING: deleting ',   &
+                   num_handles,'handles'
+        end if
+        ! Remove node from list
+        if (associated(prev_handle_node)) then
+           prev_handle_node%next => pio_handle_node%next
+        else
+           PIO_Intracom_handles => pio_handle_node%next
+        end if
+        ! Clear the starting handle (probably unneccessary)
+        pio_handle_node%c_handle_start = -1
+        ! Now, delete the iosystem_desc_t array
+        deallocate(pio_handle_node%PIO_descriptors, stat=stat)
+        if (stat .ne. 0) then
+           print *,__PIO_FILE__,__LINE__,'Error ',stat,  &
+                   ' deallocating iosystem descriptor(s)'
+        endif
+        ! Finally, delete the iosystem handle node
+        deallocate(pio_handle_node, stat=stat)
+        if (stat .ne. 0) then
+           print *,__PIO_FILE__,__LINE__,'Error ',stat,  &
+                   ' deallocating iosystem node'
+        endif
+        found_handle = .true.
+        exit
+     else
+        prev_handle_node => pio_handle_node
+        pio_handle_node => pio_handle_node%next
+     end if
+  end do
+
+  if (.not. found_handle) then
+     print *,__PIO_FILE__,__LINE__,'No descriptor for ',iosystem_handle
+  end if
+
+end subroutine delete_pio_iosys_handle
 
 ! ---------------------------------------------------------------------
 
@@ -226,7 +300,7 @@ end function c_len
 !  extern "C" void pio_cpp_init_intracom( int comp_rank, int comp_comm, int num_tasks, int num_aggregator,
 !                                         int stride, int rearr, void* iosystem, int base);
 
-subroutine pio_cpp_init_intracom( comp_rank, comp_comm, num_iotasks, num_aggregator, stride, rearr, iosystem, base) bind( c)
+subroutine pio_cpp_init_intracom( comp_rank, comp_comm, num_iotasks, num_aggregator, stride, rearr, iosystem_handle, base) bind( c)
 
 !  bind to C
 
@@ -252,30 +326,37 @@ integer( c_int), value :: num_iotasks
 integer( c_int), value :: num_aggregator
 integer( c_int), value :: stride
 integer( c_int), value :: rearr
-type( c_ptr), value :: iosystem
+integer( c_int), value :: iosystem_handle
 integer( c_int), value :: base
 
 !  local
 
-   type( iosystem_desc_t), pointer :: iosystem_desc_ptr
-   type( iosystem_desc_t), target :: iosystem_desc
+   type( iosystem_desc_t), pointer :: iosystem_desc_p(:)
+   integer :: iosystem_handles(1)
 
 !  text
 
-!  convert the C pointer to a Fortran pointer
-   call c_f_pointer( iosystem, iosystem_desc_ptr)
-
 continue
+
 write(*,*) "In pio_cpp_init_intracom"
+
+!  get a new iosystem_desc_t for this connection
+   call new_pio_iosys_handles(iosystem_handles, iosystem_desc_p)
+
+write(*,*) "After new_pio_iosys_handles"
 
 !  call the Fortran procedure
 write(*,*) "Ready to call pio_init"
-   call pio_init( int( comp_rank, i4), int( comp_comm, i4), int( num_iotasks, i4), int( num_aggregator, i4), &
-                  int( stride, i4), int( rearr, i4), iosystem_desc, int( base, i4))
+   call pio_init( int( comp_rank, i4), int( comp_comm, i4),              &
+                  int( num_iotasks, i4), int( num_aggregator, i4),       &
+                  int( stride, i4), int( rearr, i4), iosystem_desc_p(1), &
+                  int( base, i4))
 write(*,*) "After call to pio_init"
 
-write(*,*) "iosystem_desc%num_iotasks = ", iosystem_desc%num_iotasks
-   iosystem_desc_ptr => iosystem_desc
+write(*,*) "iosystem_desc_p(1)%num_iotasks = ", iosystem_desc_p(1)%num_iotasks
+
+! Set the output C handle
+iosystem_handle = iosystem_handles(1)
 
 return
 

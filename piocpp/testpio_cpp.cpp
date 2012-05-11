@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
   int base = 0;
   int rearr_type = PIO_rearr_box;
 
-  iosystem_desc_t PIOSYS;
+  iosystem_desc_t PIOSYS = -1;
   iosystem_desc_t piosystems[1];
   file_desc_t File, File_r8, File_r4, File_i4;
   var_desc_t vard_i4;
@@ -246,7 +246,8 @@ int main(int argc, char *argv[]) {
             << "I am" << (is_master_task ? "" : " not")
             << " the master task." << std::endl;
 
-  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = " << PIOSYS << std::endl;
+  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = "
+            << PIOSYS << std::endl;
   pio_cpp_init_intracom(my_task, MPI_Comm_c2f(MPI_COMM_WORLD), num_iotasks,
                          num_aggregators, stride, rearr_type, PIOSYS,
                          base);
