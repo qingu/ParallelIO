@@ -42,6 +42,7 @@
 #define PIO_64BIT_OFFSET  NC_64BIT_OFFSET
 #define PIO_num_OST       16
 #elif _NETCDF
+#include <netcdf.h>
 #define PIO_global        NC_GLOBAL
 #define PIO_unlimited     NC_UNLIMITED
 #define PIO_noerr         NC_NOERR

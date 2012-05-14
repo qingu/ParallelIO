@@ -15,6 +15,10 @@
 #define TestComboCaseName 'combo_test'
 #define MBYTES 1.0e-6
 
+#ifdef _MPISERIAL
+#define MPI_Comm_c2f(_comm) (1)
+#endif // _MPISERIAL
+
 static void printMPIErr(int err, std::string fname,
                         std::string file, int line) {
   std::string errName;
@@ -22,6 +26,7 @@ static void printMPIErr(int err, std::string fname,
   case MPI_SUCCESS:
     errName = "MPI_SUCCESS";
     break;
+#ifndef _MPISERIAL
   case MPI_ERR_BUFFER:
     errName = "MPI_ERR_BUFFER";
     break;
@@ -184,6 +189,9 @@ static void printMPIErr(int err, std::string fname,
   case MPI_ERR_LASTCODE:
     errName = "MPI_ERR_LASTCODE";
     break;
+#endif // _MPISERIAL
+  default:
+    errName = "MPI_ERROR";
   }
   if (err != MPI_SUCCESS) {
     std::cout << "Call to " << fname << " returned " << errName
@@ -230,13 +238,25 @@ int main(int argc, char *argv[]) {
 
   // Initialize MPI
 
+#ifndef _MPISERIAL
   rval = MPI_Init(&argc, &argv);
   CHECK_MPI_FUNC(rval, "MPI_Init");
+#endif // ! _MPISERIAL
 
+#ifdef _MPISERIAL
+  my_task = 0;
+#else
   rval = MPI_Comm_rank(MPI_COMM_WORLD, &my_task);
   CHECK_MPI_FUNC(rval, "MPI_Comm_rank");
+#endif // _MPISERIAL
+
+#ifdef _MPISERIAL
+  nprocs = 1;
+#else
   rval = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   CHECK_MPI_FUNC(rval, "MPI_Comm_size");
+#endif // _MPISERIAL
+
   master_task = 0;
   is_master_task = (my_task == master_task);
   num_iotasks = std::max((nprocs / 2), 1);
@@ -260,8 +280,10 @@ int main(int argc, char *argv[]) {
     std::cerr << "ERROR: pio_cpp_finalize returned " << rval << std::endl;
   }
 
+#ifndef _MPISERIAL
   rval = MPI_Finalize();
   CHECK_MPI_FUNC(rval, "MPI_Finalize");
+#endif // ! _MPISERIAL
   return 0;
 }
 

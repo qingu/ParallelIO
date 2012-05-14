@@ -5,73 +5,78 @@
 
 module pio_cpp_binding
 
-  use :: pio_types, only: iosystem_desc_t
-  use :: mpi, only: MPI_COMM_NULL
+   use :: pio_types, only: iosystem_desc_t
 
-  implicit none
+   implicit none
 
-  !  explicit export
+#ifdef _MPISERIAL
+   include 'mpif.h'      ! _EXTERNAL
+#else
+   use :: mpi, only: MPI_COMM_NULL
+#endif
 
-  private
+   !  explicit export
 
-  ! public interface
+   private
 
-  public :: pio_cpp_init_intracom
-  public :: pio_cpp_init_intercom
-  public :: pio_cpp_finalize
-  public :: pio_cpp_initdecomp_dof_i8
-  public :: pio_cpp_openfile
-  public :: pio_cpp_syncfile
-  public :: pio_cpp_createfile
-  public :: pio_cpp_closefile
-  public :: pio_cpp_setiotype
-  public :: pio_cpp_numtoread
-  public :: pio_cpp_numtowrite
-  public :: pio_cpp_setframe
-  public :: pio_cpp_advanceframe
-  public :: pio_cpp_setdebuglevel
-  public :: pio_cpp_seterrorhandlingf
-  public :: pio_cpp_seterrorhandlingi
-  public :: pio_cpp_get_local_array_size
-  public :: pio_cpp_freedecomp_ios
-  public :: pio_cpp_freedecomp_file
-  public :: pio_cpp_dupiodesc
-  public :: pio_cpp_getnumiotasks
-  public :: pio_cpp_set_hint
-  public :: pio_cpp_getnum_ost
-  public :: pio_cpp_setnum_ost
-  public :: pio_cpp_file_is_open
+   ! public interface
 
-  ! Utility functions for managing C handles for iosystem_desc_t instances
+   public :: pio_cpp_init_intracom
+   public :: pio_cpp_init_intercom
+   public :: pio_cpp_finalize
+   public :: pio_cpp_initdecomp_dof_i8
+   public :: pio_cpp_openfile
+   public :: pio_cpp_syncfile
+   public :: pio_cpp_createfile
+   public :: pio_cpp_closefile
+   public :: pio_cpp_setiotype
+   public :: pio_cpp_numtoread
+   public :: pio_cpp_numtowrite
+   public :: pio_cpp_setframe
+   public :: pio_cpp_advanceframe
+   public :: pio_cpp_setdebuglevel
+   public :: pio_cpp_seterrorhandlingf
+   public :: pio_cpp_seterrorhandlingi
+   public :: pio_cpp_get_local_array_size
+   public :: pio_cpp_freedecomp_ios
+   public :: pio_cpp_freedecomp_file
+   public :: pio_cpp_dupiodesc
+   public :: pio_cpp_getnumiotasks
+   public :: pio_cpp_set_hint
+   public :: pio_cpp_getnum_ost
+   public :: pio_cpp_setnum_ost
+   public :: pio_cpp_file_is_open
 
-  type, private :: PIO_C_HANDLE_NODE
-     integer :: c_handle_start
-     type(iosystem_desc_t), pointer :: PIO_descriptors(:)
-     type(PIO_C_HANDLE_NODE), pointer :: next
-  end type PIO_C_HANDLE_NODE
+   ! Utility functions for managing C handles for iosystem_desc_t instances
 
-  type(PIO_C_HANDLE_NODE), private, pointer :: PIO_Intracom_handles
-  integer, private :: PIO_c_handle_num = 0
+   type, private :: PIO_C_HANDLE_NODE
+      integer :: c_handle_start
+      type(iosystem_desc_t), pointer :: PIO_descriptors(:)
+      type(PIO_C_HANDLE_NODE), pointer :: next
+   end type PIO_C_HANDLE_NODE
 
-  private :: new_pio_iosys_handles
-  private :: get_pio_iosys_handle
-  private :: delete_pio_iosys_handle
-!  private :: delete_all_pio_iosys_handles
+   type(PIO_C_HANDLE_NODE), private, save, pointer :: PIO_Intracom_handles
+   integer, private :: PIO_c_handle_num = 0
 
-  !  constants
+   private :: new_pio_iosys_handles
+   private :: get_pio_iosys_handle
+   private :: delete_pio_iosys_handle
+   !  private :: delete_all_pio_iosys_handles
 
-  integer, parameter :: max_string_len = 1024
-  integer, parameter :: max_path_len = 1024
+   !  constants
 
-  ! ---------------------------------------------------------------------
+   integer, parameter :: max_string_len = 1024
+   integer, parameter :: max_path_len = 1024
 
-  !  library
+   ! ---------------------------------------------------------------------
 
-contains
+   !  library
 
-  ! ---------------------------------------------------------------------
+ contains
 
-  !  Obtain a PIO iosystem_desc_t object given its integer handle
+   ! ---------------------------------------------------------------------
+
+   !  Obtain a PIO iosystem_desc_t object given its integer handle
 
 subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
 
@@ -82,17 +87,13 @@ subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
    type(iosystem_desc_t), pointer :: iosystem(:)
 
    ! local
-   type(PIO_C_HANDLE_NODE), allocatable, target :: new_pio_c_handle_node(:)
+   type(PIO_C_HANDLE_NODE), pointer :: new_pio_c_handle_node(:)
    type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
    integer :: stat
    integer :: num_handles
    integer :: i
 
-   write(*,*) "In new_pio_iosys_handles"
-
    num_handles = size(iosystem_handles, 1)
-
-   write(*,*) "num_handles = ", num_handles
 
    ! First, create a new iosystem handle node
    allocate(new_pio_c_handle_node(1), stat=stat)
@@ -100,6 +101,7 @@ subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
       call piodie(__PIO_FILE__,__LINE__,       &
                  'unable to allocate PIO_C_HANDLE_NODE')
    endif
+   nullify(new_pio_c_handle_node(1)%next)
    ! Now, create the new iosystem_desc_t array
    allocate(new_pio_c_handle_node(1)%PIO_descriptors(num_handles), stat=stat)
    if (stat .ne. 0) then
@@ -115,6 +117,7 @@ subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
    else
       pio_handle_node => PIO_Intracom_handles
       do while (associated(pio_handle_node%next))
+         pio_handle_node => pio_handle_node%next
       end do
       pio_handle_node%next => new_pio_c_handle_node(1)
    end if
@@ -135,7 +138,7 @@ subroutine get_pio_iosys_handle(iosystem_handle, iosystem)
 
   !  dummy arguments
   integer, intent(in) :: iosystem_handle
-  type(iosystem_desc_t), intent(out) :: iosystem
+  type(iosystem_desc_t), pointer, intent(out) :: iosystem
 
   ! local
   logical :: found_handle = .false.
@@ -143,23 +146,21 @@ subroutine get_pio_iosys_handle(iosystem_handle, iosystem)
   integer :: num_handles
   integer :: handle0
 
-continue
-  write(*,*) "In get_pio_iosys_handle"
+  continue
   ! Search for a structure with the correct handle number
-  write(*,*) "get_pio_iosys_handle: PIO_Intracom_handles = ", associated(PIO_Intracom_handles)
   pio_handle_node => PIO_Intracom_handles
-  write(*,*) "get_pio_iosys_handle: Starting search for ", iosystem_handle
   do while (associated(pio_handle_node))
      num_handles = size(pio_handle_node%PIO_descriptors, 1)
      handle0 = pio_handle_node%c_handle_start
-     write(*,*) "get_pio_iosys_handle: checking match for ", handle0
      if ((iosystem_handle .gt. handle0) .and.   &
          (iosystem_handle .le. (handle0 + num_handles))) then
-        iosystem = pio_handle_node%PIO_descriptors(iosystem_handle - handle0)
+        iosystem => pio_handle_node%PIO_descriptors(iosystem_handle - handle0)
         found_handle = .true.
         exit
-     else
+     elseif (associated(pio_handle_node%next)) then
         pio_handle_node => pio_handle_node%next
+     else
+        nullify(pio_handle_node)
      end if
   end do
 
@@ -187,6 +188,7 @@ subroutine delete_pio_iosys_handle(iosystem_handle)
   integer :: num_handles
   integer :: handle0
 
+  nullify(prev_handle_node)
   ! Search for a structure with the correct handle number
   pio_handle_node => PIO_Intracom_handles
   do while (associated(pio_handle_node))
@@ -236,7 +238,7 @@ end subroutine delete_pio_iosys_handle
 
 !  remove the null that ends a C string
 
-pure subroutine f_chars( fc, cs)
+pure subroutine f_chars(fc, cs)
 
 !  bind to C
 
@@ -244,8 +246,8 @@ use, intrinsic :: iso_c_binding, only: c_char
 
 !  dummy arguments
 
-character( kind= c_char, len= *), intent( in) :: cs
-character( len= *), intent( out) :: fc
+character(kind= c_char, len= *), intent(in) :: cs
+character(len= *), intent(out) :: fc
 
 !  local
 
@@ -255,9 +257,9 @@ character( len= *), intent( out) :: fc
 
 continue
 
-   convert_kind: do i = 1, min( len( fc), len( cs))
+   convert_kind: do i = 1, min(len(fc), len(cs))
 
-      fc( i: i) = char( ichar( cs( i: i)))
+      fc(i: i) = char(ichar(cs(i: i)))
 
    end do convert_kind
 
@@ -269,7 +271,7 @@ end subroutine f_chars
 
 !  return the length of the character data in a C string
 
-pure function c_len( cs) result( cl)
+pure function c_len(cs) result(cl)
 
 !  bind to C
 
@@ -281,13 +283,13 @@ integer :: cl
 
 !  dummy arguments
 
-character( kind= c_char, len= *), intent( in) :: cs
+character(kind= c_char, len= *), intent(in) :: cs
 
 !  text
 
 continue
 
-   cl = index( cs, c_null_char) - 1
+   cl = index(cs, c_null_char) - 1
 
 return
 
@@ -299,1348 +301,1109 @@ end function c_len
 
 ! ---------------------------------------------------------------------
 
-!  extern "C" void pio_cpp_init_intracom( int comp_rank, int comp_comm, int num_tasks, int num_aggregator,
-!                                         int stride, int rearr, void* iosystem, int base);
+!  extern "C" void pio_cpp_init_intracom(int comp_rank, int comp_comm,
+!                                        int num_tasks, int num_aggregator,
+!                                        int stride, int rearr,
+!                                        int* iosystem, int base);
 
 subroutine pio_cpp_init_intracom(comp_rank, comp_comm, num_iotasks,      &
                                  num_aggregator, stride, rearr,          &
                                  iosystem_handle, base) bind(c)
 
-!  bind to C
+   !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio kinds
+  use :: pio_kinds, only: i4
 
-!  import pio kinds
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-use :: pio_kinds, only: i4
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_init
 
-!  import pio types
+  !  dummy arguments
+  integer(c_int), value :: comp_rank
+  integer(c_int), value :: comp_comm
+  integer(c_int), value :: num_iotasks
+  integer(c_int), value :: num_aggregator
+  integer(c_int), value :: stride
+  integer(c_int), value :: rearr
+  integer(c_int), intent(inout) :: iosystem_handle
+  integer(c_int), value :: base
 
-use :: pio_types, only: iosystem_desc_t
+  !  local
 
-!  import pio procedure signatures
+  type(iosystem_desc_t), pointer :: iosystem_desc_p(:)
+  integer, target :: iosystem_handles(1)
 
-use :: piolib_mod, only: pio_init
+  !  text
+  continue
 
-!  dummy arguments
+  !  get a new iosystem_desc_t for this connection
+  call new_pio_iosys_handles(iosystem_handles, iosystem_desc_p)
 
-integer( c_int), value :: comp_rank
-integer( c_int), value :: comp_comm
-integer( c_int), value :: num_iotasks
-integer( c_int), value :: num_aggregator
-integer( c_int), value :: stride
-integer( c_int), value :: rearr
-integer(c_int), intent(inout) :: iosystem_handle
-integer( c_int), value :: base
+  !  call the Fortran procedure
+  call pio_init(int(comp_rank, i4), int(comp_comm, i4),              &
+                int(num_iotasks, i4), int(num_aggregator, i4),       &
+                int(stride, i4), int(rearr, i4), iosystem_desc_p(1), &
+                int(base, i4))
 
-!  local
+  ! Set the output C handle
+  iosystem_handle = iosystem_handles(1)
 
-   type( iosystem_desc_t), pointer :: iosystem_desc_p(:)
-   integer, pointer :: iosys_handle
-   integer, target :: iosystem_handles(1)
-
-!  text
-
-continue
-
-write(*,*) "In pio_cpp_init_intracom"
-
-!  get a new iosystem_desc_t for this connection
-   call new_pio_iosys_handles(iosystem_handles, iosystem_desc_p)
-
-write(*,*) "After new_pio_iosys_handles"
-
-!  call the Fortran procedure
-write(*,*) "Ready to call pio_init"
-   call pio_init( int( comp_rank, i4), int( comp_comm, i4),              &
-                  int( num_iotasks, i4), int( num_aggregator, i4),       &
-                  int( stride, i4), int( rearr, i4), iosystem_desc_p(1), &
-                  int( base, i4))
-write(*,*) "After call to pio_init"
-
-write(*,*) "iosystem_desc_p(1)%num_iotasks = ", iosystem_desc_p(1)%num_iotasks
-
-! Set the output C handle
-iosystem_handle = iosystem_handles(1)
-
-return
+  return
 
 end subroutine pio_cpp_init_intracom
 
 ! ---------------------------------------------------------------------
 
-!  extern "C" void pio_cpp_init_intercom( int component_count, int peer_comm, int* comp_comms, int io_comm, void* iosystem);
+!  extern "C" void pio_cpp_init_intercom(int component_count, int peer_comm,
+!                                        int* comp_comms, int io_comm,
+!                                        int** iosystem);
 
-subroutine pio_cpp_init_intercom( component_count, peer_comm, comp_comms, io_comm, iosystem) bind( c)
+subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms,    &
+                                 io_comm, iosystem_handles) bind(c)
 
-!  bind to C
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-!  import pio types
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_init
 
-use :: pio_types, only: iosystem_desc_t
+  !  dummy arguments
+  integer(c_int), value :: component_count
+  integer(c_int), value :: peer_comm
+  integer(c_int), dimension(component_count), intent(in) :: comp_comms
+  integer(c_int), value :: io_comm
+  integer(c_int), intent(inout) :: iosystem_handles(component_count)
 
-!  import pio procedure signatures
+  !  local
 
-use :: piolib_mod, only: pio_init
+  integer, target :: iosystem_handle_array(component_count)
+  type(iosystem_desc_t), pointer :: iosystem_desc_p(:)
+  integer :: i
 
-!  dummy arguments
+  !  text
+  continue
 
-integer( c_int), value :: component_count
-integer( c_int), value :: peer_comm
-integer( c_int), dimension( component_count), intent( in) :: comp_comms
-integer( c_int), value :: io_comm
-type( c_ptr), value :: iosystem
+  !  get a new iosystem_desc_t for this connection
+  call new_pio_iosys_handles(iosystem_handle_array, iosystem_desc_p)
 
-!  local
+  !  call the Fortran procedure
+  call pio_init(int(component_count), int(peer_comm), int(comp_comms),        &
+                int(io_comm), iosystem_desc_p)
 
-   type( iosystem_desc_t), dimension( :), pointer :: iosystem_desc
+  ! Set the output C handles
+  do i = 1, component_count
+     iosystem_handles(i) = iosystem_handle_array(i)
+  end do
 
-!  text
-
-continue
-
-!  convert the C pointer to a Fortran pointer
-
-   call c_f_pointer( iosystem, iosystem_desc, shape= [ component_count ])
-
-!  call the Fortran procedure
-
-   call pio_init( int( component_count), int( peer_comm), int( comp_comms), int( io_comm), iosystem_desc)
-
-return
+  return
 
 end subroutine pio_cpp_init_intercom
 
 ! ---------------------------------------------------------------------
 
-!  extern "C" void pio_cpp_finalize( void* iosystem, int* ierror);
+!  extern "C" void pio_cpp_finalize(int* iosystem, int* ierror);
 
-subroutine pio_cpp_finalize( iosystem_handle, ierr) bind( c)
+subroutine pio_cpp_finalize(iosystem_handle, ierr) bind(c)
 
-!  bind to C
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio kinds
+  use :: pio_kinds, only: i4
 
-!  import pio kinds
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-use :: pio_kinds, only: i4
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_finalize
 
-!  import pio types
+  !  dummy arguments
+  integer(c_int), intent(inout) :: iosystem_handle
+  integer(c_int), intent(out) :: ierr
 
-use :: pio_types, only: iosystem_desc_t
+  !  local
+  integer(i4) :: ierror
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_finalize
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_finalize(iosystem_desc_p, ierror)
 
-integer(c_int), intent(inout) :: iosystem_handle
-integer(c_int), intent(out) :: ierr
+  ! Delete the iosystem descriptor
+  call delete_pio_iosys_handle(iosystem_handle)
 
-!  local
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  iosystem_handle = -1
 
-   integer, pointer :: iosys_handle
-   integer( i4) :: ierror
-
-   type( iosystem_desc_t), pointer :: iosystem_desc_p
-
-!  text
-
-continue
-
-!  get a new iosystem_desc_t for this connection
-write(*,*) "Ready to call get_pio_iosys_handle for c handle = ", iosystem_handle
-   call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
-
-!  call the Fortran procedure
-
-   call pio_finalize( iosystem_desc_p, ierror)
-
-!  convert the arguments back to C
-
-   ierr = int( ierror, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_finalize
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_initdecomp_dof_i8(int* iosystem, int basepiotype,
+!                                            int* dims, int ndims,
+!                                            int* compdof, int ncompdof,
+!                                            void* iodesc, int* iostart,
+!                                            int niostart, int* iocount,
+!                                            int niocount);
 
-!  extern "C" void pio_cpp_initdecomp_dof_i8( void* iosystem, int basepiotype, int* dims, int ndims, int* compdof, int ncompdof,
-!                                             void* iodesc, int* iostart, int niostart, int* iocount, int niocount);
+subroutine pio_cpp_initdecomp_dof_i8(iosystem_handle, basepiotype, dims,      &
+                                     ndims, compdof, ncompdof, iodesc,        &
+                                     iostart, niostart, iocount, niocount)    &
+                                     bind(c)
 
-subroutine pio_cpp_initdecomp_dof_i8( iosystem, basepiotype, dims, ndims, compdof, ncompdof, &
-                                      iodesc, iostart, niostart, iocount, niocount) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio kinds
+  use :: pio_kinds, only: i4, pio_offset
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t, io_desc_t
 
-!  import pio kinds
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_initdecomp
 
-use :: pio_kinds, only: i4, pio_offset
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  integer(c_int), value :: basepiotype
+  type(c_ptr), value :: dims
+  integer(c_int), value :: ndims
+  type(c_ptr), value :: compdof
+  integer(c_int), value :: ncompdof
+  type(c_ptr), value :: iodesc
+  type(c_ptr), value :: iostart
+  integer(c_int), value :: niostart
+  type(c_ptr), value :: iocount
+  integer(c_int), value :: niocount
 
-!  import pio types
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  integer(c_int), dimension(:), pointer :: as_dims
+  integer(c_int), dimension(:), pointer :: as_compdof
+  type(io_desc_t), pointer :: iodesc_desc
+  integer(c_int), dimension(:), pointer :: as_iostart
+  integer(c_int), dimension(:), pointer :: as_iocount
 
-use :: pio_types, only: iosystem_desc_t, io_desc_t
+  !  text
+  continue
 
-!  import pio procedure signatures
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(dims, as_dims, shape= [ ndims ])
+  call c_f_pointer(compdof, as_compdof, shape= [ ncompdof ])
+  call c_f_pointer(iodesc, iodesc_desc)
+  call c_f_pointer(iostart, as_iostart, shape= [ niostart ])
+  call c_f_pointer(iocount, as_iocount, shape= [ niocount ])
 
-use :: piolib_mod, only: pio_initdecomp
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_initdecomp(iosystem_desc_p, int(basepiotype, i4),                  &
+                      int(as_dims, i4), int(as_compdof, pio_offset),          &
+                      iodesc_desc, int(as_iostart, pio_offset),               &
+                      int(as_iocount, pio_offset))
 
-type( c_ptr), value :: iosystem
-integer( c_int), value :: basepiotype
-type( c_ptr), value :: dims
-integer( c_int), value :: ndims
-type( c_ptr), value :: compdof
-integer( c_int), value :: ncompdof
-type( c_ptr), value :: iodesc
-type( c_ptr), value :: iostart
-integer( c_int), value :: niostart
-type( c_ptr), value :: iocount
-integer( c_int), value :: niocount
-
-!  local
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-   integer( c_int), dimension( :), pointer :: as_dims
-   integer( c_int), dimension( :), pointer :: as_compdof
-   type( io_desc_t), pointer :: iodesc_desc
-   integer( c_int), dimension( :), pointer :: as_iostart
-   integer( c_int), dimension( :), pointer :: as_iocount
-
-!  text
-
-continue
-
-!  convert the C pointer to a Fortran pointer
-
-   call c_f_pointer( iosystem, iosystem_desc)
-   call c_f_pointer( dims, as_dims, shape= [ ndims ])
-   call c_f_pointer( compdof, as_compdof, shape= [ ncompdof ])
-   call c_f_pointer( iodesc, iodesc_desc)
-   call c_f_pointer( iostart, as_iostart, shape= [ niostart ])
-   call c_f_pointer( iocount, as_iocount, shape= [ niocount ])
-
-!  call the Fortran procedure
-
-   call pio_initdecomp( iosystem_desc, int( basepiotype, i4), int( as_dims, i4), int( as_compdof, pio_offset), &
-                        iodesc_desc, int( as_iostart, pio_offset), int( as_iocount, pio_offset))
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_initdecomp_dof_i8
 
 ! ---------------------------------------------------------------------
 
-!  extern "C" int pio_cpp_openfile( void* iosystem, void* file, int iotype, char* fname, int mode);
+!  extern "C" int pio_cpp_openfile(int* iosystem, void* file, int iotype,
+!                                  char* fname, int mode);
 
-function pio_cpp_openfile( iosystem, file, iotype, fname, mode) result( ierr) bind( c)
+function pio_cpp_openfile(iosystem_handle, file, iotype, fname, mode)         &
+                          result(ierr) bind(c)
 
-!  bind to C
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
 
-use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t, file_desc_t
 
-!  import pio types
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_openfile
 
-use :: pio_types, only: iosystem_desc_t, file_desc_t
+  !  function result
+  integer(c_int) :: ierr
 
-!  import pio procedure signatures
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  type(c_ptr), value :: file
+  integer(c_int), value :: iotype
+  type(c_ptr), value :: fname
+  integer(c_int), value :: mode
 
-use :: piolib_mod, only: pio_openfile
+  !  local
+  integer :: ierror
 
-!  function result
-
-integer( c_int) :: ierr
-
-!  dummy arguments
-
-type( c_ptr), value :: iosystem
-type( c_ptr), value :: file
-integer( c_int), value :: iotype
-type( c_ptr), value :: fname
-integer( c_int), value :: mode
-
-!  local
-
-   integer :: ierror
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-   type( file_desc_t), pointer :: file_desc
-   character( kind= c_char, len= max_path_len), pointer :: c_filename
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
 #ifdef ALLOC_CHARLEN_OK
-   character( len= :), allocatable :: filename
+  character(len= :), allocatable :: filename
 #else
-   character( len= max_path_len) :: filename
+  character(len= max_path_len) :: filename
 #endif
 
-   integer :: clen
+  integer :: clen
 
-!  text
+  !  text
+  continue
 
-continue
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(fname, c_filename)
 
-!  convert the C pointers to a Fortran pointers
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-   call c_f_pointer( iosystem, iosystem_desc)
-   call c_f_pointer( file, file_desc)
-   call c_f_pointer( fname, c_filename)
-
-!  convert the C string to Fortran characters
-
-   clen = c_len( c_filename)
+  !  convert the C string to Fortran characters
+  clen = c_len(c_filename)
 
 #ifdef ALLOC_CHARLEN_OK
-   allocate( filename, mold= filename( 1: clen))
+  allocate(filename, mold= filename(1: clen))
 #endif
-   call f_chars( filename, c_filename( 1: clen))
+  call f_chars(filename, c_filename(1: clen))
 
-!  call the Fortran procedure
+  !  call the Fortran procedure
+  ierror = pio_openfile(iosystem_desc_p, file_desc, int(iotype),              &
+                        filename, int(mode))
 
-   ierror = pio_openfile( iosystem_desc, file_desc, int( iotype), filename, int( mode))
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
 
-!  convert the arguments back to C
-
-   ierr = int( ierror, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end function pio_cpp_openfile
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_syncfile(void* file);
 
-!  extern "C" void pio_cpp_syncfile( void* file);
+subroutine pio_cpp_syncfile(file) bind(c)
 
-subroutine pio_cpp_syncfile( file) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: file_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_syncfile
 
-!  import pio types
+  !  dummy arguments
+  type(c_ptr), value :: file
 
-use :: pio_types, only: file_desc_t
+  !  local
+  type(file_desc_t), pointer :: file_desc
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_syncfile
+  !  convert the C pointer to a Fortran pointer
+  call c_f_pointer(file, file_desc)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_syncfile(file_desc)
 
-type( c_ptr), value :: file
-
-!  local
-
-   type( file_desc_t), pointer :: file_desc
-
-!  text
-
-continue
-
-!  convert the C pointer to a Fortran pointer
-
-   call c_f_pointer( file, file_desc)
-
-!  call the Fortran procedure
-
-   call pio_syncfile( file_desc)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_syncfile
 
 ! ---------------------------------------------------------------------
+!  extern "C" int pio_cpp_createfile(int* iosystem, void* file, int iotype,
+!                                    char* fname, int amode_in);
 
-!  extern "C" int pio_cpp_createfile( void* iosystem, void* file, int iotype, char* fname, int amode_in);
+function pio_cpp_createfile(iosystem_handle, file, iotype, fname, amode_in)   &
+                            result(ierr) bind(c)
 
-function pio_cpp_createfile( iosystem, file, iotype, fname, amode_in) result( ierr) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t, file_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_createfile
 
-!  import pio types
+  !  function result
+  integer(c_int) :: ierr
 
-use :: pio_types, only: iosystem_desc_t, file_desc_t
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  type(c_ptr), value :: file
+  integer(c_int), value :: iotype
+  type(c_ptr), value :: fname
+  integer(c_int), value :: amode_in
 
-!  import pio procedure signatures
+  !  local
+  integer :: ierror
 
-use :: piolib_mod, only: pio_createfile
-
-!  function result
-
-integer( c_int) :: ierr
-
-!  dummy arguments
-
-type( c_ptr), value :: iosystem
-type( c_ptr), value :: file
-integer( c_int), value :: iotype
-type( c_ptr), value :: fname
-integer( c_int), value :: amode_in
-
-!  local
-
-   integer :: ierror
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-   type( file_desc_t), pointer :: file_desc
-   character( kind= c_char, len= max_path_len), pointer :: c_filename
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
 #ifdef ALLOC_CHARLEN_OK
-   character( len= :), allocatable :: filename
+  character(len= :), allocatable :: filename
 #else
-   character( len= max_path_len) :: filename
+  character(len= max_path_len) :: filename
 #endif
 
-   integer :: clen
+  integer :: clen
 
-!  text
+  !  text
+  continue
 
-continue
+  !  convert the C pointers to Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(fname, c_filename)
 
-!  convert the C pointers to Fortran pointers
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-   call c_f_pointer( iosystem, iosystem_desc)
-   call c_f_pointer( file, file_desc)
-   call c_f_pointer( fname, c_filename)
-
-!  convert the C string to Fortran characters
-
-   clen = c_len( c_filename)
+  !  convert the C string to Fortran characters
+  clen = c_len(c_filename)
 
 #ifdef ALLOC_CHARLEN_OK
-   allocate( filename, mold= filename( 1: clen))
+  allocate(filename, mold= filename(1: clen))
 #endif
 
-   call f_chars( filename, c_filename( 1: clen))
+  call f_chars(filename, c_filename(1: clen))
 
-!  call the Fortran procedure
+  !  call the Fortran procedure
+  ierror = pio_createfile(iosystem_desc_p, file_desc, int(iotype),            &
+                          filename, int(amode_in))
 
-   ierror = pio_createfile( iosystem_desc, file_desc, int( iotype), filename, int( amode_in))
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
 
-!  convert the arguments back to C
-
-   ierr = int( ierror, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end function pio_cpp_createfile
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_closefile(void* file);
 
-!  extern "C" void pio_cpp_closefile( void* file);
+subroutine pio_cpp_closefile(file) bind(c)
 
-subroutine pio_cpp_closefile( file) bind( c)
+ !  bind to C
+ use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
-!  bind to C
+ !  import pio types
+ use :: pio_types, only: file_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
+ !  import pio procedure signatures
+ use :: piolib_mod, only: pio_closefile
 
-!  import pio types
+ !  dummy arguments
+ type(c_ptr), value :: file
 
-use :: pio_types, only: file_desc_t
+ !  local
+ type(file_desc_t), pointer :: file_desc
 
-!  import pio procedure signatures
+ !  text
+ continue
 
-use :: piolib_mod, only: pio_closefile
+ !  convert the C pointers to a Fortran pointers
+ call c_f_pointer(file, file_desc)
 
-!  dummy arguments
+ !  call the Fortran procedure
+ call pio_closefile(file_desc)
 
-type( c_ptr), value :: file
-
-!  local
-
-   type( file_desc_t), pointer :: file_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( file, file_desc)
-
-!  call the Fortran procedure
-
-   call pio_closefile( file_desc)
-
-!  return to the cpp caller
-
-return
+ !  return to the cpp caller
+ return
 
 end subroutine pio_cpp_closefile
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_setiotype(void* file, int iotype, int rearr);
 
-!  extern "C" void pio_cpp_setiotype( void* file, int iotype, int rearr);
+subroutine pio_cpp_setiotype(file, iotype, rearr) bind(c)
 
-subroutine pio_cpp_setiotype( file, iotype, rearr) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio kinds
+  use :: pio_kinds, only: i4
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: file_desc_t
 
-!  import pio kinds
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_setiotype
 
-use :: pio_kinds, only: i4
+  !  dummy arguments
+  type(c_ptr), value :: file
+  integer(c_int), value :: iotype
+  integer(c_int), value :: rearr
 
-!  import pio types
+  !  local
+  type(file_desc_t), pointer :: file_desc
 
-use :: pio_types, only: file_desc_t
+  !  text
+  continue
 
-!  import pio procedure signatures
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
 
-use :: piolib_mod, only: pio_setiotype
+  !  call the Fortran procedure
+  call pio_setiotype(file_desc, int(iotype, i4), int(rearr, i4))
 
-!  dummy arguments
-
-type( c_ptr), value :: file
-integer( c_int), value :: iotype
-integer( c_int), value :: rearr
-
-!  local
-
-   type( file_desc_t), pointer :: file_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( file, file_desc)
-
-!  call the Fortran procedure
-
-   call pio_setiotype( file_desc, int( iotype, i4), int( rearr, i4))
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_setiotype
 
 ! ---------------------------------------------------------------------
+!  extern "C" int pio_cpp_numtoread(void* iodesc);
 
-!  extern "C" int pio_cpp_numtoread( void* iodesc);
+function pio_cpp_numtoread(iodesc) result(num) bind(c)
 
-function pio_cpp_numtoread( iodesc) result( num) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: io_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_numtoread
 
-!  import pio types
+  !  function result
+  integer(c_int) :: num
 
-use :: pio_types, only: io_desc_t
+  !  dummy arguments
+  type(c_ptr), value :: iodesc
 
-!  import pio procedure signatures
+  !  local
+  integer :: n
+  type(io_desc_t), pointer :: io_desc
 
-use :: piolib_mod, only: pio_numtoread
+  !  text
+  continue
 
-!  function result
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(iodesc, io_desc)
 
-integer( c_int) :: num
+  !  call the Fortran procedure
+  n = pio_numtoread(io_desc)
 
-!  dummy arguments
+  !  convert the arguments back to C
+  num = int(n, c_int)
 
-type( c_ptr), value :: iodesc
-
-!  local
-
-   integer :: n
-
-   type( io_desc_t), pointer :: io_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( iodesc, io_desc)
-
-!  call the Fortran procedure
-
-   n = pio_numtoread( io_desc)
-
-!  convert the arguments back to C
-
-   num = int( n, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end function pio_cpp_numtoread
 
 ! ---------------------------------------------------------------------
+!  extern "C" int pio_cpp_numtowrite(void* iodesc);
 
-!  extern "C" int pio_cpp_numtowrite( void* iodesc);
+function pio_cpp_numtowrite(iodesc) result(num) bind(c)
 
-function pio_cpp_numtowrite( iodesc) result( num) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: io_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_numtowrite
 
-!  import pio types
+  !  function result
+  integer(c_int) :: num
 
-use :: pio_types, only: io_desc_t
+  !  dummy arguments
+  type(c_ptr), value :: iodesc
 
-!  import pio procedure signatures
+  !  local
+  integer :: n
+  type(io_desc_t), pointer :: io_desc
 
-use :: piolib_mod, only: pio_numtowrite
+  !  text
+  continue
 
-!  function result
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(iodesc, io_desc)
 
-integer( c_int) :: num
+  !  call the Fortran procedure
+  n = pio_numtowrite(io_desc)
 
-!  dummy arguments
+  !  convert the arguments back to C
+  num = int(n, c_int)
 
-type( c_ptr), value :: iodesc
-
-!  local
-
-   integer :: n
-
-   type( io_desc_t), pointer :: io_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( iodesc, io_desc)
-
-!  call the Fortran procedure
-
-   n = pio_numtowrite( io_desc)
-
-!  convert the arguments back to C
-
-   num = int( n, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end function pio_cpp_numtowrite
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_setframe(void* vardesc, int frame);
 
-!  extern "C" void pio_cpp_setframe( void* vardesc, int frame);
+subroutine pio_cpp_setframe(vardesc, frame) bind(c)
 
-subroutine pio_cpp_setframe( vardesc, frame) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio kinds
+  use :: pio_kinds, only: pio_offset
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: var_desc_t
 
-!  import pio kinds
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_setframe
 
-use :: pio_kinds, only: pio_offset
+  !  dummy arguments
+  type(c_ptr), value :: vardesc
+  integer(c_int), value :: frame
 
-!  import pio types
+  !  local
+  type(var_desc_t), pointer :: var_desc
 
-use :: pio_types, only: var_desc_t
+  !  text
+  continue
 
-!  import pio procedure signatures
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(vardesc, var_desc)
 
-use :: piolib_mod, only: pio_setframe
+  !  call the Fortran procedure
+  call pio_setframe(var_desc, int(frame, pio_offset))
 
-!  dummy arguments
-
-type( c_ptr), value :: vardesc
-integer( c_int), value :: frame
-
-!  local
-
-   type( var_desc_t), pointer :: var_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( vardesc, var_desc)
-
-!  call the Fortran procedure
-
-   call pio_setframe( var_desc, int( frame, pio_offset))
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_setframe
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_advanceframe(void* vardesc);
 
-!  extern "C" void pio_cpp_advanceframe( void* vardesc);
+subroutine pio_cpp_advanceframe(vardesc) bind(c)
 
-subroutine pio_cpp_advanceframe( vardesc) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: var_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_advanceframe
 
-!  import pio types
+  !  dummy arguments
+  type(c_ptr), value :: vardesc
 
-use :: pio_types, only: var_desc_t
+  !  local
+  type(var_desc_t), pointer :: var_desc
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_advanceframe
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(vardesc, var_desc)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_advanceframe(var_desc)
 
-type( c_ptr), value :: vardesc
-
-!  local
-
-   type( var_desc_t), pointer :: var_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( vardesc, var_desc)
-
-!  call the Fortran procedure
-
-   call pio_advanceframe( var_desc)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_advanceframe
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_setdebuglevel(int level);
 
-!  extern "C" void pio_cpp_setdebuglevel( int level);
+subroutine pio_cpp_setdebuglevel(level) bind(c)
 
-subroutine pio_cpp_setdebuglevel( level) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int
 
-!  bind to C
+  !  import pio kinds
+  use :: pio_kinds, only: i4
 
-use, intrinsic :: iso_c_binding, only: c_int
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_setdebuglevel
 
-!  import pio kinds
+  !  dummy arguments
+  integer(c_int), value :: level
 
-use :: pio_kinds, only: i4
+  !  text
+  continue
 
-!  import pio procedure signatures
+  !  call the Fortran procedure
+  call pio_setdebuglevel(int(level, i4))
 
-use :: piolib_mod, only: pio_setdebuglevel
-
-!  dummy arguments
-
-integer( c_int), value :: level
-
-!  text
-
-continue
-
-!  call the Fortran procedure
-
-   call pio_setdebuglevel( int( level, i4))
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_setdebuglevel
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_seterrorhandlingf(void* file, int method);
 
-!  extern "C" void pio_cpp_seterrorhandlingf( void* file, int method);
+subroutine pio_cpp_seterrorhandlingf(file, method) bind(c)
 
-subroutine pio_cpp_seterrorhandlingf( file, method) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: file_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_seterrorhandling
 
-!  import pio types
+  !  dummy arguments
+  type(c_ptr), value :: file
+  integer(c_int), value :: method
 
-use :: pio_types, only: file_desc_t
+  !  local
+  type(file_desc_t), pointer :: file_desc
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_seterrorhandling
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_seterrorhandling(file_desc, int(method))
 
-type( c_ptr), value :: file
-integer( c_int), value :: method
-
-!  local
-
-   type( file_desc_t), pointer :: file_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( file, file_desc)
-
-!  call the Fortran procedure
-
-   call pio_seterrorhandling( file_desc, int( method))
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_seterrorhandlingf
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_seterrorhandlingi(void* ios, int method);
 
-!  extern "C" void pio_cpp_seterrorhandlingi( void* ios, int method);
+subroutine pio_cpp_seterrorhandlingi(ios, method) bind(c)
 
-subroutine pio_cpp_seterrorhandlingi( ios, method) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_seterrorhandling
 
-!  import pio types
+  !  dummy arguments
+  type(c_ptr), value :: ios
+  integer(c_int), value :: method
 
-use :: pio_types, only: iosystem_desc_t
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_seterrorhandling
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(ios, iosystem_desc)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_seterrorhandling(iosystem_desc, int(method))
 
-type( c_ptr), value :: ios
-integer( c_int), value :: method
-
-!  local
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( ios, iosystem_desc)
-
-!  call the Fortran procedure
-
-   call pio_seterrorhandling( iosystem_desc, int( method))
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_seterrorhandlingi
 
 ! ---------------------------------------------------------------------
+!  extern "C" int pio_cpp_get_local_array_size(void* iodesc);
 
-!  extern "C" int pio_cpp_get_local_array_size( void* iodesc);
+function pio_cpp_get_local_array_size(iodesc) result(siz) bind(c)
 
-function pio_cpp_get_local_array_size( iodesc) result( siz) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: io_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_get_local_array_size
 
-!  import pio types
+  !  function result
+  integer(c_int) :: siz
 
-use :: pio_types, only: io_desc_t
+  !  dummy arguments
+  type(c_ptr), value :: iodesc
 
-!  import pio procedure signatures
+  !  local
+  integer :: s
+  type(io_desc_t), pointer :: io_desc
 
-use :: piolib_mod, only: pio_get_local_array_size
+  !  text
+  continue
 
-!  function result
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(iodesc, io_desc)
 
-integer( c_int) :: siz
+  !  call the Fortran procedure
+  s = pio_get_local_array_size(io_desc)
 
-!  dummy arguments
+  !  convert the arguments back to C
+  siz = int(s, c_int)
 
-type( c_ptr), value :: iodesc
-
-!  local
-
-   integer :: s
-
-   type( io_desc_t), pointer :: io_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( iodesc, io_desc)
-
-!  call the Fortran procedure
-
-   s = pio_get_local_array_size( io_desc)
-
-!  convert the arguments back to C
-
-   siz = int( s, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end function pio_cpp_get_local_array_size
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_freedecomp_ios(int* iosystem, void* iodesc);
 
-!  extern "C" void pio_cpp_freedecomp_ios( void* ios, void* iodesc);
+subroutine pio_cpp_freedecomp_ios(iosystem_handle, iodesc) bind(c)
 
-subroutine pio_cpp_freedecomp_ios( ios, iodesc) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t, io_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_freedecomp
 
-!  import pio types
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  type(c_ptr), value :: iodesc
 
-use :: pio_types, only: iosystem_desc_t, io_desc_t
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  type(io_desc_t), pointer :: io_desc
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_freedecomp
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(iodesc, io_desc)
 
-!  dummy arguments
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-type( c_ptr), value :: ios
-type( c_ptr), value :: iodesc
+  !  call the Fortran procedure
+  call pio_freedecomp(iosystem_desc_p, io_desc)
 
-!  local
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-   type( io_desc_t), pointer :: io_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( ios, iosystem_desc)
-   call c_f_pointer( iodesc, io_desc)
-
-!  call the Fortran procedure
-
-   call pio_freedecomp( iosystem_desc, io_desc)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_freedecomp_ios
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_freedecomp_file(void* file, void* iodesc);
 
-!  extern "C" void pio_cpp_freedecomp_file( void* file, void* iodesc);
+subroutine pio_cpp_freedecomp_file(file, iodesc) bind(c)
 
-subroutine pio_cpp_freedecomp_file( file, iodesc) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: file_desc_t, io_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_freedecomp
 
-!  import pio types
+  !  dummy arguments
+  type(c_ptr), value :: file
+  type(c_ptr), value :: iodesc
 
-use :: pio_types, only: file_desc_t, io_desc_t
+  !  local
+  type(file_desc_t), pointer :: file_desc
+  type(io_desc_t), pointer :: io_desc
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_freedecomp
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(iodesc, io_desc)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_freedecomp(file_desc, io_desc)
 
-type( c_ptr), value :: file
-type( c_ptr), value :: iodesc
-
-!  local
-
-   type( file_desc_t), pointer :: file_desc
-   type( io_desc_t), pointer :: io_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( file, file_desc)
-   call c_f_pointer( iodesc, io_desc)
-
-!  call the Fortran procedure
-
-   call pio_freedecomp( file_desc% iosystem, io_desc)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_freedecomp_file
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_dupiodesc(void* src, void* dest);
 
-!  extern "C" void pio_cpp_dupiodesc( void* src, void* dest);
+subroutine pio_cpp_dupiodesc(src, dest) bind(c)
 
-subroutine pio_cpp_dupiodesc( src, dest) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: io_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_dupiodesc
 
-!  import pio types
+  !  dummy arguments
+  type(c_ptr), value :: src
+  type(c_ptr), value :: dest
 
-use :: pio_types, only: io_desc_t
+  !  local
+  type(io_desc_t), pointer :: src_desc
+  type(io_desc_t), pointer :: dest_desc
 
-!  import pio procedure signatures
+  !  text
+  continue
 
-use :: piolib_mod, only: pio_dupiodesc
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(src, src_desc)
+  call c_f_pointer(dest, dest_desc)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  call pio_dupiodesc(src_desc, dest_desc)
 
-type( c_ptr), value :: src
-type( c_ptr), value :: dest
-
-!  local
-
-   type( io_desc_t), pointer :: src_desc
-   type( io_desc_t), pointer :: dest_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( src, src_desc)
-   call c_f_pointer( dest, dest_desc)
-
-!  call the Fortran procedure
-
-   call pio_dupiodesc( src_desc, dest_desc)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_dupiodesc
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_getnumiotasks(int* iosystem, int* numiotasks);
 
-!  extern "C" void pio_cpp_getnumiotasks( void* iosystem, int* numiotasks);
+subroutine pio_cpp_getnumiotasks(iosystem_handle, numiotasks) bind(c)
 
-subroutine pio_cpp_getnumiotasks( iosystem, numiotasks) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
-!  bind to C
+  !  import pio kinds
+  use :: pio_kinds, only: i4
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-!  import pio kinds
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_getnumiotasks
 
-use :: pio_kinds, only: i4
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  integer(c_int) :: numiotasks
 
-!  import pio types
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  integer(i4) :: nt
 
-use :: pio_types, only: iosystem_desc_t
+  !  text
+  continue
 
-!  import pio procedure signatures
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-use :: piolib_mod, only: pio_getnumiotasks
+  !  call the Fortran procedure
+  call pio_getnumiotasks(iosystem_desc_p, nt)
 
-!  dummy arguments
+  !  convert the arguments back to C
+  numiotasks = int(nt, c_int)
 
-type( c_ptr), value :: iosystem
-integer( c_int) :: numiotasks
-
-!  local
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-
-   integer( i4) :: nt
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( iosystem, iosystem_desc)
-
-!  call the Fortran procedure
-
-   call pio_getnumiotasks( iosystem_desc, nt)
-
-!  convert the arguments back to C
-
-   numiotasks = int( nt, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_getnumiotasks
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_set_hint(int* iosystem, void* hint, void* hintval);
 
-!  extern "C" void pio_cpp_set_hint( void* iosystem, void* hint, void* hintval);
+subroutine pio_cpp_set_hint(iosystem_handle, hint, hintval) bind(c)
 
-subroutine pio_cpp_set_hint( iosystem, hint, hintval) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_char, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_set_hint
 
-!  import pio types
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  type(c_ptr), value :: hint
+  type(c_ptr), value :: hintval
 
-use :: pio_types, only: iosystem_desc_t
-
-!  import pio procedure signatures
-
-use :: piolib_mod, only: pio_set_hint
-
-!  dummy arguments
-
-type( c_ptr), value :: iosystem
-type( c_ptr), value :: hint
-type( c_ptr), value :: hintval
-
-!  local
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-
-   character( kind= c_char, len= max_string_len), pointer :: c_hint
-   character( kind= c_char, len= max_string_len), pointer :: c_hintval
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  character(kind= c_char, len= max_string_len), pointer :: c_hint
+  character(kind= c_char, len= max_string_len), pointer :: c_hintval
 
 #ifdef ALLOC_CHARLEN_OK
-   character( len= :), allocatable :: hint_str
-   character( len= :), allocatable :: hintval_str
+  character(len= :), allocatable :: hint_str
+  character(len= :), allocatable :: hintval_str
 #else
-   character( len= max_string_len) :: hint_str
-   character( len= max_string_len) :: hintval_str
+  character(len= max_string_len) :: hint_str
+  character(len= max_string_len) :: hintval_str
 #endif
 
-   integer :: clen
+  integer :: clen
 
-!  text
+  !  text
+  continue
 
-continue
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(hint, c_hint)
+  call c_f_pointer(hintval, c_hintval)
 
-!  convert the C pointers to a Fortran pointers
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-   call c_f_pointer( iosystem, iosystem_desc)
-   call c_f_pointer( hint, c_hint)
-   call c_f_pointer( hintval, c_hintval)
-
-!  convert the C string to Fortran characters
-
-   clen = c_len( c_hint)
+  !  convert the C string to Fortran characters
+  clen = c_len(c_hint)
 #ifdef ALLOC_CHARLEN_OK
-   allocate( hint_str, mold= hint_str( 1: clen))
+  allocate(hint_str, mold= hint_str(1: clen))
 #endif
-   call f_chars( hint_str, c_hint( 1: clen))
+  call f_chars(hint_str, c_hint(1: clen))
 
-   clen = c_len( c_hintval)
+  clen = c_len(c_hintval)
 #ifdef ALLOC_CHARLEN_OK
-   allocate( hintval_str, mold= hintval_str( 1: clen))
+  allocate(hintval_str, mold= hintval_str(1: clen))
 #endif
-   call f_chars( hintval_str, c_hintval( 1: clen))
+  call f_chars(hintval_str, c_hintval(1: clen))
 
-!  call the Fortran procedure
+  !  call the Fortran procedure
+  call pio_set_hint(iosystem_desc_p, hint_str, hintval_str)
 
-   call pio_set_hint( iosystem_desc, hint_str, hintval_str)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_set_hint
 
 ! ---------------------------------------------------------------------
+!  extern "C" int pio_cpp_getnum_ost(int* iosystem);
 
-!  extern "C" int pio_cpp_getnum_ost( void* iosystem);
+function pio_cpp_getnum_ost(iosystem_handle) result(numost) bind(c)
 
-function pio_cpp_getnum_ost( iosystem) result( numost) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
-!  bind to C
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_getnum_ost
 
-!  import pio types
+  !  function result
+  integer(c_int) :: numost
 
-use :: pio_types, only: iosystem_desc_t
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
 
-!  import pio procedure signatures
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  integer :: n
 
-use :: piolib_mod, only: pio_getnum_ost
+  !  text
 
-!  function result
+  continue
 
-integer( c_int) :: numost
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  n = pio_getnum_ost(iosystem_desc_p)
 
-type( c_ptr), value :: iosystem
+  !  convert the arguments back to C
+  numost = int(n, c_int)
 
-!  local
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-
-   integer :: n
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( iosystem, iosystem_desc)
-
-!  call the Fortran procedure
-
-   n = pio_getnum_ost( iosystem_desc)
-
-!  convert the arguments back to C
-
-   numost = int( n, c_int)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end function pio_cpp_getnum_ost
 
 ! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_setnum_ost(int* iosystem, int numost);
 
-!  extern "C" void pio_cpp_setnum_ost( void* iosystem, int numost);
+subroutine pio_cpp_setnum_ost(iosystem_handle, numost) bind(c)
 
-subroutine pio_cpp_setnum_ost( iosystem, numost) bind( c)
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
-!  bind to C
+  !  import pio kinds
+  use :: pio_kinds, only: i4
 
-use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: iosystem_desc_t
 
-!  import pio kinds
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_setnum_ost
 
-use :: pio_kinds, only: i4
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  integer(c_int) :: numost
 
-!  import pio types
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
 
-use :: pio_types, only: iosystem_desc_t
+  !  text
+  continue
 
-!  import pio procedure signatures
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-use :: piolib_mod, only: pio_setnum_ost
+  !  call the Fortran procedure
+  call pio_setnum_ost(iosystem_desc_p, int(numost, i4))
 
-!  dummy arguments
-
-type( c_ptr), value :: iosystem
-integer( c_int) :: numost
-
-!  local
-
-   type( iosystem_desc_t), pointer :: iosystem_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( iosystem, iosystem_desc)
-
-!  call the Fortran procedure
-
-   call pio_setnum_ost( iosystem_desc, int( numost, i4))
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_setnum_ost
 
 ! ---------------------------------------------------------------------
 
-!  extern "C" int pio_cpp_file_is_open( void* file);
+!  extern "C" int pio_cpp_file_is_open(void* file);
 
-function pio_cpp_file_is_open( file) result( is_open) bind( c)
+function pio_cpp_file_is_open(file) result(is_open) bind(c)
 
-!  bind to C
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_bool, c_ptr, c_f_pointer
 
-use, intrinsic :: iso_c_binding, only: c_bool, c_ptr, c_f_pointer
+  !  import pio types
+  use :: pio_types, only: file_desc_t
 
-!  import pio types
+  !  import pio procedure signatures
+  use :: piolib_mod, only: pio_file_is_open
 
-use :: pio_types, only: file_desc_t
+  !  function result
+  logical(c_bool) :: is_open
 
-!  import pio procedure signatures
+  !  dummy arguments
+  type(c_ptr), value :: file
 
-use :: piolib_mod, only: pio_file_is_open
+  !  local
+  logical :: o
+  type(file_desc_t), pointer :: file_desc
 
-!  function result
+  !  text
+  continue
 
-logical( c_bool) :: is_open
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
 
-!  dummy arguments
+  !  call the Fortran procedure
+  o = pio_file_is_open(file_desc)
 
-type( c_ptr), value :: file
+  !  convert the arguments back to C
+  is_open = logical(o, c_bool)
 
-!  local
-
-   logical :: o
-
-   type( file_desc_t), pointer :: file_desc
-
-!  text
-
-continue
-
-!  convert the C pointers to a Fortran pointers
-
-   call c_f_pointer( file, file_desc)
-
-!  call the Fortran procedure
-
-   o = pio_file_is_open( file_desc)
-
-!  convert the arguments back to C
-
-   is_open = logical( o, c_bool)
-
-!  return to the cpp caller
-
-return
+  !  return to the cpp caller
+  return
 
 end function pio_cpp_file_is_open
 

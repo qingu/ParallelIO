@@ -74,8 +74,7 @@ OBJS = $(SRCS_FC:.F90=.o)
 LIB= libpiocpp.a
 
 LDPATH = -L$(builddir) -L$(TOPBUILDDIR)/pio
-MPILIBS = -lmpi_f90 -lmpi_f77 -lmpi
-LDOPTS = $(LDPATH)  -lpiocpp -lpio $(MPILIBS) -lgfortran
+LDOPTS = $(LDPATH)  -lpiocpp -lpio -lgfortran
 
 LEVEL=0
 
