@@ -7,12 +7,14 @@ module pio_cpp_binding
 
    use :: pio_types, only: iosystem_desc_t
 
+#ifndef _MPISERIAL
+   use :: mpi, only: MPI_COMM_NULL
+#endif
+
    implicit none
 
 #ifdef _MPISERIAL
    include 'mpif.h'      ! _EXTERNAL
-#else
-   use :: mpi, only: MPI_COMM_NULL
 #endif
 
    !  explicit export
