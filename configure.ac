@@ -233,32 +233,46 @@ fc_version="$ac_fc_version_output"
 
 
 # CHECK MPI BY DEFAULT
-if test "$USE_MPISERIAL" = "yes"
-  then CPPDEFS="$CPPDEFS -D_MPISERIAL -DNO_MPIMOD "
-       echo "building for use with mpi-serial"
-  MPICC=$CC
-  MPICXX=$CXX
+if test "$USE_MPISERIAL" = "yes"; then
+    CPPDEFS="$CPPDEFS -D_MPISERIAL -DNO_MPIMOD "
+    AC_MSG_NOTICE([Building for use with mpi-serial])
+    MPICC=$CC
+    MPICXX=$CXX
+    MPIFC=$FC
 
-  if test -z "$MPI_INC"; then
-    if test -n "$MCT_PATH"
-         then 
-           echo 'using MCT_PATH from environment'
-	   MPI_PATH=$MCT_PATH/mpi-serial
-         else MPI_PATH=`pwd`/../mct/mpi-serial    # note: will not work for VPATH build
-              echo 'using default mpi-serial from the pio link'
+    if test -z "$MPI_INC"; then
+        if test -n "$MCT_PATH"; then
+            AC_MSG_NOTICE([  using MCT_PATH from environment])
+            if test -d "$MCT_PATH/mpi-serial"; then
+                MPI_PATH=$MCT_PATH/mpi-serial
+                MPI_LIB="-L$MPI_PATH -lmpi-serial"
+                MPI_INC="-I$MPI_PATH" 
+            elif test -d "$MCT_PATH/lib"; then
+                MPI_PATH=$MCT_PATH
+                MPI_LIB="-L$MPI_PATH/lib -lmpi-serial"
+                MPI_INC="-I$MPI_PATH/include" 
+            else
+                AC_MSG_WARN([MCT_PATH appers invalid])
+                MPI_PATH=$MCT_PATH
+                MPI_LIB="-L$MPI_PATH -lmpi-serial"
+                MPI_INC="-I$MPI_PATH" 
+            fi
+        else
+            MPI_PATH=`pwd`/../mct/mpi-serial # NB: will not work 4 VPATH build
+            AC_MSG_NOTICE([  using default mpi-serial from the pio link])
+            MPI_LIB="-L$MPI_PATH -lmpi-serial"
+            MPI_INC="-I$MPI_PATH" 
+        fi
     fi
-
-    MPI_LIB="-L$MPI_PATH -lmpi-serial"
-    MPI_INC="-I$MPI_PATH" 
-  fi
-  USE_MPIIO="no"
-  USE_PNETCDF="no"
-  MPIFC=$FC
+    MPILIBS="$MPILIBS $MPI_LIB"
+    USE_MPIIO="no"
+    USE_PNETCDF="no"
 else
+  # Use regular MPI
   CPPDEFS="$CPPDEFS -DSPMD -DHAVE_MPI"
   ACX_MPI()
   # Check for mpi.mod
-  AC_LANG_PUSH(Fortran)
+  #  AC_LANG_PUSH(Fortran)
   AC_FC_SRCEXT(F90)
   AC_MSG_CHECKING([for mpi.mod])
   OLDFC=$FC
@@ -438,7 +452,6 @@ if test "$USE_NETCDF4" = "yes"
    USE_NETCDF=yes
 fi
 
-AC_MSG_NOTICE([g--> USE_NETCDF="$USE_NETCDF"])
 if test "$USE_NETCDF" = "yes"
   then  
        if test -n "$NETCDF_PATH"
@@ -476,13 +489,10 @@ if test "$USE_NETCDF4" = "yes"
    CPPDEFS="$CPPDEFS -D_NETCDF4"
    if test -e "$NETCDF_PATH/lib/pkgconfig/"
      then
-     AC_MSG_NOTICE([g--> Using netcdf pkgconfig])
      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$NETCDF_PATH/lib/pkgconfig/"
      PKG_CHECK_MODULES([NETCDF4], netcdf)
      LDLIBS=" $LDLIBS $NETCDF4_LIBS $HDF5_LDFLAGS"
-      AC_MSG_NOTICE([g--> LDFLAGS="$LDFLAGS"])
    else
-     AC_MSG_NOTICE([g--> Using acx_hdf5])
 #   fi
 #   if ! echo $LDLIBS | egrep -q -lhdf5
 #     then
@@ -524,7 +534,6 @@ if test "$USE_NETCDF4" = "yes"
       AC_SUBST(SZLIBDIR, [$SZLIBDIR])
 	
       CPPDEFS="$CPPDEFS -D_NETCDF4"
-      AC_MSG_NOTICE([g--> HDF5_LDFLAGS="$HDF5_LDFLAGS"])
       if test -n "$HDF5_LDFLAGS"
         then LDLIBS=" $LDLIBS $HDF5_LDFLAGS"
       fi 
