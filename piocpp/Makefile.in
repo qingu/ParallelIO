@@ -258,6 +258,7 @@ LIB = libpiocpp.a
 LDPATH = -L$(builddir) -L$(TOPBUILDDIR)/pio
 LDOPTS = $(LDPATH)  -lpiocpp -lpio -lgfortran
 LEVEL = 0
+TESTPIOOBJS = testpio_cpp.o namelist.o
 
 # check_kinds depends on pio_kinds.mod
 CHECK_KINDS_SRC = check_kinds.F90
@@ -488,9 +489,8 @@ $(LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $(OBJS)
 
 test: testpio_cpp
-
-testpio_cpp: testpio_cpp.o namelist.o $(TOPBUILDDIR)/pio/libpio.a
-	$(MPICXX) $(CXXFLAGS) $(COPTS) $< $(LDOPTS) $(LDLIBS) -o $@
+testpio_cpp: $(TESTPIOOBJS) $(TOPBUILDDIR)/pio/libpio.a
+	$(MPICXX) $(CXXFLAGS) $(COPTS) $(TESTPIOOBJS) $(LDOPTS) $(LDLIBS) -o $@
 
 clean:
 	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)

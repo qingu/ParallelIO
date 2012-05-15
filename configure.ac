@@ -10,8 +10,8 @@ AC_CONFIG_MACRO_DIR([m4])
 # output to Makefile.in
 #
 AC_CONFIG_FILES([Makefile Makefile.conf:pio/Makefile.conf.in
-                 pio/Makefile piocpp/Makefile])
-AC_CONFIG_SUBDIRS([pio piocpp])
+                 pio/Makefile piocpp/Makefile testpio/Makefile])
+AC_CONFIG_SUBDIRS([pio piocpp testpio])
 AC_CONFIG_HEADER(config.h)
 
 #AC_PREFIX_DEFAULT(/usr/local)
@@ -100,6 +100,11 @@ AC_ARG_ENABLE(stackmon,
 AC_HELP_STRING([--enable-stackmon],
 [use stackmonitor library (Must set STACKMON_PATH)]),
 [USESTACKMON=$enableval],[USESTACKMON=no])
+
+AC_ARG_ENABLE(testing,
+AC_HELP_STRING([--enable-test],
+[Build the test code for PIO]),
+[BUILD_PIOTEST=$enableval],[BUILD_PIOTEST=no])
 
 AC_ARG_ENABLE(exithandler,
 AC_HELP_STRING([--enable-exithandler],
@@ -239,53 +244,67 @@ if test "$USE_MPISERIAL" = "yes"; then
     MPICC=$CC
     MPICXX=$CXX
     MPIFC=$FC
+    MPI_PATH=""
 
-    if test -z "$MPI_INC"; then
-        if test -n "$MCT_PATH"; then
-            AC_MSG_NOTICE([  using MCT_PATH from environment])
-            if test -d "$MCT_PATH/mpi-serial"; then
-                MPI_PATH=$MCT_PATH/mpi-serial
-                MPI_LIB="-L$MPI_PATH -lmpi-serial"
-                MPI_INC="-I$MPI_PATH" 
-            elif test -d "$MCT_PATH/lib"; then
-                MPI_PATH=$MCT_PATH
-                MPI_LIB="-L$MPI_PATH/lib -lmpi-serial"
-                MPI_INC="-I$MPI_PATH/include" 
-            else
-                AC_MSG_WARN([MCT_PATH appers invalid])
-                MPI_PATH=$MCT_PATH
-                MPI_LIB="-L$MPI_PATH -lmpi-serial"
-                MPI_INC="-I$MPI_PATH" 
-            fi
+    ## Find an acceptable path to an mpiserial installation (may not use)
+    if test -n "$MCT_PATH"; then
+        AC_MSG_NOTICE([  using MCT_PATH from environment])
+        if test -d "$MCT_PATH/mpi-serial"; then
+            MPI_PATH=$MCT_PATH/mpi-serial
+        elif test -d "$MCT_PATH/lib"; then
+            MPI_PATH=$MCT_PATH
         else
-            MPI_PATH=`pwd`/../mct/mpi-serial # NB: will not work 4 VPATH build
-            AC_MSG_NOTICE([  using default mpi-serial from the pio link])
-            MPI_LIB="-L$MPI_PATH -lmpi-serial"
+            AC_MSG_WARN([  MCT_PATH appers invalid, trying anyway])
+            MPI_PATH=$MCT_PATH
+        fi
+    elif test -d "../mct/mpi-serial"; then
+        MPI_PATH=`(cd ../mct/mpi-serial; pwd -P)`
+        AC_MSG_NOTICE([  using default mpi-serial from the pio link])
+    else
+        AC_MSG_WARN([  --mpiserial specified but no path found])
+    fi
+
+    # Only try to set an MPI include path if user did not preset
+    if test -z "$MPI_INC"; then
+        if test -n "$MPI_PATH"; then
             MPI_INC="-I$MPI_PATH" 
         fi
     fi
+    # Only try to set an MPI library path if user did not preset
+    if test -z "$MPI_LIB"; then
+        if test -n "$MPI_PATH"; then
+            MPI_LIB="-L$MPI_PATH -lmpi-serial"
+        fi
+    fi
+
     MPILIBS="$MPILIBS $MPI_LIB"
     USE_MPIIO="no"
     USE_PNETCDF="no"
+    unset MPI_PATH
+elif test -n "$MPI_LIB"; then
+    # Allow user to specify MPI library flags
+    # Make sure the libraries we need are in there (assume path specified)
+    if ! echo $MPI_LIB | egrep -q "(^| )-lmpi_f90($| )"; then
+        MPI_LIB="$MPI_LIB -lmpi_f90 -lmpi_f77 -lmpi"
+    fi
+    MPILIBS="$MPILIBS $MPI_LIB"
 else
-  # Use regular MPI
-  CPPDEFS="$CPPDEFS -DSPMD -DHAVE_MPI"
-  ACX_MPI()
-  # Check for mpi.mod
-  #  AC_LANG_PUSH(Fortran)
-  AC_FC_SRCEXT(F90)
-  AC_MSG_CHECKING([for mpi.mod])
-  OLDFC=$FC
-  FC=$MPIFC
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[       use mpi])],[AC_MSG_RESULT(yes)],
-    [CPPDEFS="$CPPDEFS -DNO_MPIMOD"; AC_MSG_RESULT(no)])
-  FC=$OLDFC
-
+    # Use regular MPI
+    CPPDEFS="$CPPDEFS -DSPMD -DHAVE_MPI"
+    ACX_MPI()
+    # Check for mpi.mod
+    #  AC_LANG_PUSH(Fortran)
+    AC_FC_SRCEXT(F90)
+    AC_MSG_CHECKING([for mpi.mod])
+    OLDFC=$FC
+    FC=$MPIFC
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[       use mpi])],
+                      [AC_MSG_RESULT(yes)],
+                      [CPPDEFS="$CPPDEFS -DNO_MPIMOD"; AC_MSG_RESULT(no)])
+    FC=$OLDFC
 fi
 
 AC_LANG_POP(Fortran)
-
-
 
 ###########################################################################
 if test "$FC_USE_SIZEOF" = "default"
@@ -309,14 +328,6 @@ if test "$FC_USE_SIZEOF" = "no"
        echo "disabling Fortran sizeof()"
 fi
 
-#####
-
-# A HACK TO FIX ACX_MPI TO GET MPI_LIB TO BE AN EMPTY STRING
-if test "$MPI_LIB" = " "; then
-   MPI_LIB=""
-fi
-
-
 if test "$USE_MPIIO" = "default"
   then AC_MSG_CHECKING(MPI-IO support in MPI implementation)
        FFLAGS="$FFLAGS $MPI_INC"
@@ -339,27 +350,18 @@ if test "$USE_MPIIO" = "yes"
        CPPDEFS="$CPPDEFS -DUSEMPIIO"
 fi
 
-if test "$BUILD_PIOCPP" = "$enableval"
-  then AC_MSG_CHECKING(Fortran support for allocatable character length)
-       AC_LANG_PUSH(Fortran)
-       AC_COMPILE_IFELSE( [program allocatecharcheck
-                           character( len= :), allocatable :: filename
-                           end program],
-                           ALLOC_CHARLEN_OK="yes", ALLOC_CHARLEN_OK="no" )
-       if test "$ALLOC_CHARLEN_OK" = "yes"
-         then AC_MSG_RESULT(yes)
-         else AC_MSG_RESULT(no)
-       fi
-       AC_MSG_CHECKING(Fortran support for storage_size)
-       AC_COMPILE_IFELSE( [program storagesizecheck
-                           integer, save, public :: size_ios = storage_size( ios)
-                           end program],
-                           STORAGESIZE_OK="yes", STORAGESIZE_OK="no" )
-       if test "$STORAGESIZE_OK" = "yes"
-         then AC_MSG_RESULT(yes)
-         else AC_MSG_RESULT(no)
-       fi
-       AC_LANG_POP(Fortran)
+if test "$BUILD_PIOCPP" = "$enableval"; then
+    AC_MSG_CHECKING(Fortran support for allocatable character length)
+    AC_LANG_PUSH(Fortran)
+    AC_COMPILE_IFELSE( [program allocatecharcheck
+                        character( len= :), allocatable :: filename
+                        end program],
+                        ALLOC_CHARLEN_OK="yes", ALLOC_CHARLEN_OK="no" )
+    if test "$ALLOC_CHARLEN_OK" = "yes"; then
+        AC_MSG_RESULT(yes)
+    else
+        AC_MSG_RESULT(no)
+    fi
 fi
 
 #####
@@ -597,14 +599,14 @@ if test "$USE_PNETCDF" = "yes"
 fi
 
 
-if test "$USE_TIMING" = "yes"
-  then
+if test "$USE_TIMING" = "$enableval"; then
     CPPDEFS=" $CPPDEFS -DTIMING"
     INCLUDEPATH=" $INCLUDEPATH -Itiming"
     LDLIBS=" $LDLIBS -Ltiming -ltiming"
 fi
 
-
+## Include MPI libs late after everyone who uses it.
+LDLIBS=" $LDLIBS $MPILIBS "
 
 #####
 
@@ -675,15 +677,12 @@ if test "$ALLOC_CHARLEN_OK" != "no"; then
   FCFLAGS="$FCFLAGS -DALLOC_CHARLEN_OK"
 fi
 
-if test "$STORAGESIZE_OK" != "no"; then
-  FCFLAGS="$FCFLAGS -DSTORAGESIZE_OK"
-fi
-
 ##
 ## Automake variables
 ##
-AM_CONDITIONAL([TIMING], [test "$BUILD_TIMING" = yes])
+AM_CONDITIONAL([TIMING], [test "$USE_TIMING" = yes])
 AM_CONDITIONAL([PIOCPP], [test "$BUILD_PIOCPP" = yes])
+AM_CONDITIONAL([TESTING], [test "$BUILD_PIOTEST" = yes])
 AM_CONDITIONAL([PIOARCH_DEFAULT], [test -z "$PIOARCH"])
 
 ##
@@ -737,6 +736,46 @@ AM_SUBST_NOTMAKE([TOPSRCDIR])
 ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(TOPBUILDDIR)/pio'
 AC_SUBST([ADDPIOINC])
 AM_SUBST_NOTMAKE([ADDPIOINC])
+
+# Special macros for testpio
+
+if test "$BUILD_PIOCPP" = "$enableval"; then
+  SRCS4='SRCS4_F90=
+  SRCS4_C=namelist.cpp testpio.cpp
+'
+  OBJS4='OBJS4= $(SRCS4_C:.c=.o) $(SRCS4_F90:.F90=.o)'
+  EXE4='EXE4=testpio_cpp
+$(EXE4): $(OBJS4) $(PIOLIBA)
+	$(MPIFC) $(FFLAGS) -o $@ $(OBJS4) $(PIOLIB) $(LDLIBS)
+'
+  BUILDEXE4='$(MAKE) -f Makefile LEVEL=1 $(EXE3)'
+else
+  SRCS4='SRCS4_F90=
+  SRCS4_C='
+  OBJS4='OBJS4='
+  EXE4='EXE4='
+  BUILDEXE4=''
+fi
+AC_SUBST([SRCS4])
+AM_SUBST_NOTMAKE([SRCS4])
+AC_SUBST([OBJS4])
+AM_SUBST_NOTMAKE([OBJS4])
+AC_SUBST([EXE4])
+AM_SUBST_NOTMAKE([EXE4])
+AC_SUBST([BUILDEXE])
+AM_SUBST_NOTMAKE([BUILDEXE])
+
+if test "$BUILD_TIMING" = "$enableval"; then
+  TIMINGLIBS='PIOLIB = -L$(PIODIR)/../timing -ltiming -L$(PIODIR) -lpio
+  INCLUDES += -I$(PIODIR)/timing
+'
+else
+  TIMINGLIBS='PIOLIB = -L$(PIODIR) -lpio'
+fi
+AC_SUBST([TIMINGLIBS])
+AM_SUBST_NOTMAKE([TIMINGLIBS])
+
+AM_CONDITIONAL([EXPLICITCPP], [test x$EXPLICIT_CPP = xyes])
 
 #############################################################################
 

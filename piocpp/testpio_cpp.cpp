@@ -258,6 +258,9 @@ int main(int argc, char *argv[]) {
   CHECK_MPI_FUNC(rval, "MPI_Comm_size");
 #endif // _MPISERIAL
 
+  // IO Namelist data
+  io_nml namelist = io_nml(nprocs);
+
   master_task = 0;
   is_master_task = (my_task == master_task);
   num_iotasks = std::max((nprocs / 2), 1);
@@ -278,10 +281,9 @@ int main(int argc, char *argv[]) {
 
   // Decomposition -- set up a problem
   int gDims3D[3];
-  gDims3D[1] = nx_global;
-  gDims3D[2] = ny_global;
-  gDims3D[3] = nz_global;
-
+  gDims3D[1] = namelist.nx_global;
+  gDims3D[2] = namelist.ny_global;
+  gDims3D[3] = namelist.nz_global;
 
   pio_cpp_finalize(PIOSYS, &rval);
   if (rval != PIO_noerr) {

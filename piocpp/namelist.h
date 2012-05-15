@@ -97,7 +97,6 @@ public:
   char casename[256];
   char dir[80];
   char ioFMTd[4];
-  int rearr_type
 
   i4 nprocsIO;
   i4 PrintRec;

@@ -109,8 +109,9 @@ $(LIB): $(OBJS)
 
 test: testpio_cpp
 
-testpio_cpp: testpio_cpp.o namelist.o $(TOPBUILDDIR)/pio/libpio.a
-	$(MPICXX) $(CXXFLAGS) $(COPTS) $< $(LDOPTS) $(LDLIBS) -o $@
+TESTPIOOBJS = testpio_cpp.o namelist.o
+testpio_cpp: $(TESTPIOOBJS) $(TOPBUILDDIR)/pio/libpio.a
+	$(MPICXX) $(CXXFLAGS) $(COPTS) $(TESTPIOOBJS) $(LDOPTS) $(LDLIBS) -o $@
 
 clean:
 	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)

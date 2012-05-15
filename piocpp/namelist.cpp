@@ -18,6 +18,7 @@
 #include <vector>
 #include "namelist.h"
 #include "pio.h"
+#include "pio_types.h"
 
 #define MAX_NAMELIST_LINELENGTH 512
 
@@ -421,9 +422,9 @@ void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
   //-------------------------------------------------------
   // If rearrangement is "none" reset to the proper values
   //-------------------------------------------------------
-  if(trim(rearr) == "none") {
+  if(rearr_type == PIO_rearr_none) {
     stride = 1;
-    num_iotasks = nprocs	;
+    num_iotasks = nprocs;
   }
 
     // write(*,*) trim(string)," n_iotasks  = ",num_iotasks,"  (updated)"

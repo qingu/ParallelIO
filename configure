@@ -606,6 +606,13 @@ LIBOBJS
 LDLIBS
 CPPDEFS
 PIO_PATH
+EXPLICITCPP_FALSE
+EXPLICITCPP_TRUE
+TIMINGLIBS
+BUILDEXE
+EXE4
+OBJS4
+SRCS4
 ADDPIOINC
 TOPSRCDIR
 TOPBILDDIR
@@ -616,6 +623,8 @@ MODFILES
 INCLUDEDEPENDS
 PIOARCH_DEFAULT_FALSE
 PIOARCH_DEFAULT_TRUE
+TESTING_FALSE
+TESTING_TRUE
 PIOCPP_FALSE
 PIOCPP_TRUE
 TIMING_FALSE
@@ -770,6 +779,7 @@ enable_mpi2
 enable_sizeof
 enable_memmon
 enable_stackmon
+enable_testing
 enable_exithandler
 enable_filesystem_hints
 enable_dependency_tracking
@@ -827,7 +837,7 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 NETCDF4_CFLAGS
 NETCDF4_LIBS'
-ac_subdirs_all='pio piocpp'
+ac_subdirs_all='pio piocpp testpio'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -1461,6 +1471,7 @@ Optional Features and Packages:
                           detect)
   --enable-memmon         use memmon library (Must set MEMMON_PATH)
   --enable-stackmon       use stackmonitor library (Must set STACKMON_PATH)
+  --enable-test           Build the test code for PIO
   --enable-exithandler    use exithandler library (Must set EXITHANDLER_PATH)
   --enable-filesystem-hints
                           set hints for gpfs or lustre parallel file systems
@@ -2437,7 +2448,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # take input from Makefile.am
 # output to Makefile.in
 #
-ac_config_files="$ac_config_files Makefile Makefile.conf:pio/Makefile.conf.in pio/Makefile piocpp/Makefile"
+ac_config_files="$ac_config_files Makefile Makefile.conf:pio/Makefile.conf.in pio/Makefile piocpp/Makefile testpio/Makefile"
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
@@ -2470,7 +2481,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
-subdirs="$subdirs pio piocpp"
+subdirs="$subdirs pio piocpp testpio"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -3587,6 +3598,14 @@ if test "${enable_stackmon+set}" = set; then :
   enableval=$enable_stackmon; USESTACKMON=$enableval
 else
   USESTACKMON=no
+fi
+
+
+# Check whether --enable-testing was given.
+if test "${enable_testing+set}" = set; then :
+  enableval=$enable_testing; BUILD_PIOTEST=$enableval
+else
+  BUILD_PIOTEST=no
 fi
 
 
@@ -6471,7 +6490,7 @@ _ACEOF
 # 1 to this macro) to the Fortran 90 compiler in order to get "version" output
 ac_save_FCFLAGS=$FCFLAGS
 FCFLAGS="$FCFLAGS $ac_version"
-(eval echo $as_me:6474: \"$ac_link\") >&5
+(eval echo $as_me:6493: \"$ac_link\") >&5
 ac_fc_version_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_fc_version_output" >&5
 FCFLAGS=$ac_save_FCFLAGS
@@ -6511,29 +6530,64 @@ fc_version="$ac_fc_version_output"
 
 
 # CHECK MPI BY DEFAULT
-if test "$USE_MPISERIAL" = "yes"
-  then CPPDEFS="$CPPDEFS -D_MPISERIAL -DNO_MPIMOD "
-       echo "building for use with mpi-serial"
-  MPICC=$CC
-  MPICXX=$CXX
+if test "$USE_MPISERIAL" = "yes"; then
+    CPPDEFS="$CPPDEFS -D_MPISERIAL -DNO_MPIMOD "
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Building for use with mpi-serial" >&5
+$as_echo "$as_me: Building for use with mpi-serial" >&6;}
+    MPICC=$CC
+    MPICXX=$CXX
+    MPIFC=$FC
+    MPI_PATH=""
 
-  if test -z "$MPI_INC"; then
-    if test -n "$MCT_PATH"
-         then
-           echo 'using MCT_PATH from environment'
-	   MPI_PATH=$MCT_PATH/mpi-serial
-         else MPI_PATH=`pwd`/../mct/mpi-serial    # note: will not work for VPATH build
-              echo 'using default mpi-serial from the pio link'
+    ## Find an acceptable path to an mpiserial installation (may not use)
+    if test -n "$MCT_PATH"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}:   using MCT_PATH from environment" >&5
+$as_echo "$as_me:   using MCT_PATH from environment" >&6;}
+        if test -d "$MCT_PATH/mpi-serial"; then
+            MPI_PATH=$MCT_PATH/mpi-serial
+        elif test -d "$MCT_PATH/lib"; then
+            MPI_PATH=$MCT_PATH
+        else
+            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING:   MCT_PATH appers invalid, trying anyway" >&5
+$as_echo "$as_me: WARNING:   MCT_PATH appers invalid, trying anyway" >&2;}
+            MPI_PATH=$MCT_PATH
+        fi
+    elif test -d "../mct/mpi-serial"; then
+        MPI_PATH=`(cd ../mct/mpi-serial; pwd -P)`
+        { $as_echo "$as_me:${as_lineno-$LINENO}:   using default mpi-serial from the pio link" >&5
+$as_echo "$as_me:   using default mpi-serial from the pio link" >&6;}
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING:   --mpiserial specified but no path found" >&5
+$as_echo "$as_me: WARNING:   --mpiserial specified but no path found" >&2;}
     fi
 
-    MPI_LIB="-L$MPI_PATH -lmpi-serial"
-    MPI_INC="-I$MPI_PATH"
-  fi
-  USE_MPIIO="no"
-  USE_PNETCDF="no"
-  MPIFC=$FC
+    # Only try to set an MPI include path if user did not preset
+    if test -z "$MPI_INC"; then
+        if test -n "$MPI_PATH"; then
+            MPI_INC="-I$MPI_PATH"
+        fi
+    fi
+    # Only try to set an MPI library path if user did not preset
+    if test -z "$MPI_LIB"; then
+        if test -n "$MPI_PATH"; then
+            MPI_LIB="-L$MPI_PATH -lmpi-serial"
+        fi
+    fi
+
+    MPILIBS="$MPILIBS $MPI_LIB"
+    USE_MPIIO="no"
+    USE_PNETCDF="no"
+    unset MPI_PATH
+elif test -n "$MPI_LIB"; then
+    # Allow user to specify MPI library flags
+    # Make sure the libraries we need are in there (assume path specified)
+    if ! echo $MPI_LIB | egrep -q "(^| )-lmpi_f90($| )"; then
+        MPI_LIB="$MPI_LIB -lmpi_f90 -lmpi_f77 -lmpi"
+    fi
+    MPILIBS="$MPILIBS $MPI_LIB"
 else
-  CPPDEFS="$CPPDEFS -DSPMD -DHAVE_MPI"
+    # Use regular MPI
+    CPPDEFS="$CPPDEFS -DSPMD -DHAVE_MPI"
 
 
 
@@ -6759,13 +6813,9 @@ $as_echo "#define HAVE_MPI 1" >>confdefs.h
         :
 fi
 
-  # Check for mpi.mod
-  ac_ext=${ac_fc_srcext-f}
-ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
-ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_fc_compiler_gnu
-
-  ac_ext=${ac_fc_srcext-f}
+    # Check for mpi.mod
+    #  AC_LANG_PUSH(Fortran)
+    ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
 ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
@@ -6815,11 +6865,11 @@ ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
 ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mpi.mod" >&5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mpi.mod" >&5
 $as_echo_n "checking for mpi.mod... " >&6; }
-  OLDFC=$FC
-  FC=$MPIFC
-  cat > conftest.$ac_ext <<_ACEOF
+    OLDFC=$FC
+    FC=$MPIFC
+    cat > conftest.$ac_ext <<_ACEOF
       program main
        use mpi
       end
@@ -6832,16 +6882,14 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  FC=$OLDFC
-
+    FC=$OLDFC
 fi
 
-ac_ext=${ac_fc_srcext-f}
-ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
-ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_fc_compiler_gnu
-
-
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 ###########################################################################
@@ -6865,10 +6913,11 @@ else
   FC_USE_SIZEOF="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-       ac_ext=${ac_fc_srcext-f}
-ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
-ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+       ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
        if test "$FC_USE_SIZEOF" = "yes"
@@ -6883,14 +6932,6 @@ if test "$FC_USE_SIZEOF" = "no"
   then CPPDEFS=" $CPPDEFS -DNO_SIZEOF "
        echo "disabling Fortran sizeof()"
 fi
-
-#####
-
-# A HACK TO FIX ACX_MPI TO GET MPI_LIB TO BE AN EMPTY STRING
-if test "$MPI_LIB" = " "; then
-   MPI_LIB=""
-fi
-
 
 if test "$USE_MPIIO" = "default"
   then { $as_echo "$as_me:${as_lineno-$LINENO}: checking MPI-IO support in MPI implementation" >&5
@@ -6913,10 +6954,11 @@ else
   USE_MPIIO="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-       ac_ext=${ac_fc_srcext-f}
-ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
-ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+       ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
        if test "$USE_MPIIO" = "yes"
          then { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -6932,18 +6974,18 @@ if test "$USE_MPIIO" = "yes"
        CPPDEFS="$CPPDEFS -DUSEMPIIO"
 fi
 
-if test "$BUILD_PIOCPP" = "$enableval"
-  then { $as_echo "$as_me:${as_lineno-$LINENO}: checking Fortran support for allocatable character length" >&5
+if test "$BUILD_PIOCPP" = "$enableval"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking Fortran support for allocatable character length" >&5
 $as_echo_n "checking Fortran support for allocatable character length... " >&6; }
-       ac_ext=${ac_fc_srcext-f}
+    ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
 ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
 
-       cat > conftest.$ac_ext <<_ACEOF
+    cat > conftest.$ac_ext <<_ACEOF
 program allocatecharcheck
-                           character( len= :), allocatable :: filename
-                           end program
+                        character( len= :), allocatable :: filename
+                        end program
 _ACEOF
 if ac_fn_fc_try_compile "$LINENO"; then :
   ALLOC_CHARLEN_OK="yes"
@@ -6951,36 +6993,13 @@ else
   ALLOC_CHARLEN_OK="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-       if test "$ALLOC_CHARLEN_OK" = "yes"
-         then { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+    if test "$ALLOC_CHARLEN_OK" = "yes"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-         else { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-       fi
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking Fortran support for storage_size" >&5
-$as_echo_n "checking Fortran support for storage_size... " >&6; }
-       cat > conftest.$ac_ext <<_ACEOF
-program storagesizecheck
-                           integer, save, public :: size_ios = storage_size( ios)
-                           end program
-_ACEOF
-if ac_fn_fc_try_compile "$LINENO"; then :
-  STORAGESIZE_OK="yes"
-else
-  STORAGESIZE_OK="no"
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-       if test "$STORAGESIZE_OK" = "yes"
-         then { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-         else { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-       fi
-       ac_ext=${ac_fc_srcext-f}
-ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
-ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_fc_compiler_gnu
-
+    fi
 fi
 
 #####
@@ -7195,8 +7214,6 @@ if test "$USE_NETCDF4" = "yes"
    USE_NETCDF=yes
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: g--> USE_NETCDF=\"$USE_NETCDF\"" >&5
-$as_echo "$as_me: g--> USE_NETCDF=\"$USE_NETCDF\"" >&6;}
 if test "$USE_NETCDF" = "yes"
   then
        if test -n "$NETCDF_PATH"
@@ -7768,8 +7785,6 @@ if test "$USE_NETCDF4" = "yes"
    CPPDEFS="$CPPDEFS -D_NETCDF4"
    if test -e "$NETCDF_PATH/lib/pkgconfig/"
      then
-     { $as_echo "$as_me:${as_lineno-$LINENO}: g--> Using netcdf pkgconfig" >&5
-$as_echo "$as_me: g--> Using netcdf pkgconfig" >&6;}
      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$NETCDF_PATH/lib/pkgconfig/"
 
 
@@ -7983,11 +7998,7 @@ $as_echo "yes" >&6; }
 
 fi
      LDLIBS=" $LDLIBS $NETCDF4_LIBS $HDF5_LDFLAGS"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: g--> LDFLAGS=\"$LDFLAGS\"" >&5
-$as_echo "$as_me: g--> LDFLAGS=\"$LDFLAGS\"" >&6;}
    else
-     { $as_echo "$as_me:${as_lineno-$LINENO}: g--> Using acx_hdf5" >&5
-$as_echo "$as_me: g--> Using acx_hdf5" >&6;}
 #   fi
 #   if ! echo $LDLIBS | egrep -q -lhdf5
 #     then
@@ -8284,8 +8295,6 @@ $as_echo "$SZLIBDIR" >&6; }
 
 
       CPPDEFS="$CPPDEFS -D_NETCDF4"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: g--> HDF5_LDFLAGS=\"$HDF5_LDFLAGS\"" >&5
-$as_echo "$as_me: g--> HDF5_LDFLAGS=\"$HDF5_LDFLAGS\"" >&6;}
       if test -n "$HDF5_LDFLAGS"
         then LDLIBS=" $LDLIBS $HDF5_LDFLAGS"
       fi
@@ -8363,14 +8372,14 @@ $as_echo "$as_me: pnetcdf disabled" >&6;}
 fi
 
 
-if test "$USE_TIMING" = "yes"
-  then
+if test "$USE_TIMING" = "$enableval"; then
     CPPDEFS=" $CPPDEFS -DTIMING"
     INCLUDEPATH=" $INCLUDEPATH -Itiming"
     LDLIBS=" $LDLIBS -Ltiming -ltiming"
 fi
 
-
+## Include MPI libs late after everyone who uses it.
+LDLIBS=" $LDLIBS $MPILIBS "
 
 #####
 
@@ -8445,14 +8454,10 @@ if test "$ALLOC_CHARLEN_OK" != "no"; then
   FCFLAGS="$FCFLAGS -DALLOC_CHARLEN_OK"
 fi
 
-if test "$STORAGESIZE_OK" != "no"; then
-  FCFLAGS="$FCFLAGS -DSTORAGESIZE_OK"
-fi
-
 ##
 ## Automake variables
 ##
- if test "$BUILD_TIMING" = yes; then
+ if test "$USE_TIMING" = yes; then
   TIMING_TRUE=
   TIMING_FALSE='#'
 else
@@ -8466,6 +8471,14 @@ fi
 else
   PIOCPP_TRUE='#'
   PIOCPP_FALSE=
+fi
+
+ if test "$BUILD_PIOTEST" = yes; then
+  TESTING_TRUE=
+  TESTING_FALSE='#'
+else
+  TESTING_TRUE='#'
+  TESTING_FALSE=
 fi
 
  if test -z "$PIOARCH"; then
@@ -8527,6 +8540,53 @@ TOPSRCDIR='TOPSOURCEDIR = $(abs_top_srcdir)'
 # Look for foo.mod.o in pio subdir (e.g., piocpp)
 ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(TOPBUILDDIR)/pio'
 
+
+
+# Special macros for testpio
+
+if test "$BUILD_PIOCPP" = "$enableval"; then
+  SRCS4='SRCS4_F90=
+  SRCS4_C=namelist.cpp testpio.cpp
+'
+  OBJS4='OBJS4= $(SRCS4_C:.c=.o) $(SRCS4_F90:.F90=.o)'
+  EXE4='EXE4=testpio_cpp
+$(EXE4): $(OBJS4) $(PIOLIBA)
+	$(MPIFC) $(FFLAGS) -o $@ $(OBJS4) $(PIOLIB) $(LDLIBS)
+'
+  BUILDEXE4='$(MAKE) -f Makefile LEVEL=1 $(EXE3)'
+else
+  SRCS4='SRCS4_F90=
+  SRCS4_C='
+  OBJS4='OBJS4='
+  EXE4='EXE4='
+  BUILDEXE4=''
+fi
+
+
+
+
+
+
+
+
+
+if test "$BUILD_TIMING" = "$enableval"; then
+  TIMINGLIBS='PIOLIB = -L$(PIODIR)/../timing -ltiming -L$(PIODIR) -lpio
+  INCLUDES += -I$(PIODIR)/timing
+'
+else
+  TIMINGLIBS='PIOLIB = -L$(PIODIR) -lpio'
+fi
+
+
+
+ if test x$EXPLICIT_CPP = xyes; then
+  EXPLICITCPP_TRUE=
+  EXPLICITCPP_FALSE='#'
+else
+  EXPLICITCPP_TRUE='#'
+  EXPLICITCPP_FALSE=
+fi
 
 
 #############################################################################
@@ -8710,8 +8770,16 @@ if test -z "${PIOCPP_TRUE}" && test -z "${PIOCPP_FALSE}"; then
   as_fn_error $? "conditional \"PIOCPP\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${TESTING_TRUE}" && test -z "${TESTING_FALSE}"; then
+  as_fn_error $? "conditional \"TESTING\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${PIOARCH_DEFAULT_TRUE}" && test -z "${PIOARCH_DEFAULT_FALSE}"; then
   as_fn_error $? "conditional \"PIOARCH_DEFAULT\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${EXPLICITCPP_TRUE}" && test -z "${EXPLICITCPP_FALSE}"; then
+  as_fn_error $? "conditional \"EXPLICITCPP\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
@@ -9322,6 +9390,7 @@ do
     "Makefile.conf") CONFIG_FILES="$CONFIG_FILES Makefile.conf:pio/Makefile.conf.in" ;;
     "pio/Makefile") CONFIG_FILES="$CONFIG_FILES pio/Makefile" ;;
     "piocpp/Makefile") CONFIG_FILES="$CONFIG_FILES piocpp/Makefile" ;;
+    "testpio/Makefile") CONFIG_FILES="$CONFIG_FILES testpio/Makefile" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
 
