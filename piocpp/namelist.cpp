@@ -124,7 +124,7 @@ io_nml::io_nml(int nprocs) {
   strcpy(ioFMT, "bin");
   strcpy(dir, "./");
   strcpy(casename, "");
-  strcpy(rearr, "box");
+  rearr_type = PIO_rearr_box; // (from "box" or "none")
   maxiter = 10;
 
   linenum = 0;
@@ -163,7 +163,11 @@ void io_nml::assignValue(std::string &varName, std::string &varValue) {
   } else if (0 == varName.compare("ioFMT")) {
     strcpy(ioFMT, varValue.c_str());
   } else if (0 == varName.compare("rearr")) {
-    strcpy(rearr, varValue.c_str());
+    if (0 == varValue.compare("box")) {
+      rearr_type = PIO_rearr_box;
+    } else {
+      rearr_type = PIO_rearr_none;
+    }
   } else if (0 == varName.compare("nprocsIO")) {
     nprocsIO = atoi(varValue.c_str());
   } else if (0 == varName.compare("num_iodofs")) {

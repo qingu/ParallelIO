@@ -4,6 +4,7 @@
 
 #include "pio.h"
 #include "pio_types.h"
+#include "namelist.h"
 
 #define CHECK_MPI_FUNC(_rval, _fname) \
   printMPIErr((_rval), (_fname), __FILE__, (__LINE__ - 1))
@@ -267,13 +268,20 @@ int main(int argc, char *argv[]) {
             << " the master task." << std::endl;
 
   PIOSYS = new int(-1);
-  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = "
-            << *PIOSYS << std::endl;
+//  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = "
+//            << *PIOSYS << std::endl;
   pio_cpp_init_intracom(my_task, MPI_Comm_c2f(MPI_COMM_WORLD), num_iotasks,
                          num_aggregators, stride, rearr_type, PIOSYS,
                          base);
-  std::cout << "After pio_cpp_init_intracom, PIOSYS = "
-            << *PIOSYS << std::endl;
+//  std::cout << "After pio_cpp_init_intracom, PIOSYS = "
+//            << *PIOSYS << std::endl;
+
+  // Decomposition -- set up a problem
+  int gDims3D[3];
+  gDims3D[1] = nx_global;
+  gDims3D[2] = ny_global;
+  gDims3D[3] = nz_global;
+
 
   pio_cpp_finalize(PIOSYS, &rval);
   if (rval != PIO_noerr) {
@@ -292,7 +300,6 @@ int main(int argc, char *argv[]) {
 
   integer(i4) :: cbad, ivar
   integer(i4) :: i,j,is,ie,itmp,it,n,i1,j1,k1
-  integer(i4) :: gDims3D(3)
 
   character(6) :: ew_type,ns_type
   character(len=10) :: varname
@@ -457,10 +464,6 @@ int main(int argc, char *argv[]) {
           rearr_type, PIOSYS, base)
   end if
   if(Debug)    print *,'testpio: after call to PIO_init', piosys%num_tasks,piosys%io_comm
-
-  gDims3D(1) = nx_global
-  gDims3D(2) = ny_global
-  gDims3D(3) = nz_global
 
   !! ** Set PIO/MPI filesystem hints **
 
