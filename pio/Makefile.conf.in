@@ -55,7 +55,7 @@ AWK             = @AWK@
 
 # Sizes (in C)
 
-SIZEOF_CHAR     = @SIZEOF_CHAR@
+SIZEOF_CHAR     = @SIZEOF_char@
 SIZEOF_INT      = @SIZEOF_INT@
 SIZEOF_FLOAT    = @SIZEOF_FLOAT@
 SIZEOF_DOUBLE   = @SIZEOF_DOUBLE@

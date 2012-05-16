@@ -50,7 +50,7 @@ SRCS3_F90= tst_pio.F90 \
 
 SRCS3_C=
 
-@SRCS4$
+@SRCS4@
 
 OBJS=  $(SRCS_C:.c=.o)       \
        $(SRCS_F90:.F90=.o)
@@ -82,7 +82,7 @@ default: depends
 
 all: depends
 	$(MAKE) -f Makefile LEVEL=1 $(EXE)
-	$(MAKE) -f Makefile LEVEL=1 $(EXE2)
+#	$(MAKE) -f Makefile LEVEL=1 $(EXE2)
 	$(MAKE) -f Makefile LEVEL=1 $(EXE3)
 	@BUILDEXE4@
 

@@ -350,7 +350,7 @@ if test "$USE_MPIIO" = "yes"
        CPPDEFS="$CPPDEFS -DUSEMPIIO"
 fi
 
-if test "$BUILD_PIOCPP" = "$enableval"; then
+if test "$BUILD_PIOCPP" = "yes"; then
     AC_MSG_CHECKING(Fortran support for allocatable character length)
     AC_LANG_PUSH(Fortran)
     AC_COMPILE_IFELSE( [program allocatecharcheck
@@ -599,7 +599,7 @@ if test "$USE_PNETCDF" = "yes"
 fi
 
 
-if test "$USE_TIMING" = "$enableval"; then
+if test "$USE_TIMING" = "yes"; then
     CPPDEFS=" $CPPDEFS -DTIMING"
     INCLUDEPATH=" $INCLUDEPATH -Itiming"
     LDLIBS=" $LDLIBS -Ltiming -ltiming"
@@ -739,16 +739,16 @@ AM_SUBST_NOTMAKE([ADDPIOINC])
 
 # Special macros for testpio
 
-if test "$BUILD_PIOCPP" = "$enableval"; then
+if test "$BUILD_PIOCPP" = "yes"; then
   SRCS4='SRCS4_F90=
-  SRCS4_C=namelist.cpp testpio.cpp
+SRCS4_C=namelist.cpp testpio.cpp
 '
   OBJS4='OBJS4= $(SRCS4_C:.c=.o) $(SRCS4_F90:.F90=.o)'
   EXE4='EXE4=testpio_cpp
 $(EXE4): $(OBJS4) $(PIOLIBA)
 	$(MPIFC) $(FFLAGS) -o $@ $(OBJS4) $(PIOLIB) $(LDLIBS)
 '
-  BUILDEXE4='$(MAKE) -f Makefile LEVEL=1 $(EXE3)'
+  BUILDEXE4='$(MAKE) -f Makefile LEVEL=1 $(EXE4)'
 else
   SRCS4='SRCS4_F90=
   SRCS4_C='
@@ -762,10 +762,10 @@ AC_SUBST([OBJS4])
 AM_SUBST_NOTMAKE([OBJS4])
 AC_SUBST([EXE4])
 AM_SUBST_NOTMAKE([EXE4])
-AC_SUBST([BUILDEXE])
-AM_SUBST_NOTMAKE([BUILDEXE])
+AC_SUBST([BUILDEXE4])
+AM_SUBST_NOTMAKE([BUILDEXE4])
 
-if test "$BUILD_TIMING" = "$enableval"; then
+if test "$USE_TIMING" = "yes"; then
   TIMINGLIBS='PIOLIB = -L$(PIODIR)/../timing -ltiming -L$(PIODIR) -lpio
   INCLUDES += -I$(PIODIR)/timing
 '

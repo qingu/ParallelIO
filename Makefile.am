@@ -4,7 +4,8 @@ TOPDIR=.
 export TOPDIR
 
 if TIMING
-  TIMINGDIR = timing
+  TIMINGDIR =
+#  TIMINGDIR = timing
 else
   TIMINGDIR =
 endif
@@ -21,4 +22,4 @@ else
   PIOTESTDIR =
 endif
 
-SUBDIRS = pio $(PIOCPPDIR) $(TIMINGDIR) $(PIOTESTDIR)
+SUBDIRS = $(TIMINGDIR) pio $(PIOCPPDIR) $(PIOTESTDIR)

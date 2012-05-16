@@ -28,6 +28,7 @@
 #   FFLAGS
 #   AWK
 #   AR
+VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
@@ -44,7 +45,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-subdir = piocpp
+subdir = pio
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -57,7 +58,6 @@ CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-VPATH = $(PIOBUILDDIR)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AR = @AR@
@@ -204,48 +204,40 @@ top_srcdir = @top_srcdir@
 FDEPENDS = $(TOPSOURCEDIR)/pio/fdepends.awk
 DEPSUF = .d
 MODSUF = .mod
+CPPSUF = .f90
 @PIOARCH_DEFAULT_TRUE@PIOARCH = conf
-SRCS_FC = pio_cpp_binding.F90 $(TEMPSRCFC)
-#pio_kinds.F90        \
-#          box_rearrange.F90    \
-#          calcdecomp.F90       \
-#          calcdisplace_mod.F90 \
-#          iompi_mod.F90        \
-#          ionf_mod.F90         \
-#          nf_mod.F90           \
-#          alloc_mod.F90        \
-#          pio_mpi_utils.F90    \
-#          pio_msg_mod.F90      \
-#          pio_support.F90      \
-#          pio_types.F90        \
-#          pio_utils.F90        \
-#          piolib_mod.F90       \
-#          pionfread_mod.F90    \
-#          pionfwrite_mod.F90   \
-#          rearrange.F90        
-TEMPLATES_FC = 
-#pio_sizes.F90.in
+SRCS_C = topology.c 
+SRCS_FC = pio.F90 pio_kinds.F90 nf_mod.F90 ionf_mod.F90 pio_types.F90 \
+	calcdecomp.F90 piolib_mod.F90 pio_mpi_utils.F90 \
+	pio_nf_utils.F90 pio_utils.F90 pio_quicksort.F90 \
+	pio_msg_mod.F90 calcdisplace_mod.F90 pio_msg_callbacks.F90 \
+	$(TEMPSRCFC)
+TEMPLATES_FC = pionfatt_mod.F90.in \
+	        pionfread_mod.F90.in \
+                pionfwrite_mod.F90.in \
+                pionfput_mod.F90.in \
+                pionfget_mod.F90.in \
+	        alloc_mod.F90.in \
+                box_rearrange.F90.in \
+                rearrange.F90.in \
+                pio_support.F90.in \
+	        iompi_mod.F90.in  \
+	        piodarray.F90.in \
+	        pio_spmd_utils.F90.in \
+	        pio_msg_getput_callbacks.F90.in
+
 TEMPSRCFC = $(TEMPLATES_FC:.in=)
-PIOBUILDDIR = $(TOPBUILDDIR)/pio
-PIOSOURCEDIR = $(TOPSOURCEDIR)/pio
+OBJS = $(SRCS_C:.c=.o) \
+       $(SRCS_FC:.F90=.o)
 
-# This probably needs to be a pointer to actual modules
-PIOMODS = $(PIOBUILDDIR)/libpio.a
-OBJS = $(SRCS_FC:.F90=.o)
-LIB = libpiocpp.a
-LDPATH = -L$(builddir) -L$(TOPBUILDDIR)/pio
-LDOPTS = $(LDPATH)  -lpiocpp -lpio -lgfortran
+PERL = /usr/bin/perl
+LIB = libpio.a
 LEVEL = 0
-TESTPIOOBJS = testpio_cpp.o namelist.o
-
-# check_kinds depends on pio_kinds.mod
-CHECK_KINDS_SRC = check_kinds.F90
-
-# size_of_types depends on pio_types.mod
-SIZE_OF_TYPES_SRC = size_of_types.F90
+SRCS_CPP = 
 all: all-am
 
 .SUFFIXES:
+.SUFFIXES: .F90 .c .o
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -255,9 +247,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu piocpp/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu pio/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu piocpp/Makefile
+	  $(AUTOMAKE) --gnu pio/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -427,11 +419,13 @@ export PIOARCH
 @MODFILES@
 
 # File foo.DEPSUF will contain make dependency for foo.F90
-# This depends on SRCS_FC so has to come after
-#@DEPENDS@
+@DEPENDS@
 
-# Include pio subdirectory
-@ADDPIOINC@
+all: depends
+	@$(MAKE) LEVEL=1 $(LIB)
+
+depends: $(DEPENDS)
+	@echo "Done updating dependencies"
 
 #
 # Suffix rules
@@ -440,68 +434,63 @@ export PIOARCH
 @SUFFIXRULES@
 
 # For each file foo.F90, make the depency file foo.d
+
 @MKDEPEND@
+.F90.o:
+	$(MPIFC) -c $(FPPDEFS) $(FFLAGS) $(FOPTS) $(INCLUDES) $<
 
-%.o: %.F90
-	$(MPIFC) -c $(FPPDEFS) $(FCFLAGS) $(FOPTS) $(INCLUDES) $<
-
-%.o: %.cpp
-	$(MPICXX) -c $(CPPDEFS) $(CXXFLAGS) $(COPTS) $(INCLUDES) $<
+.c.o:
+	$(MPICC) -c $(CPPDEFS) $(CFLAGS) $(COPTS) $(INCLUDES) $<
 
 $(TEMPSRCFC): $(TEMPLATE_FC)
-	$(PERL) $(PIOSOURCEDIR)/genf90.pl $< > $*.F90
-
-all: depends
-	@$(MAKE) LEVEL=1 $(LIB)
-
-depends: $(DEPENDS)
-	@echo "Done updating dependencies"
+	$(PERL) $(TOPSOURCEDIR)/pio/genf90.pl $< > $*.F90
 
 $(LIB): $(OBJS)
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(OBJS)
 
-test: testpio_cpp
-testpio_cpp: $(TESTPIOOBJS) $(TOPBUILDDIR)/pio/libpio.a
-	$(MPICXX) $(CXXFLAGS) $(COPTS) $(TESTPIOOBJS) $(LDOPTS) $(LDLIBS) -o $@
+predist: predistclean $(TEMPSRCFC)
 
 clean:
 	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)
 
 predistclean: clean
+	$(RM) $(TEMPSRCFC)
 
-predist: predistclean
+startandcount: calcdecomp.F90
+	$(FC) $(FC_DEFINE)TESTCALCDECOMP $(FFLAGS) $< -o $@
+
+#
+# Automatically generated module dependencies
+#
 
 @INCLUDEDEPENDS@
 
-#pio_kinds.o : pio_kinds.F90
-#box_rearrange.o : box_rearrange.F90
-#calcdecomp.o : calcdecomp.F90
-#calcdisplace_mod.o : calcdisplace_mod.F90
-#iompi_mod.o : iompi_mod.F90
-#ionf_mod.o : ionf_mod.F90
-#nf_mod.o : nf_mod.F90
-#alloc_mod.o : alloc_mod.F90
-#pio_mpi_utils.o : pio_mpi_utils.F90
-#pio_msg_mod.o : pio_msg_mod.F90
-#pio_support.o : pio_support.F90
-#pio_types.o : pio_types.F90
-#pio_utils.o : pio_utils.F90
-#piolib_mod.o : piolib_mod.F90
-#pionfread_mod.o : pionfread_mod.F90
-#pionfwrite_mod.o : pionfwrite_mod.F90
-#rearrange.o : rearrange.F90
-pio_cpp_binding.o : pio_cpp_binding.F90
-pio_cpp_binding.o : $(PIOBUILDDIR)/pio_kinds.mod
-pio_cpp_binding.o : $(PIOBUILDDIR)/pio_types.mod
-pio_cpp_binding.o : $(PIOBUILDDIR)/piolib_mod.mod
+alloc_mod.o : alloc_mod.F90
+box_rearrange.o : box_rearrange.F90
+iompi_mod.o : iompi_mod.F90
+piodarray.o : piodarray.F90
+pionfatt_mod.o : pionfatt_mod.F90
+pionfget_mod.o : pionfget_mod.F90
+pionfput_mod.o : pionfput_mod.F90
+pionfread_mod.o : pionfread_mod.F90
+pionfwrite_mod.o : pionfwrite_mod.F90
+pio_support.o : pio_support.F90
+rearrange.o : rearrange.F90
 
-testpio_cpp.o: testpio_cpp.cpp pio.h $(LIB)
-testpio_cpp.o: kinds.h
-testpio_cpp.o: namelist.o namelist.o
-#testpio_cpp.o:
-
-#pio_sizes.o : pio_sizes.F90.in
+alloc_mod.F90 : alloc_mod.F90.in
+box_rearrange.F90 : box_rearrange.F90.in
+iompi_mod.F90 : iompi_mod.F90.in
+piodarray.F90 : piodarray.F90.in
+pionfatt_mod.F90 : pionfatt_mod.F90.in
+pionfget_mod.F90 : pionfget_mod.F90.in
+pionfput_mod.F90 : pionfput_mod.F90.in
+pionfread_mod.F90 : pionfread_mod.F90.in
+pionfwrite_mod.F90 : pionfwrite_mod.F90.in
+pio_support.F90 : pio_support.F90.in
+rearrange.F90 : rearrange.F90.in
+pio_spmd_utils.F90: pio_spmd_utils.F90.in
+pio_msg_getput_callbacks.F90 : pio_msg_getput_callbacks.F90.in
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
