@@ -836,7 +836,7 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 NETCDF4_CFLAGS
 NETCDF4_LIBS'
-ac_subdirs_all='pio piocpp testpio'
+ac_subdirs_all='pio testpio'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -2447,7 +2447,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # take input from Makefile.am
 # output to Makefile.in
 #
-ac_config_files="$ac_config_files Makefile Makefile.conf:pio/Makefile.conf.in pio/Makefile piocpp/Makefile testpio/Makefile"
+ac_config_files="$ac_config_files Makefile Makefile.conf:pio/Makefile.conf.in pio/Makefile testpio/Makefile"
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
@@ -2480,7 +2480,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
-subdirs="$subdirs pio piocpp testpio"
+subdirs="$subdirs pio testpio"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -9385,7 +9385,6 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "Makefile.conf") CONFIG_FILES="$CONFIG_FILES Makefile.conf:pio/Makefile.conf.in" ;;
     "pio/Makefile") CONFIG_FILES="$CONFIG_FILES pio/Makefile" ;;
-    "piocpp/Makefile") CONFIG_FILES="$CONFIG_FILES piocpp/Makefile" ;;
     "testpio/Makefile") CONFIG_FILES="$CONFIG_FILES testpio/Makefile" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;

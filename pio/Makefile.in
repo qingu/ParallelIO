@@ -45,6 +45,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
+@PIOCPP_TRUE@am__append_1 = pio_cpp_binding.F90
 subdir = pio
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -206,12 +207,6 @@ DEPSUF = .d
 MODSUF = .mod
 CPPSUF = .f90
 @PIOARCH_DEFAULT_TRUE@PIOARCH = conf
-SRCS_C = topology.c 
-SRCS_FC = pio.F90 pio_kinds.F90 nf_mod.F90 ionf_mod.F90 pio_types.F90 \
-	calcdecomp.F90 piolib_mod.F90 pio_mpi_utils.F90 \
-	pio_nf_utils.F90 pio_utils.F90 pio_quicksort.F90 \
-	pio_msg_mod.F90 calcdisplace_mod.F90 pio_msg_callbacks.F90 \
-	$(TEMPSRCFC)
 TEMPLATES_FC = pionfatt_mod.F90.in \
 	        pionfread_mod.F90.in \
                 pionfwrite_mod.F90.in \
@@ -227,6 +222,12 @@ TEMPLATES_FC = pionfatt_mod.F90.in \
 	        pio_msg_getput_callbacks.F90.in
 
 TEMPSRCFC = $(TEMPLATES_FC:.in=)
+SRCS_C = topology.c 
+SRCS_FC = pio.F90 pio_kinds.F90 nf_mod.F90 ionf_mod.F90 pio_types.F90 \
+	calcdecomp.F90 piolib_mod.F90 pio_mpi_utils.F90 \
+	pio_nf_utils.F90 pio_utils.F90 pio_quicksort.F90 \
+	pio_msg_mod.F90 calcdisplace_mod.F90 pio_msg_callbacks.F90 \
+	$(am__append_1) $(TEMPSRCFC)
 OBJS = $(SRCS_C:.c=.o) \
        $(SRCS_FC:.F90=.o)
 
@@ -491,6 +492,8 @@ pio_support.F90 : pio_support.F90.in
 rearrange.F90 : rearrange.F90.in
 pio_spmd_utils.F90: pio_spmd_utils.F90.in
 pio_msg_getput_callbacks.F90 : pio_msg_getput_callbacks.F90.in
+
+@PIOCPP_TRUE@pio_cpp_binding.o : pio_cpp_binding.F90
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

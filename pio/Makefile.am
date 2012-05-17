@@ -28,6 +28,22 @@ endif
 include $(TOPBUILDDIR)/Makefile.$(PIOARCH)
 export PIOARCH
 
+TEMPLATES_FC = pionfatt_mod.F90.in \
+	        pionfread_mod.F90.in \
+                pionfwrite_mod.F90.in \
+                pionfput_mod.F90.in \
+                pionfget_mod.F90.in \
+	        alloc_mod.F90.in \
+                box_rearrange.F90.in \
+                rearrange.F90.in \
+                pio_support.F90.in \
+	        iompi_mod.F90.in  \
+	        piodarray.F90.in \
+	        pio_spmd_utils.F90.in \
+	        pio_msg_getput_callbacks.F90.in
+
+TEMPSRCFC = $(TEMPLATES_FC:.in=)
+
 SRCS_C = topology.c 
 
 SRCS_FC =  pio.F90 \
@@ -45,21 +61,9 @@ SRCS_FC =  pio.F90 \
 	    calcdisplace_mod.F90 \
 	    pio_msg_callbacks.F90 
 
-TEMPLATES_FC = pionfatt_mod.F90.in \
-	        pionfread_mod.F90.in \
-                pionfwrite_mod.F90.in \
-                pionfput_mod.F90.in \
-                pionfget_mod.F90.in \
-	        alloc_mod.F90.in \
-                box_rearrange.F90.in \
-                rearrange.F90.in \
-                pio_support.F90.in \
-	        iompi_mod.F90.in  \
-	        piodarray.F90.in \
-	        pio_spmd_utils.F90.in \
-	        pio_msg_getput_callbacks.F90.in
-
-TEMPSRCFC = $(TEMPLATES_FC:.in=)
+if PIOCPP
+  SRCS_FC += pio_cpp_binding.F90
+endif
 SRCS_FC += $(TEMPSRCFC)
 
 OBJS=  $(SRCS_C:.c=.o) \
@@ -156,3 +160,6 @@ rearrange.F90 : rearrange.F90.in
 pio_spmd_utils.F90: pio_spmd_utils.F90.in
 pio_msg_getput_callbacks.F90 : pio_msg_getput_callbacks.F90.in
 
+if PIOCPP
+pio_cpp_binding.o : pio_cpp_binding.F90
+endif

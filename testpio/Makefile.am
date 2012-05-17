@@ -83,7 +83,7 @@ default: depends
 all: depends
 	$(MAKE) -f Makefile LEVEL=1 $(EXE)
 #	$(MAKE) -f Makefile LEVEL=1 $(EXE2)
-	$(MAKE) -f Makefile LEVEL=1 $(EXE3)
+#	$(MAKE) -f Makefile LEVEL=1 $(EXE3)
 	@BUILDEXE4@
 
 depends: $(DEPENDS)
@@ -148,3 +148,12 @@ clean:
 
 @INCLUDEDEPENDS@
 
+#
+# Manual dependencies
+#
+
+testpio_cpp.o: testpio_cpp.cpp $(PIOLIBA)
+testpio_cpp.o: $(PIODIR)/pio.h $(PIODIR)/pio_types.h $(PIODIR)/pio_kinds.h
+testpio_cpp.o: namelist.o namelist.h
+
+namelist.o:    $(PIODIR)/pio.h $(PIODIR)/pio_types.h $(PIODIR)/pio_kinds.h

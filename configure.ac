@@ -10,8 +10,8 @@ AC_CONFIG_MACRO_DIR([m4])
 # output to Makefile.in
 #
 AC_CONFIG_FILES([Makefile Makefile.conf:pio/Makefile.conf.in
-                 pio/Makefile piocpp/Makefile testpio/Makefile])
-AC_CONFIG_SUBDIRS([pio piocpp testpio])
+                 pio/Makefile testpio/Makefile])
+AC_CONFIG_SUBDIRS([pio testpio])
 AC_CONFIG_HEADER(config.h)
 
 #AC_PREFIX_DEFAULT(/usr/local)
