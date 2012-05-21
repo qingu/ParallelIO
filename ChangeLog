@@ -1,3 +1,10 @@
+Tagname: branch_tag/cesm1_0_4_pio1_4_1_tags/tag02
+Originator: Jim
+Date: 05-21-2012
+
+Bug fix in calcdecomp.F90 back ported from pio1_4_6
+
+
 ===============================================================
 *** You must run 'make predist' in the pio subdirectory before committing. ***
 
