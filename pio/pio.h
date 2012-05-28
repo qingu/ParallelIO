@@ -1,6 +1,7 @@
 #ifndef __PIO_H_INCLUDED_
 #define __PIO_H_INCLUDED_
 
+#include <mpi.h>
 #include "pio_kinds.h"
 
 // ---------------------------------------------------------------------
@@ -12,21 +13,21 @@ extern "C" {
 // subroutine pio_cpp_init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride, rearr, iosystem, base) bind(c)
 
 void pio_cpp_init_intracom(int comp_rank,
-                            int comp_comm,
-                            int num_tasks,
-                            int num_aggregator,
-                            int stride,
-                            int rearr,
-                            iosystem_desc_t iosystem,
-                            int base);
+                           MPI_Comm comp_comm,
+                           int num_tasks,
+                           int num_aggregator,
+                           int stride,
+                           int rearr,
+                           iosystem_desc_t iosystem,
+                           int base);
 
 // subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms, io_comm, iosystem) bind(c)
 
 void pio_cpp_init_intercom(int component_count,
-                            int peer_comm,
-                            int* comp_comms,
-                            int io_comm,
-                            iosystem_desc_t *iosystem);
+                           MPI_Comm peer_comm,
+                           MPI_Comm* comp_comms,
+                           MPI_Comm io_comm,
+                           iosystem_desc_t *iosystems);
 
 // subroutine pio_cpp_finalize(iosystem, ierr) bind(c)
 

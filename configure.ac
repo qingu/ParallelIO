@@ -331,6 +331,7 @@ fi
 if test "$USE_MPIIO" = "default"
   then AC_MSG_CHECKING(MPI-IO support in MPI implementation)
        FFLAGS="$FFLAGS $MPI_INC"
+       CXXFLAGS="$CXXFLAGS $MPI_INC"
        AC_LANG_PUSH(Fortran)
        AC_COMPILE_IFELSE( [program mpicheck
                            include "mpif.h"
@@ -709,7 +710,7 @@ AM_SUBST_NOTMAKE([DEPENDS])
 
 SUFFIXRULES='
 .SUFFIXES:
-.SUFFIXES: .o .c .F90 $(DEPSUF)
+.SUFFIXES: .o .c .F90 .cc $(DEPSUF)
 '
 AC_SUBST([SUFFIXRULES])
 AM_SUBST_NOTMAKE([SUFFIXRULES])
@@ -732,21 +733,23 @@ TOPSRCDIR='TOPSOURCEDIR = $(abs_top_srcdir)'
 AC_SUBST([TOPSRCDIR])
 AM_SUBST_NOTMAKE([TOPSRCDIR])
 
-# Look for foo.mod.o in pio subdir (e.g., piocpp)
-ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(TOPBUILDDIR)/pio'
+# Look for foo.mod.o in pio subdir (e.g., testpio)
+ADDPIOINC='FCFLAGS := $(FCFLAGS) -I$(TOPBUILDDIR)/pio
+CXXFLAGS := $(CXXFLAGS) -I$(TOPSOURCEDIR)/pio'
 AC_SUBST([ADDPIOINC])
 AM_SUBST_NOTMAKE([ADDPIOINC])
 
 # Special macros for testpio
 
 if test "$BUILD_PIOCPP" = "yes"; then
+  AC_FC_LIBRARY_LDFLAGS
   SRCS4='SRCS4_F90=
-SRCS4_C=namelist.cpp testpio.cpp
+SRCS4_C=namelist.cpp testpio_cpp.cpp
 '
   OBJS4='OBJS4= $(SRCS4_C:.c=.o) $(SRCS4_F90:.F90=.o)'
   EXE4='EXE4=testpio_cpp
 $(EXE4): $(OBJS4) $(PIOLIBA)
-	$(MPIFC) $(FFLAGS) -o $@ $(OBJS4) $(PIOLIB) $(LDLIBS)
+	$(MPICXX) $(CXXFLAGS) -o $@ $(OBJS4) $(PIOLIB) $(LDLIBS) $(FCLIBS)
 '
   BUILDEXE4='$(MAKE) -f Makefile LEVEL=1 $(EXE4)'
 else

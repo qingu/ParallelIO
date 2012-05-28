@@ -5,10 +5,10 @@
 
 module pio_cpp_binding
 
-   use :: pio_types, only: iosystem_desc_t
+   use pio_types, only: iosystem_desc_t
 
 #ifndef _MPISERIAL
-   use :: mpi, only: MPI_COMM_NULL
+   use mpi, only: MPI_COMM_NULL   ! _EXTERNAL
 #endif
 
    implicit none
@@ -23,8 +23,8 @@ module pio_cpp_binding
 
    ! public interface
 
-   public :: pio_cpp_init_intracom
-   public :: pio_cpp_init_intercom
+   public :: pio_cpp_init_intracom_int
+   public :: pio_cpp_init_intercom_int
    public :: pio_cpp_finalize
    public :: pio_cpp_initdecomp_dof_i8
    public :: pio_cpp_openfile
@@ -308,21 +308,21 @@ end function c_len
 !                                        int stride, int rearr,
 !                                        int* iosystem, int base);
 
-subroutine pio_cpp_init_intracom(comp_rank, comp_comm, num_iotasks,      &
-                                 num_aggregator, stride, rearr,          &
-                                 iosystem_handle, base) bind(c)
+subroutine pio_cpp_init_intracom_int(comp_rank, comp_comm, num_iotasks,      &
+                                     num_aggregator, stride, rearr,          &
+                                     iosystem_handle, base) bind(c)
 
    !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
   !  import pio kinds
-  use :: pio_kinds, only: i4
+  use pio_kinds, only: i4
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_init
+  use piolib_mod, only: pio_init
 
   !  dummy arguments
   integer(c_int), value :: comp_rank
@@ -356,7 +356,7 @@ subroutine pio_cpp_init_intracom(comp_rank, comp_comm, num_iotasks,      &
 
   return
 
-end subroutine pio_cpp_init_intracom
+end subroutine pio_cpp_init_intracom_int
 
 ! ---------------------------------------------------------------------
 
@@ -364,17 +364,17 @@ end subroutine pio_cpp_init_intracom
 !                                        int* comp_comms, int io_comm,
 !                                        int** iosystem);
 
-subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms,    &
-                                 io_comm, iosystem_handles) bind(c)
+subroutine pio_cpp_init_intercom_int(component_count, peer_comm, comp_comms,  &
+                                     io_comm, iosystem_handles) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_init
+  use piolib_mod, only: pio_init
 
   !  dummy arguments
   integer(c_int), value :: component_count
@@ -406,7 +406,7 @@ subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms,    &
 
   return
 
-end subroutine pio_cpp_init_intercom
+end subroutine pio_cpp_init_intercom_int
 
 ! ---------------------------------------------------------------------
 
@@ -418,13 +418,13 @@ subroutine pio_cpp_finalize(iosystem_handle, ierr) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
   !  import pio kinds
-  use :: pio_kinds, only: i4
+  use pio_kinds, only: i4
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_finalize
+  use piolib_mod, only: pio_finalize
 
   !  dummy arguments
   integer(c_int), intent(inout) :: iosystem_handle
@@ -472,13 +472,13 @@ subroutine pio_cpp_initdecomp_dof_i8(iosystem_handle, basepiotype, dims,      &
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio kinds
-  use :: pio_kinds, only: i4, pio_offset
+  use pio_kinds, only: i4, pio_offset
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t, io_desc_t
+  use pio_types, only: iosystem_desc_t, io_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_initdecomp
+  use piolib_mod, only: pio_initdecomp
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle
@@ -537,10 +537,10 @@ function pio_cpp_openfile(iosystem_handle, file, iotype, fname, mode)         &
   use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t, file_desc_t
+  use pio_types, only: iosystem_desc_t, file_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_openfile
+  use piolib_mod, only: pio_openfile
 
   !  function result
   integer(c_int) :: ierr
@@ -605,10 +605,10 @@ subroutine pio_cpp_syncfile(file) bind(c)
   use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: file_desc_t
+  use pio_types, only: file_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_syncfile
+  use piolib_mod, only: pio_syncfile
 
   !  dummy arguments
   type(c_ptr), value :: file
@@ -641,10 +641,10 @@ function pio_cpp_createfile(iosystem_handle, file, iotype, fname, amode_in)   &
   use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t, file_desc_t
+  use pio_types, only: iosystem_desc_t, file_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_createfile
+  use piolib_mod, only: pio_createfile
 
   !  function result
   integer(c_int) :: ierr
@@ -710,10 +710,10 @@ subroutine pio_cpp_closefile(file) bind(c)
  use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
  !  import pio types
- use :: pio_types, only: file_desc_t
+ use pio_types, only: file_desc_t
 
  !  import pio procedure signatures
- use :: piolib_mod, only: pio_closefile
+ use piolib_mod, only: pio_closefile
 
  !  dummy arguments
  type(c_ptr), value :: file
@@ -744,13 +744,13 @@ subroutine pio_cpp_setiotype(file, iotype, rearr) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio kinds
-  use :: pio_kinds, only: i4
+  use pio_kinds, only: i4
 
   !  import pio types
-  use :: pio_types, only: file_desc_t
+  use pio_types, only: file_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_setiotype
+  use piolib_mod, only: pio_setiotype
 
   !  dummy arguments
   type(c_ptr), value :: file
@@ -783,10 +783,10 @@ function pio_cpp_numtoread(iodesc) result(num) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: io_desc_t
+  use pio_types, only: io_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_numtoread
+  use piolib_mod, only: pio_numtoread
 
   !  function result
   integer(c_int) :: num
@@ -824,10 +824,10 @@ function pio_cpp_numtowrite(iodesc) result(num) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: io_desc_t
+  use pio_types, only: io_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_numtowrite
+  use piolib_mod, only: pio_numtowrite
 
   !  function result
   integer(c_int) :: num
@@ -865,13 +865,13 @@ subroutine pio_cpp_setframe(vardesc, frame) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio kinds
-  use :: pio_kinds, only: pio_offset
+  use pio_kinds, only: pio_offset
 
   !  import pio types
-  use :: pio_types, only: var_desc_t
+  use pio_types, only: var_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_setframe
+  use piolib_mod, only: pio_setframe
 
   !  dummy arguments
   type(c_ptr), value :: vardesc
@@ -903,10 +903,10 @@ subroutine pio_cpp_advanceframe(vardesc) bind(c)
   use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: var_desc_t
+  use pio_types, only: var_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_advanceframe
+  use piolib_mod, only: pio_advanceframe
 
   !  dummy arguments
   type(c_ptr), value :: vardesc
@@ -937,10 +937,10 @@ subroutine pio_cpp_setdebuglevel(level) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int
 
   !  import pio kinds
-  use :: pio_kinds, only: i4
+  use pio_kinds, only: i4
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_setdebuglevel
+  use piolib_mod, only: pio_setdebuglevel
 
   !  dummy arguments
   integer(c_int), value :: level
@@ -965,10 +965,10 @@ subroutine pio_cpp_seterrorhandlingf(file, method) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: file_desc_t
+  use pio_types, only: file_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_seterrorhandling
+  use piolib_mod, only: pio_seterrorhandling
 
   !  dummy arguments
   type(c_ptr), value :: file
@@ -1000,10 +1000,10 @@ subroutine pio_cpp_seterrorhandlingi(ios, method) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_seterrorhandling
+  use piolib_mod, only: pio_seterrorhandling
 
   !  dummy arguments
   type(c_ptr), value :: ios
@@ -1035,10 +1035,10 @@ function pio_cpp_get_local_array_size(iodesc) result(siz) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: io_desc_t
+  use pio_types, only: io_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_get_local_array_size
+  use piolib_mod, only: pio_get_local_array_size
 
   !  function result
   integer(c_int) :: siz
@@ -1076,10 +1076,10 @@ subroutine pio_cpp_freedecomp_ios(iosystem_handle, iodesc) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t, io_desc_t
+  use pio_types, only: iosystem_desc_t, io_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_freedecomp
+  use piolib_mod, only: pio_freedecomp
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle
@@ -1115,10 +1115,10 @@ subroutine pio_cpp_freedecomp_file(file, iodesc) bind(c)
   use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: file_desc_t, io_desc_t
+  use pio_types, only: file_desc_t, io_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_freedecomp
+  use piolib_mod, only: pio_freedecomp
 
   !  dummy arguments
   type(c_ptr), value :: file
@@ -1152,10 +1152,10 @@ subroutine pio_cpp_dupiodesc(src, dest) bind(c)
   use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: io_desc_t
+  use pio_types, only: io_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_dupiodesc
+  use piolib_mod, only: pio_dupiodesc
 
   !  dummy arguments
   type(c_ptr), value :: src
@@ -1189,13 +1189,13 @@ subroutine pio_cpp_getnumiotasks(iosystem_handle, numiotasks) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
   !  import pio kinds
-  use :: pio_kinds, only: i4
+  use pio_kinds, only: i4
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_getnumiotasks
+  use piolib_mod, only: pio_getnumiotasks
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle
@@ -1231,10 +1231,10 @@ subroutine pio_cpp_set_hint(iosystem_handle, hint, hintval) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_set_hint
+  use piolib_mod, only: pio_set_hint
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle
@@ -1296,10 +1296,10 @@ function pio_cpp_getnum_ost(iosystem_handle) result(numost) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_getnum_ost
+  use piolib_mod, only: pio_getnum_ost
 
   !  function result
   integer(c_int) :: numost
@@ -1338,13 +1338,13 @@ subroutine pio_cpp_setnum_ost(iosystem_handle, numost) bind(c)
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
   !  import pio kinds
-  use :: pio_kinds, only: i4
+  use pio_kinds, only: i4
 
   !  import pio types
-  use :: pio_types, only: iosystem_desc_t
+  use pio_types, only: iosystem_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_setnum_ost
+  use piolib_mod, only: pio_setnum_ost
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle
@@ -1377,10 +1377,10 @@ function pio_cpp_file_is_open(file) result(is_open) bind(c)
   use, intrinsic :: iso_c_binding, only: c_bool, c_ptr, c_f_pointer
 
   !  import pio types
-  use :: pio_types, only: file_desc_t
+  use pio_types, only: file_desc_t
 
   !  import pio procedure signatures
-  use :: piolib_mod, only: pio_file_is_open
+  use piolib_mod, only: pio_file_is_open
 
   !  function result
   logical(c_bool) :: is_open

@@ -91,6 +91,7 @@ FC = @FC@
 FCFLAGS = @FCFLAGS@
 FCFLAGS_F = @FCFLAGS_F@
 FCFLAGS_F90 = @FCFLAGS_F90@
+FCLIBS = @FCLIBS@
 FC_DEFINE = @FC_DEFINE@
 FC_MODEXT = @FC_MODEXT@
 FC_MODINC = @FC_MODINC@
@@ -228,17 +229,19 @@ SRCS_FC = pio.F90 pio_kinds.F90 nf_mod.F90 ionf_mod.F90 pio_types.F90 \
 	pio_nf_utils.F90 pio_utils.F90 pio_quicksort.F90 \
 	pio_msg_mod.F90 calcdisplace_mod.F90 pio_msg_callbacks.F90 \
 	$(am__append_1) $(TEMPSRCFC)
-OBJS = $(SRCS_C:.c=.o) \
+@PIOCPP_FALSE@SRCS_CC = 
+@PIOCPP_TRUE@SRCS_CC = piocpp.cc
+OBJS = $(SRCS_C:.c=.o)       \
+       $(SRCS_CC:.cc=.o)   \
        $(SRCS_FC:.F90=.o)
 
 PERL = /usr/bin/perl
 LIB = libpio.a
 LEVEL = 0
-SRCS_CPP = 
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .F90 .c .o
+.SUFFIXES: .F90 .c .cc .o
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -437,11 +440,15 @@ depends: $(DEPENDS)
 # For each file foo.F90, make the depency file foo.d
 
 @MKDEPEND@
+
 .F90.o:
 	$(MPIFC) -c $(FPPDEFS) $(FFLAGS) $(FOPTS) $(INCLUDES) $<
 
 .c.o:
 	$(MPICC) -c $(CPPDEFS) $(CFLAGS) $(COPTS) $(INCLUDES) $<
+
+.cc.o:
+	$(MPICXX) -c $(CPPDEFS) $(CXXFLAGS) $(CXXOPTS) $(INCLUDES) $<
 
 $(TEMPSRCFC): $(TEMPLATE_FC)
 	$(PERL) $(TOPSOURCEDIR)/pio/genf90.pl $< > $*.F90
@@ -453,7 +460,7 @@ $(LIB): $(OBJS)
 predist: predistclean $(TEMPSRCFC)
 
 clean:
-	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)
+	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS)
 
 predistclean: clean
 	$(RM) $(TEMPSRCFC)
@@ -494,6 +501,7 @@ pio_spmd_utils.F90: pio_spmd_utils.F90.in
 pio_msg_getput_callbacks.F90 : pio_msg_getput_callbacks.F90.in
 
 @PIOCPP_TRUE@pio_cpp_binding.o : pio_cpp_binding.F90
+@PIOCPP_TRUE@piocpp.o: piocpp.cc pio.h pio_kinds.h
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

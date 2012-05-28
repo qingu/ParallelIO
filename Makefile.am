@@ -10,16 +10,10 @@ else
   TIMINGDIR =
 endif
 
-if PIOCPP
-  PIOCPPDIR = piocpp
-else
-  PIOCPPDIR =
-endif
-
 if TESTING
   PIOTESTDIR = testpio
 else
   PIOTESTDIR =
 endif
 
-SUBDIRS = $(TIMINGDIR) pio $(PIOCPPDIR) $(PIOTESTDIR)
+SUBDIRS = $(TIMINGDIR) pio $(PIOTESTDIR)

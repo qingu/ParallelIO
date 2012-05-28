@@ -63,10 +63,14 @@ SRCS_FC =  pio.F90 \
 
 if PIOCPP
   SRCS_FC += pio_cpp_binding.F90
+  SRCS_CC = piocpp.cc
+else
+  SRCS_CC =
 endif
 SRCS_FC += $(TEMPSRCFC)
 
-OBJS=  $(SRCS_C:.c=.o) \
+OBJS=  $(SRCS_C:.c=.o)       \
+       $(SRCS_CC:.cc=.o)   \
        $(SRCS_FC:.F90=.o)
 
 
@@ -98,12 +102,14 @@ depends: $(DEPENDS)
 
 @MKDEPEND@
 
-SRCS_CPP=
 .F90.o:
 	$(MPIFC) -c $(FPPDEFS) $(FFLAGS) $(FOPTS) $(INCLUDES) $<
 
 .c.o:
 	$(MPICC) -c $(CPPDEFS) $(CFLAGS) $(COPTS) $(INCLUDES) $<
+
+.cc.o:
+	$(MPICXX) -c $(CPPDEFS) $(CXXFLAGS) $(CXXOPTS) $(INCLUDES) $<
 
 
 $(TEMPSRCFC): $(TEMPLATE_FC)
@@ -119,7 +125,7 @@ $(LIB): $(OBJS)
 predist: predistclean $(TEMPSRCFC)
 
 clean:
-	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS) $(SRCS_CPP)
+	$(RM) $(LIB) $(OBJS) $(MODFILES) $(DEPENDS)
 
 predistclean: clean
 	$(RM) $(TEMPSRCFC)
@@ -162,4 +168,5 @@ pio_msg_getput_callbacks.F90 : pio_msg_getput_callbacks.F90.in
 
 if PIOCPP
 pio_cpp_binding.o : pio_cpp_binding.F90
+piocpp.o: piocpp.cc pio.h pio_kinds.h
 endif
