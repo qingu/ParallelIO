@@ -37,7 +37,7 @@ std::string io_nml::trim(const std::string& pString,
   return pString.substr(beginStr, range);
 }
 
-std::string io_nml:: readInputLine(std::ifstream &infile, i4 &ierror,
+std::string io_nml:: readInputLine(std::ifstream &infile, int &ierror,
                                    const char *filename) {
   char input[MAX_NAMELIST_LINELENGTH];
   std::string output = "";
@@ -220,8 +220,8 @@ void io_nml::assignValue(std::string &varName, std::string &varValue) {
   }
 }
 
-void io_nml::ReadTestPIO_Namelist(i4 nprocs, char *filename,
-                                  char *caller, i4 &ierror) {
+void io_nml::ReadTestPIO_Namelist(int nprocs, char *filename,
+                                  char *caller, int &ierror) {
 
   const std::string myname = "namelist_mod"; //'ReadPIO_Namelist' ??goldy??
   std::string namelist_name = "io_nml";

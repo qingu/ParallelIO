@@ -25,7 +25,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "kinds.h"
+#include "pio_kinds.h"
 
 // Modules from PIO package that are used by this application
 //    use pio_support, only : piodie, CheckMPIReturn ! _EXTERNAL
@@ -42,16 +42,16 @@ public:
 
   io_nml(int nprocs);
 
-  void Broadcast_Namelist(char * caller, i4 myID, i4 root,
-                          i4 comm, i4 &ierror);
+  void Broadcast_Namelist(char * caller, int myID, int root,
+                          int comm, int &ierror);
 
-  void ReadTestPIO_Namelist(i4 nprocs, char *filename,
-                            char *caller, i4 &ierror);
+  void ReadTestPIO_Namelist(int nprocs, char *filename,
+                            char *caller, int &ierror);
 private:
   std::string trim(const std::string& pString,
                    const std::string& pWhitespace = " \t");
 
-  std::string readInputLine(std::ifstream &infile, i4 &ierror,
+  std::string readInputLine(std::ifstream &infile, int &ierror,
                             const char *filename);
 
   bool parseInputLine(std::string &line,
@@ -63,32 +63,32 @@ private:
 public:
   // Data (all public for now)
   bool async;
-  i4 nx_global,ny_global,nz_global;
-  i4 rearr_type;
-  i4 num_iotasks;
-  i4 stride;
-  i4 base;
-  i4 DebugLevel;
-  i4 maxiter;
-  i4 num_aggregator;
-  i4 iotype;
-  i4 num_iodofs;
-  i4 nvars;
-  i4 npr_yz[4];   // To simulate cam fv decompositions
+  int nx_global,ny_global,nz_global;
+  int rearr_type;
+  int num_iotasks;
+  int stride;
+  int base;
+  int DebugLevel;
+  int maxiter;
+  int num_aggregator;
+  int iotype;
+  int num_iodofs;
+  int nvars;
+  int npr_yz[4];   // To simulate cam fv decompositions
 
-  i4 set_mpi_values; // Set to one for true
+  int set_mpi_values; // Set to one for true
   char mpi_cb_buffer_size[buffer_size_str_len];
-  i4 set_romio_values; // Set to one for true
+  int set_romio_values; // Set to one for true
   char romio_cb_write[romio_str_len];
   char romio_cb_read[romio_str_len];
   char romio_direct_io[romio_str_len];
-  i4 set_ibm_io_values; // Set to one for true
+  int set_ibm_io_values; // Set to one for true
   char ibm_io_buffer_size[buffer_size_str_len];
   char ibm_io_largeblock_io[true_false_str_len];
   char ibm_io_sparse_access[true_false_str_len];
 
-  i4 set_lustre_values; // Set to one for true
-  i4 lfs_ost_count;
+  int set_lustre_values; // Set to one for true
+  int lfs_ost_count;
     
   char compdof_input[80];
   char iodof_input[80] ;
@@ -98,12 +98,12 @@ public:
   char dir[80];
   char ioFMTd[4];
 
-  i4 nprocsIO;
-  i4 PrintRec;
+  int nprocsIO;
+  int PrintRec;
   char ioFMT[4];
   char fname1[80], fname2;
-  i4 max_buffer_size;
-  i4 block_size;
+  int max_buffer_size;
+  int block_size;
 };
 
 #endif // __NAMELIST_H_INCLUDED_

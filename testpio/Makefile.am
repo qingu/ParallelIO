@@ -28,6 +28,8 @@ if PIOARCH_DEFAULT
 endif
 include $(TOPBUILDDIR)/Makefile.$(PIOARCH)
 
+@ADDPIOINC@
+
 SRCS_C=
 SRCS_F90= kinds_mod.F90 \
           check_mod.F90 \
