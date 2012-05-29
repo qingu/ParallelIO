@@ -71,8 +71,8 @@ void pio_cpp_init_intercom(int component_count,
   }
 }
 
-// Initialize PIOSYSTEM_DESC_NULL
+// Initialize PIO_IOSYSTEM_DESC_NULL
 // NB: This should be the only place outside of pio_kinds.h which knows
 //     that an iossytem_desc_t is a pointer to an integer
 static int nullint = -1;
-const pio_iosystem_desc_t PIOSYSTEM_DESC_NULL = &nullint;
+const pio_iosystem_desc_t PIO_IOSYSTEM_DESC_NULL = &nullint;

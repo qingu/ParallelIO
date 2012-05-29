@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
             << "I am" << (is_master_task ? "" : " not")
             << " the master task." << std::endl;
 
-  PIOSYS = PIOSYSTEM_DESC_NULL;
+  PIOSYS = PIO_IOSYSTEM_DESC_NULL;
 //  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = "
 //            << *PIOSYS << std::endl;
   pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,

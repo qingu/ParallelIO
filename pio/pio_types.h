@@ -26,6 +26,11 @@
 // (all netcdf4 files for read will be opened this way)
 #define PIO_iotype_netcdf4p       8
 
+// Options for PIO_seterrorhandling
+#define PIO_INTERNAL_ERROR      -51
+#define PIO_BCAST_ERROR         -52
+#define PIO_RETURN_ERROR        -53
+
 // Error values may depend on the I/O package in use
 #ifdef _PNETCDF
 #include <pnetcdf.h>   /* _EXTERNAL */
