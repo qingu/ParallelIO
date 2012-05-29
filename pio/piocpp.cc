@@ -2,6 +2,7 @@
 // ---------------------------------------------------------------------
 
 //  procedures for translating MPI communicators before calling into Fortran
+#include <stdlib.h>
 #include <mpi.h>
 #include "pio.h"
 
