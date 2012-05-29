@@ -16,20 +16,20 @@ typedef signed char PIO_char;
 // ---------------------------------------------------------------------
 
 // sizeof( iosystem_desc_t)
-typedef int *iosystem_desc_t;
-extern const iosystem_desc_t PIOSYSTEM_DESC_NULL;
-#define SIZE_IOSYSTEM_DESC  144
+typedef int *pio_iosystem_desc_t;
+extern const pio_iosystem_desc_t PIOSYSTEM_DESC_NULL;
+#define PIO_SIZE_IOSYSTEM_DESC  144
 
 // sizeof( file_desc_t)
-typedef void *file_desc_t;
-#define SIZE_FILE_DESC   24
+typedef void *pio_file_desc_t;
+#define PIO_SIZE_FILE_DESC       24
 
 // sizeof( io_desc_t)
-typedef void *io_desc_t;
-#define SIZE_IO_DESC  472
+typedef void *pio_io_desc_t;
+#define PIO_SIZE_IO_DESC        472
 
 // sizeof( var_desc_t)
-typedef void *var_desc_t;
-#define SIZE_VAR_DESC   16
+typedef void *pio_var_desc_t;
+#define PIO_SIZE_VAR_DESC        16
 
 #endif // __PIO_H_KINDS_INCLUDED_

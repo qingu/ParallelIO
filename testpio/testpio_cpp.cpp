@@ -217,24 +217,24 @@ int main(int argc, char *argv[]) {
   int base = 0;
   int rearr_type = PIO_rearr_box;
 
-  iosystem_desc_t PIOSYS;
-  iosystem_desc_t piosystems[1];
-  file_desc_t File, File_r8, File_r4, File_i4;
-  var_desc_t vard_i4;
-  var_desc_t vard_r8c;
-  var_desc_t vard_r4c;
-  var_desc_t vard_i4c;
-  var_desc_t vard_i4i;
-  var_desc_t vard_i4j;
-  var_desc_t vard_i4k;
-  var_desc_t vard_i4m;
-  var_desc_t vard_i4dof;
-  var_desc_t *vard_r8;
-  var_desc_t *vard_r4;
+  pio_iosystem_desc_t PIOSYS;
+  pio_iosystem_desc_t piosystems[1];
+  pio_file_desc_t File, File_r8, File_r4, File_i4;
+  pio_var_desc_t vard_i4;
+  pio_var_desc_t vard_r8c;
+  pio_var_desc_t vard_r4c;
+  pio_var_desc_t vard_i4c;
+  pio_var_desc_t vard_i4i;
+  pio_var_desc_t vard_i4j;
+  pio_var_desc_t vard_i4k;
+  pio_var_desc_t vard_i4m;
+  pio_var_desc_t vard_i4dof;
+  pio_var_desc_t *vard_r8;
+  pio_var_desc_t *vard_r4;
 
-  io_desc_t IOdesc_r8;
-  io_desc_t IOdesc_r4;
-  io_desc_t IOdesc_i4;
+  pio_io_desc_t IOdesc_r8;
+  pio_io_desc_t IOdesc_r4;
+  pio_io_desc_t IOdesc_i4;
   //  gdecomp_type gdecomp;
 
   // Initialize MPI
