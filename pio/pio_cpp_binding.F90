@@ -994,7 +994,7 @@ end subroutine pio_cpp_seterrorhandlingf
 ! ---------------------------------------------------------------------
 !  extern "C" void pio_cpp_seterrorhandlingi(void* ios, int method);
 
-subroutine pio_cpp_seterrorhandlingi(ios, method) bind(c)
+subroutine pio_cpp_seterrorhandlingi(iosystem_handle, method) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -1006,20 +1006,20 @@ subroutine pio_cpp_seterrorhandlingi(ios, method) bind(c)
   use piolib_mod, only: pio_seterrorhandling
 
   !  dummy arguments
-  type(c_ptr), value :: ios
+  integer(c_int), intent(in) :: iosystem_handle
   integer(c_int), value :: method
 
   !  local
-  type(iosystem_desc_t), pointer :: iosystem_desc
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
 
   !  text
   continue
 
-  !  convert the C pointers to a Fortran pointers
-  call c_f_pointer(ios, iosystem_desc)
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
   !  call the Fortran procedure
-  call pio_seterrorhandling(iosystem_desc, int(method))
+  call pio_seterrorhandling(iosystem_desc_p, int(method))
 
   !  return to the cpp caller
   return
