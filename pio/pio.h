@@ -54,7 +54,7 @@ void pio_cpp_initdecomp_dof_i8(pio_iosystem_desc_t iosystem,
 int pio_cpp_openfile(pio_iosystem_desc_t iosystem,
                       pio_file_desc_t file,
                       int iotype,
-                      char* fname,
+                      const char *fname,
                       int mode);
 
 // subroutine pio_cpp_syncfile(file) bind(c)
@@ -66,7 +66,7 @@ void pio_cpp_syncfile(pio_file_desc_t file);
 int pio_cpp_createfile(pio_iosystem_desc_t iosystem,
                         pio_file_desc_t file,
                         int iotype,
-                        char* fname,
+                        const char *fname,
                         int amode_in);
 
 // subroutine pio_cpp_closefile(file) bind(c)
