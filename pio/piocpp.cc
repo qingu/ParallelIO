@@ -21,7 +21,7 @@ void pio_cpp_init_intracom_int(int comp_rank,
                                int num_aggregator,
                                int stride,
                                int rearr,
-                               pio_iosystem_desc_t iosystem,
+                               pio_iosystem_desc_t *iosystem,
                                int base);
 
 // subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms, io_comm, iosystem) bind(c)
@@ -30,7 +30,7 @@ void pio_cpp_init_intercom_int(int component_count,
                                int peer_comm,
                                int *comp_comms,
                                int io_comm,
-                               pio_iosystem_desc_t *iosystem);
+                               pio_iosystem_desc_t **iosystem);
 } // extern "C"
 
 void pio_cpp_init_intracom(int comp_rank,
@@ -39,7 +39,7 @@ void pio_cpp_init_intracom(int comp_rank,
                            int num_aggregator,
                            int stride,
                            int rearr,
-                           pio_iosystem_desc_t iosystem,
+                           pio_iosystem_desc_t *iosystem,
                            int base) {
   pio_cpp_init_intracom_int(comp_rank,
                             MPI_Comm_c2f(comp_comm),
@@ -55,7 +55,7 @@ void pio_cpp_init_intercom(int component_count,
                            MPI_Comm peer_comm,
                            MPI_Comm* comp_comms,
                            MPI_Comm io_comm,
-                           pio_iosystem_desc_t *iosystems) {
+                           pio_iosystem_desc_t **iosystems) {
   int *int_comp_comms;
 
   int_comp_comms = (int *)malloc(sizeof(int) * component_count);
@@ -73,6 +73,6 @@ void pio_cpp_init_intercom(int component_count,
 
 // Initialize PIO_IOSYSTEM_DESC_NULL
 // NB: This should be the only place outside of pio_kinds.h which knows
-//     that an iossytem_desc_t is a pointer to an integer
+//     that an iossytem_desc_t is an integer
 static int nullint = -1;
-const pio_iosystem_desc_t PIO_IOSYSTEM_DESC_NULL = &nullint;
+const pio_iosystem_desc_t PIO_IOSYSTEM_DESC_NULL = nullint;

@@ -18,7 +18,7 @@ void pio_cpp_init_intracom(int comp_rank,
                            int num_aggregator,
                            int stride,
                            int rearr,
-                           pio_iosystem_desc_t iosystem,
+                           pio_iosystem_desc_t *iosystem,
                            int base);
 
 // subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms, io_comm, iosystem) bind(c)
@@ -27,17 +27,17 @@ void pio_cpp_init_intercom(int component_count,
                            MPI_Comm peer_comm,
                            MPI_Comm* comp_comms,
                            MPI_Comm io_comm,
-                           pio_iosystem_desc_t *iosystems);
+                           pio_iosystem_desc_t **iosystems);
 
 // subroutine pio_cpp_finalize(iosystem, ierr) bind(c)
 
-void pio_cpp_finalize(pio_iosystem_desc_t iosystem,
+void pio_cpp_finalize(pio_iosystem_desc_t *iosystem,
                        int* ierror);
 
 // subroutine pio_cpp_initdecomp_dof_i8(iosystem, basepiotype, dims, ndims, compdof, ncompdof, &
 //                                       iodesc, iostart, niostart, iocount, niocount) bind(c)
 
-void pio_cpp_initdecomp_dof_i8(pio_iosystem_desc_t iosystem,
+void pio_cpp_initdecomp_dof_i8(pio_iosystem_desc_t *iosystem,
                                 int basepiotype,
                                 int* dims,
                                 int ndims,
@@ -51,7 +51,7 @@ void pio_cpp_initdecomp_dof_i8(pio_iosystem_desc_t iosystem,
 
 // function pio_cpp_openfile(iosystem, file, iotype, fname, mode) result(ierr) bind(c)
 
-int pio_cpp_openfile(pio_iosystem_desc_t iosystem,
+int pio_cpp_openfile(pio_iosystem_desc_t *iosystem,
                       pio_file_desc_t file,
                       int iotype,
                       const char *fname,
@@ -63,7 +63,7 @@ void pio_cpp_syncfile(pio_file_desc_t file);
 
 // function pio_cpp_createfile(iosystem, file, iotype, fname, amode_in) result(ierr) bind(c)
 
-int pio_cpp_createfile(pio_iosystem_desc_t iosystem,
+int pio_cpp_createfile(pio_iosystem_desc_t *iosystem,
                         pio_file_desc_t file,
                         int iotype,
                         const char *fname,
@@ -131,22 +131,22 @@ void pio_cpp_dupiodesc(void* src,
 
 // subroutine pio_cpp_getnumiotasks(iosystem, numiotasks) bind(c)
 
-void pio_cpp_getnumiotasks(pio_iosystem_desc_t iosystem,
+void pio_cpp_getnumiotasks(pio_iosystem_desc_t *iosystem,
                             int* numiotasks);
 
 // subroutine pio_cpp_set_hint(iosystem, hint, hintval) bind(c)
 
-void pio_cpp_set_hint(pio_iosystem_desc_t iosystem,
+void pio_cpp_set_hint(pio_iosystem_desc_t *iosystem,
                        void* hint,
                        void* hint_val);
 
 // function pio_cpp_getnum_ost(iosystem) result(numost) bind(c)
 
-int pio_cpp_getnum_ost(pio_iosystem_desc_t iosystem);
+int pio_cpp_getnum_ost(pio_iosystem_desc_t *iosystem);
 
 // subroutine pio_cpp_setnum_ost(iosystem, numost) bind(c)
 
-void pio_cpp_setnum_ost(pio_iosystem_desc_t iosystem,
+void pio_cpp_setnum_ost(pio_iosystem_desc_t *iosystem,
                          int numost);
 
 // function pio_cpp_file_is_open(file) result(is_open) bind(c)

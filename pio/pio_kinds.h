@@ -16,7 +16,7 @@ typedef signed char PIO_char;
 // ---------------------------------------------------------------------
 
 // sizeof( iosystem_desc_t)
-typedef int *pio_iosystem_desc_t;
+typedef int pio_iosystem_desc_t;
 extern const pio_iosystem_desc_t PIO_IOSYSTEM_DESC_NULL;
 #define PIO_SIZE_IOSYSTEM_DESC  144
 
