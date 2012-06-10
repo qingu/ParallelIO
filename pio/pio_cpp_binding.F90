@@ -586,9 +586,6 @@ function pio_cpp_openfile(iosystem_handle, file, iotype, fname, mode)         &
   filename = c_filename(1:clen)
 #endif
 
-  write(6,*) ' pio_cpp_openfile, file = ', trim(filename), ', mode = ',      &
-             mode, ', iotype = ', iotype, ', clen = ', clen
-
   !  call the Fortran procedure
   ierror = pio_openfile(iosystem_desc_p, file_desc, int(iotype),              &
                         trim(filename), int(mode))

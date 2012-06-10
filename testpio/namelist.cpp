@@ -83,32 +83,26 @@ io_nml::io_nml(int nprocs) {
   //--------------------------------------------------
 
   async = false;
-  DebugLevel = 2;
-  stride = 0;
-  base = 0;
   nx_global = 3600;
   ny_global = 2400;
   nz_global = 1;
-  num_iotasks = -1;
+  num_iotasks = nprocs;
+  rearr_type = PIO_rearr_box; // (from "box" or "none")
+  stride = 0;
+  base = 0;
+  DebugLevel = 2;
+  maxiter = 10;
   num_aggregator = 4;
-  nprocsIO = 0;
+  iotype = PIO_iotype_pnetcdf;
   num_iodofs = 1;
-  strcpy(compdof_input, "namelist");
-  strcpy(part_input, "null");
-  strcpy(iodof_input, "internal");
-  strcpy(compdof_output, "none");
   nvars = 10;
-
-  max_buffer_size = -1;  // use default value;
-  block_size = -1;       // use default value;
-
   npr_yz[0] = nprocs;
   npr_yz[1] = 1;
   npr_yz[2] = 1;
   npr_yz[3] = nprocs;
+
   set_mpi_values = 0 ; // Set to one for true;
   strcpy(mpi_cb_buffer_size, "");
-
   set_romio_values = 0;  // Set to one for true
   strcpy(romio_cb_write, "");   // Default is "automatic"
   strcpy(romio_cb_read, "");    // Default is "automatic"
@@ -122,12 +116,20 @@ io_nml::io_nml(int nprocs) {
   set_lustre_values = 0;
   lfs_ost_count = 1;
 
-  strcpy(ioFMT, "bin");
-  strcpy(dir, "./");
+  strcpy(compdof_input, "namelist");
+  strcpy(compdof_output, "none");
+  strcpy(iodof_input, "internal");
+  strcpy(part_input, "null");
   strcpy(casename, "");
-  rearr_type = PIO_rearr_box; // (from "box" or "none")
-  maxiter = 10;
+  strcpy(dir, "./");
+  strcpy(ioFMT, "pnc");
+  strcpy(ioFMTd, "nc");
 
+  nprocsIO = nprocs;
+  strcpy(fname1, "");
+  strcpy(fname2, "");
+  max_buffer_size = -1;  // use default value;
+  block_size = -1;       // use default value;
   linenum = 0;
 }
 

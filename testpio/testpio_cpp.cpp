@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <sys/stat.h>
 #include <mpi.h>
 
 #include "pio.h"
@@ -20,6 +21,21 @@
 #define MPI_Comm_c2f(_comm) (1)
 #endif // _MPISERIAL
 
+#define __DEBUG
+#ifdef __DEBUG
+// Debug version
+#define PRINTPOS  std::cout << METHODNAME << " called at " << __FILE__        \
+                            << ":" << __LINE__ << std::endl
+#define PRINTMSG(_msg)  std::cout << METHODNAME << " at " << __FILE__         \
+                                  << ":" << __LINE__ << _msg << std::endl
+#else
+// Non-debug version
+#define PRINTPOS
+#define PRINTMSG(_msg)
+#endif
+
+#undef METHODNAME
+#define METHODNAME "printMPIErr"
 static void printMPIErr(int err, std::string fname,
                         std::string file, int line) {
   std::string errName;
@@ -200,6 +216,8 @@ static void printMPIErr(int err, std::string fname,
   }
 }
 
+#undef METHODNAME
+#define METHODNAME "main"
 int main(int argc, char *argv[]) {
   int nprocs;
   int num_iotasks;
@@ -216,6 +234,9 @@ int main(int argc, char *argv[]) {
   int stride = 1;
   int base = 0;
   int rearr_type = PIO_rearr_box;
+  int iotype;
+  int localrc;
+  char filename[FNAME_LEN];
 
   pio_iosystem_desc_t PIOSYS;
   pio_iosystem_desc_t piosystems[1];
@@ -270,21 +291,70 @@ int main(int argc, char *argv[]) {
             << "I am" << (is_master_task ? "" : " not")
             << " the master task." << std::endl;
 
+  pio_cpp_setdebuglevel(0);
   PIOSYS = PIO_IOSYSTEM_DESC_NULL;
 //  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = "
 //            << PIOSYS << std::endl;
   pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,
                          num_aggregators, stride, rearr_type, &PIOSYS,
                          base);
+  pio_cpp_seterrorhandlingi(&PIOSYS, PIO_RETURN_ERROR);
 //  std::cout << "After pio_cpp_init_intracom, PIOSYS = "
 //            << PIOSYS << std::endl;
 
+  iotype = namelist.iotype;
+  if (strlen(namelist.fname1) > 0) {
+    strcpy(filename, namelist.fname1);
+  } else {
+    strcpy(filename, "FileI4.nc");
+  }
   // Decomposition -- set up a problem
   int gDims3D[3];
-  gDims3D[1] = namelist.nx_global;
-  gDims3D[2] = namelist.ny_global;
-  gDims3D[3] = namelist.nz_global;
+  gDims3D[0] = namelist.nx_global;
+  gDims3D[1] = namelist.ny_global;
+  gDims3D[2] = namelist.nz_global;
+  int blockSize = gDims3D[1] * gDims3D[2];
+  int arrayNumElem = gDims3D[0] * blockSize;
+  int nMod = gDims3D[0] % nprocs;
+  int peNumElem;
+  if (my_task < nMod) {
+    peNumElem = blockSize * ((gDims3D[0] / nprocs) + 1);
+  } else {
+    peNumElem = blockSize * (gDims3D[0] / nprocs);
+  }
+  int *testArrayI1 = (int *)malloc(peNumElem * sizeof(int));
 
+  // Allocate a file descriptor
+  File_i4 = (pio_file_desc_t)malloc(PIO_SIZE_FILE_DESC);
+  if ((pio_file_desc_t)NULL == File_i4) {
+    PRINTMSG(" failed to allocate pio file desc");
+    return -1;
+  }
+  PRINTMSG(" allocated pio file desc, addr = " << (void *)File_i4);
+
+  // See if the file already exists
+  {
+    struct stat info;
+    if (stat(filename, &info) != -1) {
+      PRINTMSG(" WARNING: file, " << filename << ", exists; overwriting");
+    }
+  }
+  // Open a file
+  localrc = pio_cpp_createfile(&PIOSYS, File_i4, iotype,
+                               filename, PIO_CLOBBER);
+  if (PIO_noerr != localrc) {
+    char errmsg[512];
+    sprintf(errmsg,
+            " ERROR: Attempt to create file, \"%s\", return code = %d\n",
+            filename, localrc);
+    PRINTMSG(errmsg);
+    return localrc;
+  }
+
+  // Close the file
+  pio_cpp_closefile(File_i4);
+
+  // Finalize PIO
   pio_cpp_finalize(&PIOSYS, &rval);
   if (rval != PIO_noerr) {
     std::cerr << "ERROR: pio_cpp_finalize returned " << rval << std::endl;
