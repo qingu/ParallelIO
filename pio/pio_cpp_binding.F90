@@ -581,12 +581,17 @@ function pio_cpp_openfile(iosystem_handle, file, iotype, fname, mode)         &
 
 #ifdef ALLOC_CHARLEN_OK
   allocate(filename, mold= filename(1: clen))
-#endif
   call f_chars(filename, c_filename(1: clen))
+#else
+  filename = c_filename(1:clen)
+#endif
+
+  write(6,*) ' pio_cpp_openfile, file = ', trim(filename), ', mode = ',      &
+             mode, ', iotype = ', iotype, ', clen = ', clen
 
   !  call the Fortran procedure
   ierror = pio_openfile(iosystem_desc_p, file_desc, int(iotype),              &
-                        filename, int(mode))
+                        trim(filename), int(mode))
 
   !  convert the arguments back to C
   ierr = int(ierror, c_int)
@@ -685,13 +690,14 @@ function pio_cpp_createfile(iosystem_handle, file, iotype, fname, amode_in)   &
 
 #ifdef ALLOC_CHARLEN_OK
   allocate(filename, mold= filename(1: clen))
-#endif
-
   call f_chars(filename, c_filename(1: clen))
+#else
+  filename = c_filename(1:clen)
+#endif
 
   !  call the Fortran procedure
   ierror = pio_createfile(iosystem_desc_p, file_desc, int(iotype),            &
-                          filename, int(amode_in))
+                          trim(filename), int(amode_in))
 
   !  convert the arguments back to C
   ierr = int(ierror, c_int)
@@ -1270,17 +1276,21 @@ subroutine pio_cpp_set_hint(iosystem_handle, hint, hintval) bind(c)
   clen = c_len(c_hint)
 #ifdef ALLOC_CHARLEN_OK
   allocate(hint_str, mold= hint_str(1: clen))
-#endif
   call f_chars(hint_str, c_hint(1: clen))
+#else
+  hint_str = c_hint(1:clen)
+#endif
 
   clen = c_len(c_hintval)
 #ifdef ALLOC_CHARLEN_OK
   allocate(hintval_str, mold= hintval_str(1: clen))
-#endif
   call f_chars(hintval_str, c_hintval(1: clen))
+#else
+  hintval_str = c_hintval(1:clen)
+#endif
 
   !  call the Fortran procedure
-  call pio_set_hint(iosystem_desc_p, hint_str, hintval_str)
+  call pio_set_hint(iosystem_desc_p, trim(hint_str), trim(hintval_str))
 
   !  return to the cpp caller
   return
