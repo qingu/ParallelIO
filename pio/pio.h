@@ -37,20 +37,32 @@ void pio_cpp_init_intercom(int component_count,
 void pio_cpp_finalize(pio_iosystem_desc_t *iosystem,
                        int* ierror);
 
-// subroutine pio_cpp_initdecomp_dof_dof(iosystem, basepiotype, dims, ndims,  &
-//                                       compdof, ncompdof, iodesc, iostart,  &
-//                                       niostart, iocount, niocount) bind(c)
+// We present two versions of this routine in order to allow the C
+// programmer to leave out the optional arguments
+// We use would like to use MPI_Offset for the size of arrays since PIO_OFFSET
+// is of type MPI_Offset. However, in order to use the C interoperability
+// features, we are limited so we choose the 64-bit integer version
 
-// iostart and iocount are optional. To not pass either argument, use
-// zero for niostart and niocount.
+// subroutine pio_cpp_initdecomp_dof_i8(iosystem, basepiotype, dims, ndims,   &
+//                                      compdof, ncompdof, iodesc, iostart,   &
+//                                      niostart, iocount, niocount) bind(c)
+
+void pio_cpp_initdecomp_dof_io(pio_iosystem_desc_t *iosystem,
+                               int basepiotype,
+                               int* dims, int ndims,
+                               int64_t* compdof, int ncompdof,
+                               pio_io_desc_t iodesc,
+                               int64_t* iostart, int niostart,
+                               int64_t* iocount, int niocount);
+
 void pio_cpp_initdecomp_dof(pio_iosystem_desc_t *iosystem,
                             int basepiotype,
                             int* dims, int ndims,
-                            int* compdof, int ncompdof,
-                            pio_io_desc_t iodesc,
-                            int* iostart, int niostart,
-                            int* iocount, int niocount);
+                            int64_t* compdof, int ncompdof,
+                            pio_io_desc_t iodesc);
 
+#if 0
+// This routine is not yet implemented
 // subroutine pio_cpp_initdecomp_dof_dof(iosystem, basepiotype, dims, ndims,  &
 //                                       compdof, ncompdof, iodesc,           &
 //                                       iodof, niodof) bind(c)
@@ -61,6 +73,7 @@ void pio_cpp_initdecomp_dof_dof(pio_iosystem_desc_t *iosystem,
                                 int* compdof, int ncompdof,
                                 pio_io_desc_t iodesc,
                                 int* iodof, int niodof);
+#endif // Not implemented
 
 // function pio_cpp_openfile(iosystem, file, iotype, fname, mode)             &
 //          result(ierr) bind(c)

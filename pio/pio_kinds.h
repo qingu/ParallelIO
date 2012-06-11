@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------
 
 #include <stdint.h>
+#include <mpi.h>
 
 // ---------------------------------------------------------------------
 // types for and sizes of the PIO Fortran derived types
@@ -27,5 +28,8 @@ typedef void *pio_io_desc_t;
 // sizeof( var_desc_t)
 typedef void *pio_var_desc_t;
 #define PIO_SIZE_VAR_DESC        16
+
+// PIO_OFFSET is the same type as MPI_Offset which is a typedef in C
+#define PIO_Offset MPI_Offset
 
 #endif // __PIO_H_KINDS_INCLUDED_

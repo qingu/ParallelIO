@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <mpi.h>
 
 #include "pio.h"
@@ -28,11 +29,30 @@
                             << ":" << __LINE__ << std::endl
 #define PRINTMSG(_msg)  std::cout << METHODNAME << " at " << __FILE__         \
                                   << ":" << __LINE__ << _msg << std::endl
+#define PRINTMSGTSK(_msg) PRINTMSG("(" << my_task << ") " << _msg)
 #else
 // Non-debug version
 #define PRINTPOS
 #define PRINTMSG(_msg)
+#define PRINTMSGTSK(_msg)
 #endif
+
+// Calculate the zero-based local index offset for the given coordinates
+// We are assuming Fortran array order
+static inline int getLocalOffset(int i, int j, int k, int dimi, int dimj) {
+  return (i + ((j + (k * dimj)) * dimi));
+}
+// Get a local value from a local (Fortran order) array
+#define GET_LOCAL_VALUE(_arr,_i,_j,_k,_dimi,_dimj)                            \
+        (*((_arr) + getLocalOffset((_i), (_j), (_k), (_dimi), (_dimj))))
+// Set a local value from a local (Fortran order) array
+#define SET_LOCAL_VALUE(_arr,_i,_j,_k,_dimi,_dimj,_val)                       \
+     (*((_arr) + getLocalOffset((_i), (_j), (_k), (_dimi), (_dimj))) = (_val))
+// Calculate the one-based global offset for a set of local indices
+// The offset is calculated for Fortran order
+static inline int getGlobalOffset(int i, int j, int k, int *dims) {
+  return (i + 1 + ((j + (k * dims[1])) * dims[0]));
+}
 
 #undef METHODNAME
 #define METHODNAME "printMPIErr"
@@ -241,22 +261,22 @@ int main(int argc, char *argv[]) {
   pio_iosystem_desc_t PIOSYS;
   pio_iosystem_desc_t piosystems[1];
   pio_file_desc_t File, File_r8, File_r4, File_i4;
-  pio_var_desc_t vard_i4;
-  pio_var_desc_t vard_r8c;
-  pio_var_desc_t vard_r4c;
-  pio_var_desc_t vard_i4c;
-  pio_var_desc_t vard_i4i;
-  pio_var_desc_t vard_i4j;
-  pio_var_desc_t vard_i4k;
-  pio_var_desc_t vard_i4m;
-  pio_var_desc_t vard_i4dof;
-  pio_var_desc_t *vard_r8;
-  pio_var_desc_t *vard_r4;
 
   pio_io_desc_t IOdesc_r8;
   pio_io_desc_t IOdesc_r4;
   pio_io_desc_t IOdesc_i4;
+
+  int *testArrayI1;
+
   //  gdecomp_type gdecomp;
+  bool progOK = true;
+  bool fileOpen = false;
+  int64_t *compdof;
+  int blockSize;
+  int arrayNumElem;
+  int peNumElem;
+  int numBlocks;
+  int gDims3D[3];
 
   // Initialize MPI
 
@@ -291,16 +311,14 @@ int main(int argc, char *argv[]) {
             << "I am" << (is_master_task ? "" : " not")
             << " the master task." << std::endl;
 
-  pio_cpp_setdebuglevel(0);
+  pio_cpp_setdebuglevel(3);
   PIOSYS = PIO_IOSYSTEM_DESC_NULL;
-//  std::cout << "Calling pio_cpp_init_intracom, PIOSYS = "
-//            << PIOSYS << std::endl;
+  PRINTMSG(" Calling pio_cpp_init_intracom, PIOSYS = " << PIOSYS);
   pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,
-                         num_aggregators, stride, rearr_type, &PIOSYS,
-                         base);
+                        num_aggregators, stride, rearr_type, &PIOSYS,
+                        base);
   pio_cpp_seterrorhandlingi(&PIOSYS, PIO_RETURN_ERROR);
-//  std::cout << "After pio_cpp_init_intracom, PIOSYS = "
-//            << PIOSYS << std::endl;
+  PRINTMSG(" After pio_cpp_init_intracom, PIOSYS = " << PIOSYS);
 
   iotype = namelist.iotype;
   if (strlen(namelist.fname1) > 0) {
@@ -308,67 +326,144 @@ int main(int argc, char *argv[]) {
   } else {
     strcpy(filename, "FileI4.nc");
   }
-  // Decomposition -- set up a problem
-  int gDims3D[3];
-  gDims3D[0] = namelist.nx_global;
-  gDims3D[1] = namelist.ny_global;
-  gDims3D[2] = namelist.nz_global;
-  int blockSize = gDims3D[1] * gDims3D[2];
-  int arrayNumElem = gDims3D[0] * blockSize;
-  int nMod = gDims3D[0] % nprocs;
-  int peNumElem;
-  if (my_task < nMod) {
-    peNumElem = blockSize * ((gDims3D[0] / nprocs) + 1);
-  } else {
-    peNumElem = blockSize * (gDims3D[0] / nprocs);
+  // Allocate PIO data structure memory
+  IOdesc_i4 = (pio_io_desc_t)malloc(PIO_SIZE_IO_DESC);
+  if ((pio_io_desc_t)NULL == IOdesc_i4) {
+    PRINTMSG(" failed to allocate pio IO desc");
+    progOK = false;
   }
-  int *testArrayI1 = (int *)malloc(peNumElem * sizeof(int));
-  int *compdof = (int *)malloc(peNumElem * sizeof(int));
-
-  // Calculate a decomposition
-  pio_cpp_initdecomp_dof(&PIOSYS, PIO_int, gDims3D, 3,
-                         compdof, peNumElem, IOdesc_i4,
-                         (int *)NULL, 0, (int *)NULL, 0);
   // Allocate a file descriptor
-  File_i4 = (pio_file_desc_t)malloc(PIO_SIZE_FILE_DESC);
-  if ((pio_file_desc_t)NULL == File_i4) {
-    PRINTMSG(" failed to allocate pio file desc");
-    return -1;
+  if (progOK) {
+    File_i4 = (pio_file_desc_t)malloc(PIO_SIZE_FILE_DESC);
+    if ((pio_file_desc_t)NULL == File_i4) {
+      PRINTMSG(" failed to allocate pio file desc");
+      progOK = false;
+    } else {
+      PRINTMSG(" allocated pio file desc, addr = " << (void *)File_i4);
+    }
   }
-  PRINTMSG(" allocated pio file desc, addr = " << (void *)File_i4);
+
+  if (progOK) {
+    // Decomposition -- set up a problem
+    int nMod;
+    gDims3D[0] = namelist.nx_global;
+    gDims3D[1] = namelist.ny_global;
+    gDims3D[2] = namelist.nz_global;
+    blockSize = gDims3D[1] * gDims3D[2];
+    arrayNumElem = gDims3D[0] * blockSize;
+    nMod = gDims3D[0] % nprocs;
+    if (my_task < nMod) {
+      numBlocks = ((gDims3D[0] / nprocs) + 1);
+    } else {
+      numBlocks = (gDims3D[0] / nprocs);
+    }
+    peNumElem = blockSize * numBlocks;
+    testArrayI1 = (int *)malloc(peNumElem * sizeof(int));
+    if ((int *)NULL == testArrayI1) {
+      PRINTMSG(" failed to allocate integer test array");
+      progOK = false;
+    }
+  }
+  if (progOK) {
+    compdof = (int64_t *)malloc(peNumElem * sizeof(int64_t));
+    if ((int64_t *)NULL == compdof) {
+      PRINTMSG(" failed to allocate compdof");
+      progOK = false;
+    }
+  }
+  if (progOK) {
+    // Fill the array and the DOF
+    for (int i = 0; i < numBlocks; i++) {
+      for (int j = 0; j < gDims3D[1]; j++) {
+        for (int k = 0; k < gDims3D[2]; k++) {
+          SET_LOCAL_VALUE(testArrayI1, i, j, k, numBlocks, gDims3D[1],
+                          (getLocalOffset(i, j, k, numBlocks, gDims3D[1]) +
+                           (my_task * 10000000)));
+          SET_LOCAL_VALUE(compdof, i, j, k, numBlocks, gDims3D[1],
+                          getGlobalOffset(i, j, k, gDims3D));
+        }
+      }
+    }
+
+    // Calculate a decomposition
+    PRINTMSGTSK("Calling pio_cpp_initdecomp_dof_i4");
+    pio_cpp_initdecomp_dof(&PIOSYS, PIO_int, gDims3D, 3,
+                           compdof, peNumElem, IOdesc_i4);
+    free(compdof);
+    compdof = (int64_t *)NULL;
+  }
 
   // See if the file already exists
-  {
+  if (progOK) {
     struct stat info;
     if (stat(filename, &info) != -1) {
       PRINTMSG(" WARNING: file, " << filename << ", exists; overwriting");
     }
-  }
-  // Open a file
-  localrc = pio_cpp_createfile(&PIOSYS, File_i4, iotype,
-                               filename, PIO_CLOBBER);
-  if (PIO_noerr != localrc) {
-    char errmsg[512];
-    sprintf(errmsg,
-            " ERROR: Attempt to create file, \"%s\", return code = %d\n",
-            filename, localrc);
-    PRINTMSG(errmsg);
-    free(testArrayI1);
-    free(compdof);
-    return localrc;
+
+    // Open a file
+    PRINTMSG(" Calling pio_cpp_createfile");
+    localrc = pio_cpp_createfile(&PIOSYS, File_i4, iotype,
+                                 filename, PIO_CLOBBER);
+    if (PIO_noerr != localrc) {
+      char errmsg[512];
+      sprintf(errmsg,
+              " ERROR: Attempt to create file, \"%s\", return code = %d\n",
+              filename, localrc);
+      PRINTMSG(errmsg);
+      progOK = false;
+    } else {
+      fileOpen = true;
+    }
   }
 
   // Close the file
-  pio_cpp_closefile(File_i4);
+  if (fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_closefile");
+    pio_cpp_closefile(File_i4);
+    fileOpen = false;
+  }
 
-  // Finalize PIO
+  // Cleanup
+
+  if ((pio_io_desc_t)NULL != IOdesc_i4) {
+    // Free any decompositions
+    PRINTMSGTSK("Calling pio_cpp_freedecomp_ios");
+    pio_cpp_freedecomp_ios(&PIOSYS, IOdesc_i4);
+    free(IOdesc_i4);
+    IOdesc_i4 = (pio_io_desc_t)NULL;
+  }
+
+  if (progOK) {
+    pid_t foo = getpid();
+    PRINTMSGTSK(foo);
+  }
+  // Finalize PIO (always call this)
+  rval = MPI_Barrier(MPI_COMM_WORLD);
+  CHECK_MPI_FUNC(rval, "MPI_Barrier");
+  if (2 == my_task) {
+    PRINTMSGTSK("Calling pio_cpp_finalize");
+  }
   pio_cpp_finalize(&PIOSYS, &rval);
   if (rval != PIO_noerr) {
     std::cerr << "ERROR: pio_cpp_finalize returned " << rval << std::endl;
   }
 
-  free(testArrayI1);
-  free(compdof);
+  if ((pio_io_desc_t)NULL != IOdesc_i4) {
+    free(IOdesc_i4);
+    IOdesc_i4 = (pio_io_desc_t)NULL;
+  }
+  if ((pio_file_desc_t)NULL != File_i4) { 
+    free(File_i4);
+    File_i4 = (pio_file_desc_t)NULL;
+  }
+  if ((int *)NULL != testArrayI1) {
+    free(testArrayI1);
+    testArrayI1 = (int *)NULL;
+  }
+  if ((int64_t *)NULL != compdof) {
+    free(compdof);
+    compdof = (int64_t *)NULL;
+  }
 
 #ifndef _MPISERIAL
   rval = MPI_Finalize();
