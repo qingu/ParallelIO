@@ -26,7 +26,8 @@ module pio_cpp_binding
    public :: pio_cpp_init_intracom_int
    public :: pio_cpp_init_intercom_int
    public :: pio_cpp_finalize
-   public :: pio_cpp_initdecomp_dof_i8
+   public :: pio_cpp_initdecomp_dof
+   public :: pio_cpp_initdecomp_dof_dof
    public :: pio_cpp_openfile
    public :: pio_cpp_syncfile
    public :: pio_cpp_createfile
@@ -456,17 +457,17 @@ subroutine pio_cpp_finalize(iosystem_handle, ierr) bind(c)
 end subroutine pio_cpp_finalize
 
 ! ---------------------------------------------------------------------
-!  extern "C" void pio_cpp_initdecomp_dof_i8(int* iosystem, int basepiotype,
-!                                            int* dims, int ndims,
-!                                            int* compdof, int ncompdof,
-!                                            void* iodesc, int* iostart,
-!                                            int niostart, int* iocount,
-!                                            int niocount);
+!  extern "C" void pio_cpp_initdecomp_dof(int* iosystem, int basepiotype,
+!                                         int* dims, int ndims,
+!                                         int* compdof, int ncompdof,
+!                                         void* iodesc, int* iostart,
+!                                         int niostart, int* iocount,
+!                                         int niocount);
 
-subroutine pio_cpp_initdecomp_dof_i8(iosystem_handle, basepiotype, dims,      &
-                                     ndims, compdof, ncompdof, iodesc,        &
-                                     iostart, niostart, iocount, niocount)    &
-                                     bind(c)
+subroutine pio_cpp_initdecomp_dof(iosystem_handle, basepiotype, dims,         &
+                                  ndims, compdof, ncompdof, iodesc,           &
+                                  iostart, niostart, iocount, niocount)       &
+                                  bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -508,8 +509,85 @@ subroutine pio_cpp_initdecomp_dof_i8(iosystem_handle, basepiotype, dims,      &
   call c_f_pointer(dims, as_dims, shape= [ ndims ])
   call c_f_pointer(compdof, as_compdof, shape= [ ncompdof ])
   call c_f_pointer(iodesc, iodesc_desc)
-  call c_f_pointer(iostart, as_iostart, shape= [ niostart ])
-  call c_f_pointer(iocount, as_iocount, shape= [ niocount ])
+  if (niostart .gt. 0) then
+     call c_f_pointer(iostart, as_iostart, shape= [ niostart ])
+  end if
+  if (niocount .gt. 0) then
+     call c_f_pointer(iocount, as_iocount, shape= [ niocount ])
+  end if
+
+  !  get the iosystem_desc_t for this connection
+  call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
+
+  !  call the Fortran procedure (passing optional arguments if passed in)
+  if ((niocount .gt. 0) .and. (niostart .gt. 0)) then
+    call pio_initdecomp(iosystem_desc_p, int(basepiotype, i4),                &
+                        int(as_dims, i4), int(as_compdof, pio_offset),        &
+                        iodesc_desc, int(as_iostart, pio_offset),             &
+                        int(as_iocount, pio_offset))
+  else if ((niocount .gt. 0) .or. (niostart .gt. 0)) then
+    print *,__PIO_FILE__,__LINE__,                                            &
+            'both optional parameters iostart and iocount must be provided'
+  else
+    call pio_initdecomp(iosystem_desc_p, int(basepiotype, i4),                &
+                        int(as_dims, i4), int(as_compdof, pio_offset),        &
+                        iodesc_desc)
+ end if
+
+  !  return to the cpp caller
+  return
+
+end subroutine pio_cpp_initdecomp_dof
+
+! ---------------------------------------------------------------------
+!  extern "C" void pio_cpp_initdecomp_dof_dof(int* iosystem, int basepiotype,
+!                                             int* dims, int ndims,
+!                                             int* compdof, int ncompdof,
+!                                             void* iodesc,
+!                                             int* iodof, int niodof);
+
+subroutine pio_cpp_initdecomp_dof_dof(iosystem_handle, basepiotype, dims,     &
+                                      ndims, compdof, ncompdof, iodesc,       &
+                                      iodof, niodof) bind(c)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio kinds
+  use pio_kinds, only: i4, pio_offset
+
+  !  import pio types
+  use pio_types, only: iosystem_desc_t, io_desc_t
+
+  !  import pio procedure signatures
+  use piolib_mod, only: pio_initdecomp
+
+  !  dummy arguments
+  integer(c_int), intent(in) :: iosystem_handle
+  integer(c_int), value :: basepiotype
+  type(c_ptr), value :: dims
+  integer(c_int), value :: ndims
+  type(c_ptr), value :: compdof
+  integer(c_int), value :: ncompdof
+  type(c_ptr), value :: iodesc
+  type(c_ptr), value :: iodof
+  integer(c_int), value :: niodof
+
+  !  local
+  type(iosystem_desc_t), pointer :: iosystem_desc_p
+  integer(c_int), dimension(:), pointer :: as_dims
+  integer(c_int), dimension(:), pointer :: as_compdof
+  type(io_desc_t), pointer :: iodesc_desc
+  integer(c_int), dimension(:), pointer :: as_iodof
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(dims, as_dims, shape= [ ndims ])
+  call c_f_pointer(compdof, as_compdof, shape= [ ncompdof ])
+  call c_f_pointer(iodesc, iodesc_desc)
+  call c_f_pointer(iodof, as_iodof, shape= [ niodof ])
 
   !  get the iosystem_desc_t for this connection
   call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
@@ -517,13 +595,12 @@ subroutine pio_cpp_initdecomp_dof_i8(iosystem_handle, basepiotype, dims,      &
   !  call the Fortran procedure
   call pio_initdecomp(iosystem_desc_p, int(basepiotype, i4),                  &
                       int(as_dims, i4), int(as_compdof, pio_offset),          &
-                      iodesc_desc, int(as_iostart, pio_offset),               &
-                      int(as_iocount, pio_offset))
+                      iodesc_desc, int(as_iodof, pio_offset))
 
   !  return to the cpp caller
   return
 
-end subroutine pio_cpp_initdecomp_dof_i8
+end subroutine pio_cpp_initdecomp_dof_dof
 
 ! ---------------------------------------------------------------------
 

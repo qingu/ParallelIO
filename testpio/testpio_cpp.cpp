@@ -323,7 +323,12 @@ int main(int argc, char *argv[]) {
     peNumElem = blockSize * (gDims3D[0] / nprocs);
   }
   int *testArrayI1 = (int *)malloc(peNumElem * sizeof(int));
+  int *compdof = (int *)malloc(peNumElem * sizeof(int));
 
+  // Calculate a decomposition
+  pio_cpp_initdecomp_dof(&PIOSYS, PIO_int, gDims3D, 3,
+                         compdof, peNumElem, IOdesc_i4,
+                         (int *)NULL, 0, (int *)NULL, 0);
   // Allocate a file descriptor
   File_i4 = (pio_file_desc_t)malloc(PIO_SIZE_FILE_DESC);
   if ((pio_file_desc_t)NULL == File_i4) {
@@ -348,6 +353,8 @@ int main(int argc, char *argv[]) {
             " ERROR: Attempt to create file, \"%s\", return code = %d\n",
             filename, localrc);
     PRINTMSG(errmsg);
+    free(testArrayI1);
+    free(compdof);
     return localrc;
   }
 
@@ -359,6 +366,9 @@ int main(int argc, char *argv[]) {
   if (rval != PIO_noerr) {
     std::cerr << "ERROR: pio_cpp_finalize returned " << rval << std::endl;
   }
+
+  free(testArrayI1);
+  free(compdof);
 
 #ifndef _MPISERIAL
   rval = MPI_Finalize();

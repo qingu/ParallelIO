@@ -10,7 +10,9 @@
 
 extern "C" {
 
-// subroutine pio_cpp_init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride, rearr, iosystem, base) bind(c)
+// subroutine pio_cpp_init_intracom(comp_rank, comp_comm, num_iotasks,        &
+//                                  num_aggregator, stride, rearr, iosystem,  &
+//                                  base) bind(c)
 
 void pio_cpp_init_intracom(int comp_rank,
                            MPI_Comm comp_comm,
@@ -21,7 +23,8 @@ void pio_cpp_init_intracom(int comp_rank,
                            pio_iosystem_desc_t *iosystem,
                            int base);
 
-// subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms, io_comm, iosystem) bind(c)
+// subroutine pio_cpp_init_intercom(component_count, peer_comm, comp_comms,  &
+//                                  io_comm, iosystem) bind(c)
 
 void pio_cpp_init_intercom(int component_count,
                            MPI_Comm peer_comm,
@@ -34,22 +37,33 @@ void pio_cpp_init_intercom(int component_count,
 void pio_cpp_finalize(pio_iosystem_desc_t *iosystem,
                        int* ierror);
 
-// subroutine pio_cpp_initdecomp_dof_i8(iosystem, basepiotype, dims, ndims, compdof, ncompdof, &
-//                                       iodesc, iostart, niostart, iocount, niocount) bind(c)
+// subroutine pio_cpp_initdecomp_dof_dof(iosystem, basepiotype, dims, ndims,  &
+//                                       compdof, ncompdof, iodesc, iostart,  &
+//                                       niostart, iocount, niocount) bind(c)
 
-void pio_cpp_initdecomp_dof_i8(pio_iosystem_desc_t *iosystem,
+// iostart and iocount are optional. To not pass either argument, use
+// zero for niostart and niocount.
+void pio_cpp_initdecomp_dof(pio_iosystem_desc_t *iosystem,
+                            int basepiotype,
+                            int* dims, int ndims,
+                            int* compdof, int ncompdof,
+                            pio_io_desc_t iodesc,
+                            int* iostart, int niostart,
+                            int* iocount, int niocount);
+
+// subroutine pio_cpp_initdecomp_dof_dof(iosystem, basepiotype, dims, ndims,  &
+//                                       compdof, ncompdof, iodesc,           &
+//                                       iodof, niodof) bind(c)
+
+void pio_cpp_initdecomp_dof_dof(pio_iosystem_desc_t *iosystem,
                                 int basepiotype,
-                                int* dims,
-                                int ndims,
-                                int* compdof,
-                                int ncompdof,
+                                int* dims, int ndims,
+                                int* compdof, int ncompdof,
                                 pio_io_desc_t iodesc,
-                                int* iostart,
-                                int niostart,
-                                int* iocount,
-                                int niocount);
+                                int* iodof, int niodof);
 
-// function pio_cpp_openfile(iosystem, file, iotype, fname, mode) result(ierr) bind(c)
+// function pio_cpp_openfile(iosystem, file, iotype, fname, mode)             &
+//          result(ierr) bind(c)
 
 int pio_cpp_openfile(pio_iosystem_desc_t *iosystem,
                       pio_file_desc_t file,
@@ -61,7 +75,8 @@ int pio_cpp_openfile(pio_iosystem_desc_t *iosystem,
 
 void pio_cpp_syncfile(pio_file_desc_t file);
 
-// function pio_cpp_createfile(iosystem, file, iotype, fname, amode_in) result(ierr) bind(c)
+// function pio_cpp_createfile(iosystem, file, iotype, fname, amode_in)       &
+//          result(ierr) bind(c)
 
 int pio_cpp_createfile(pio_iosystem_desc_t *iosystem,
                         pio_file_desc_t file,

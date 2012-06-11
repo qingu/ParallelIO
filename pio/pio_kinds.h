@@ -6,10 +6,6 @@
 // ---------------------------------------------------------------------
 
 #include <stdint.h>
-typedef double      PIO_double;
-typedef float       PIO_real;
-typedef int32_t     PIO_int;
-typedef signed char PIO_char;
 
 // ---------------------------------------------------------------------
 // types for and sizes of the PIO Fortran derived types

@@ -36,6 +36,10 @@
 #include <pnetcdf.h>   /* _EXTERNAL */
 #define PIO_global        NC_GLOBAL
 #define PIO_unlimited     NC_UNLIMITED
+#define PIO_double        NF_DOUBLE
+#define PIO_real          NF_REAL
+#define PIO_int           NF_INT
+#define PIO_char          NF_CHAR
 #define PIO_noerr         NC_NOERR
 #define PIO_WRITE         NC_WRITE
 #define PIO_nowrite       NC_NOWRITE
@@ -50,6 +54,10 @@
 #include <netcdf.h>
 #define PIO_global        NC_GLOBAL
 #define PIO_unlimited     NC_UNLIMITED
+#define PIO_double        NF90_DOUBLE
+#define PIO_real          NF90_REAL
+#define PIO_int           NF90_INT
+#define PIO_char          NF90_CHAR
 #define PIO_noerr         NC_NOERR
 #define PIO_WRITE         NC_WRITE
 #define PIO_nowrite       NC_NOWRITE
@@ -62,6 +70,10 @@
 #define PIO_num_OST       16
 #else
 #define PIO_global         0
+#define PIO_double         6
+#define PIO_real           5
+#define PIO_int            4
+#define PIO_char           2
 #define PIO_noerr          0
 #define PIO_MAX_NAME      25
 #define PIO_MAX_VAR_DIMS   6
