@@ -444,7 +444,6 @@ subroutine pio_cpp_finalize(iosystem_handle, ierr) bind(c)
   !  get the iosystem_desc_t for this connection
   call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
-  print *,'cpp_finalize: {comp,io}_rank:',iosystem_desc_p%comp_rank,iosystem_desc_p%io_rank
   call MPI_Barrier(iosystem_desc_p%comp_comm, ierror);
   !  call the Fortran procedure
   call pio_finalize(iosystem_desc_p, ierror)

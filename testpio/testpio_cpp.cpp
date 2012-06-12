@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <mpi.h>
 
 #include "pio.h"
@@ -236,9 +237,22 @@ static void printMPIErr(int err, std::string fname,
   }
 }
 
+static struct option long_options[] =
+  { { "num_iotasks",                 required_argument, 0,           'i' },
+    { "num_aggregators",             required_argument, 0,           'a' },
+    { "rerr_type",                   required_argument, 0,           'r' },
+    { "stride",                      required_argument, 0,           's' },
+    { "base",                        required_argument, 0,           'b' },
+    { "help",                        no_argument,       0,           'h' },
+    { 0,                             0,                 0,            0  }
+  };
+
 #undef METHODNAME
 #define METHODNAME "main"
 int main(int argc, char *argv[]) {
+  int copt = 1;
+  int option_index = 0;
+
   int nprocs;
   int num_iotasks;
   int my_task;
@@ -306,12 +320,65 @@ int main(int argc, char *argv[]) {
   is_master_task = (my_task == master_task);
   num_iotasks = std::max((nprocs / 2), 1);
   num_aggregators = num_iotasks;
+  bool numaggset = false;
+
+  // Process input args (if any)
+  while (copt >= 0) {
+    copt = getopt_long(argc, argv, "a:b:hi:r:s:",
+		       long_options, &option_index);
+    switch (copt) {
+    case 'a':
+      num_aggregators = atoi(optarg);
+      numaggset = true;
+      break;
+    case 'b':
+      base = atoi(optarg);
+      break;
+    case 'i':
+      num_iotasks = atoi(optarg);
+      break;
+    case 'r':
+      rearr_type = atoi(optarg);
+      break;
+    case 's':
+      stride = atoi(optarg);
+      break;
+    case 'h':
+      std::cout << "Usage: " << argv[0] << std::endl;
+      std::cout << "Optional arguments: " << std::endl;
+      for (int i = 0;
+           i < (sizeof(long_options) / sizeof(struct option)); i++) {
+	std::cout << "  " << long_options[i].name << std::endl;
+      }
+#ifndef _MPISERIAL
+      rval = MPI_Finalize();
+      CHECK_MPI_FUNC(rval, "MPI_Finalize");
+#endif // ! _MPISERIAL
+      return 0;
+      break;
+    case '?':
+      // No action, getopt_long already complained
+      break;
+    default:
+      if (copt >= 0) {
+	std::cerr << "ERROR: Bad option, " << copt << std::endl;
+      }
+      // copt < 0 is normal termination
+    }
+  }
+  if (!numaggset) {
+    num_aggregators = num_iotasks;
+  }
 
   std::cout << "My rank is " << my_task << "/" << nprocs << ": "
             << "I am" << (is_master_task ? "" : " not")
             << " the master task." << std::endl;
+  if (is_master_task) {
+    std::cout << "Configuring " << num_iotasks << " iotasks and "
+              << num_aggregators << " MPI aggegrators" << std::endl;
+  }
 
-  pio_cpp_setdebuglevel(3);
+  pio_cpp_setdebuglevel(0);
   PIOSYS = PIO_IOSYSTEM_DESC_NULL;
   PRINTMSG(" Calling pio_cpp_init_intracom, PIOSYS = " << PIOSYS);
   pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,
@@ -414,6 +481,11 @@ int main(int argc, char *argv[]) {
     } else {
       fileOpen = true;
     }
+  }
+
+  // Write the file
+  if (progOK && fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_closefile");
   }
 
   // Close the file
