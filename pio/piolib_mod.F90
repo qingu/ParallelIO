@@ -246,15 +246,15 @@ module piolib_mod
 
   !eoc
   !***********************************************************************
-#ifdef _COMPRESSIONS
-  interface
-     subroutine createvdf(vdc_dims, vdc_bsize, vdc_ts, restart , fname) bind(C)
-       use, intrinsic :: iso_c_binding
-       integer(c_int), intent(in) :: vdc_dims(3), vdc_bsize(3)
-       integer(c_int), intent(in), value :: vdc_ts, restart
-       type(c_ptr), intent(in), value :: fname
-     end subroutine createvdf
-  end interface
+#ifdef _COMPRESSION
+!  interface
+!     subroutine createvdf(vdc_dims, vdc_bsize, vdc_ts, restart , fname) bind(C)
+!       use, intrinsic :: iso_c_binding
+!       integer(c_int), intent(in) :: vdc_dims(3), vdc_bsize(3)
+!       integer(c_int), intent(in), value :: vdc_ts, restart
+!       type(c_ptr), intent(in), value :: fname
+!     end subroutine createvdf
+!  end interface
 #endif
 
 contains

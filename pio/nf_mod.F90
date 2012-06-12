@@ -1391,10 +1391,10 @@ contains
     logical, parameter :: Check = .TRUE.
     integer :: msg = PIO_MSG_ENDDEF
 
-    interface
-       subroutine endvdfdef() bind(C)
-       end subroutine endvdfdef
-    end interface
+!    interface
+!       subroutine endvdfdef() bind(C)
+!       end subroutine endvdfdef
+!    end interface
 
     iotype = File%iotype
 
