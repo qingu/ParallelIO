@@ -52,6 +52,16 @@ module pio_cpp_binding
    public :: pio_cpp_getnum_ost
    public :: pio_cpp_setnum_ost
    public :: pio_cpp_file_is_open
+   ! read/write routines
+   public :: read_darray_1d_int
+   public :: read_darray_1d_real
+   public :: read_darray_1d_double
+   public :: write_darray_1d_int
+   public :: write_darray_1d_real
+   public :: write_darray_1d_double
+   ! NetCDF routines
+   public :: def_var_0d
+   public :: def_var_md
 
    ! Utility functions for managing C handles for iosystem_desc_t instances
 
