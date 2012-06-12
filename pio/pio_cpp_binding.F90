@@ -52,16 +52,6 @@ module pio_cpp_binding
    public :: pio_cpp_getnum_ost
    public :: pio_cpp_setnum_ost
    public :: pio_cpp_file_is_open
-   ! read/write routines
-   public :: read_darray_1d_int
-   public :: read_darray_1d_real
-   public :: read_darray_1d_double
-   public :: write_darray_1d_int
-   public :: write_darray_1d_real
-   public :: write_darray_1d_double
-   ! NetCDF routines
-   public :: def_var_0d
-   public :: def_var_md
 
    ! Utility functions for managing C handles for iosystem_desc_t instances
 
@@ -80,9 +70,6 @@ module pio_cpp_binding
    !  private :: delete_all_pio_iosys_handles
 
    !  constants
-
-   integer, parameter :: max_string_len = 1024
-   integer, parameter :: max_path_len = 1024
 
    ! ---------------------------------------------------------------------
 
@@ -249,67 +236,6 @@ subroutine delete_pio_iosys_handle(iosystem_handle)
   end if
 
 end subroutine delete_pio_iosys_handle
-
-! ---------------------------------------------------------------------
-
-!  remove the null that ends a C string
-
-pure subroutine f_chars(fc, cs)
-
-!  bind to C
-
-use, intrinsic :: iso_c_binding, only: c_char
-
-!  dummy arguments
-
-character(kind= c_char, len= *), intent(in) :: cs
-character(len= *), intent(out) :: fc
-
-!  local
-
-   integer :: i
-
-!  text
-
-continue
-
-   convert_kind: do i = 1, min(len(fc), len(cs))
-
-      fc(i: i) = char(ichar(cs(i: i)))
-
-   end do convert_kind
-
-return
-
-end subroutine f_chars
-
-! ---------------------------------------------------------------------
-
-!  return the length of the character data in a C string
-
-pure function c_len(cs) result(cl)
-
-!  bind to C
-
-use, intrinsic :: iso_c_binding, only: c_char, c_null_char
-
-!  result
-
-integer :: cl
-
-!  dummy arguments
-
-character(kind= c_char, len= *), intent(in) :: cs
-
-!  text
-
-continue
-
-   cl = index(cs, c_null_char) - 1
-
-return
-
-end function c_len
 
 ! ---------------------------------------------------------------------
 
@@ -682,6 +608,7 @@ function pio_cpp_openfile(iosystem_handle, file, iotype, fname, mode)         &
 
   !  import pio procedure signatures
   use piolib_mod, only: pio_openfile
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
 
   !  function result
   integer(c_int) :: ierr
@@ -788,6 +715,7 @@ function pio_cpp_createfile(iosystem_handle, file, iotype, fname, amode_in)   &
 
   !  import pio procedure signatures
   use piolib_mod, only: pio_createfile
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
 
   !  function result
   integer(c_int) :: ierr
@@ -1379,6 +1307,7 @@ subroutine pio_cpp_set_hint(iosystem_handle, hint, hintval) bind(c)
 
   !  import pio procedure signatures
   use piolib_mod, only: pio_set_hint
+  use pio_cpp_utils, only: f_chars, c_len, max_string_len
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle

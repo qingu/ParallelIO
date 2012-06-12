@@ -62,7 +62,10 @@ SRCS_FC =  pio.F90 \
 	    pio_msg_callbacks.F90 
 
 if PIOCPP
-  SRCS_FC += pio_cpp_binding.F90
+  SRCS_FC += pio_cpp_utils.F90      \
+             pio_cpp_binding.F90    \
+             nf_cpp_binding.F90     \
+             darray_cpp_binding.F90
   SRCS_CC = piocpp.cc
 else
   SRCS_CC =

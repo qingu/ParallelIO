@@ -62,7 +62,11 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-@PIOCPP_TRUE@am__append_1 = pio_cpp_binding.F90
+@PIOCPP_TRUE@am__append_1 = pio_cpp_utils.F90      \
+@PIOCPP_TRUE@             pio_cpp_binding.F90    \
+@PIOCPP_TRUE@             nf_cpp_binding.F90     \
+@PIOCPP_TRUE@             darray_cpp_binding.F90
+
 subdir = pio
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
