@@ -972,7 +972,7 @@ program testpio
 #endif
               do ivar=1,nvars
 #ifdef _COMPRESSION
-	         call PIO_read_darray(File_r4,vard_r4(ivar),iodesc_r4,test_r4rd,iostat, it)
+	         call PIO_read_darray(File_r4, vard_r4(ivar),iodesc_r4,test_r4rd,iostat, it)
 #else
 	         call PIO_read_darray(File_r4,vard_r4(ivar),iodesc_r4,test_r4rd,iostat)
 #endif

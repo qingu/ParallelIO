@@ -1,8 +1,8 @@
 &io_nml
   casename    = 'vdc01:pnc:box:stride=4'
-  nx_global   = 128
-  ny_global   = 128
-  nz_global   = 128
+  nx_global   = 512
+  ny_global   = 512
+  nz_global   = 512
   iofmt       = 'pnc'
   rearr       = 'box'
   nprocsIO    = 4
@@ -16,7 +16,7 @@
   compdof_input = 'namelist'
 /
 &compdof_nml
-  nblksppe = 256
+  nblksppe = 32
   grdorder = 'xyz'
   grddecomp = 'xyz'
   gdx = 64
@@ -24,7 +24,7 @@
   gdz = 64
   blkorder = 'xyz'
   blkdecomp1 = 'xyz'
-  bdx = 16
-  bdy = 16
+  bdx = 8
+  bdy = 4
   bdz = 1
 /
