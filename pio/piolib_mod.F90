@@ -477,7 +477,6 @@ contains
     type (io_desc_t), intent(out)     :: iodesc
 
  
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_2dof_bin_i4'
    call initdecomp_2dof_bin_i8(iosystem,basepiotype,dims,lenblocks,int(compdof,kind=pio_offset),int(iodofr,kind=pio_offset), &
          int(iodofw,kind=pio_offset),iodesc)
 
@@ -505,7 +504,6 @@ contains
     integer (kind=pio_offset), pointer :: displacer(:),displacew(:)
 
 
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_2dof_bin_i8'
     nullify(iodesc%start)
     nullify(iodesc%count)
 
@@ -615,7 +613,6 @@ contains
     integer(kind=PIO_offset) :: start(1), count(1)
     ! these are not used in the binary interface
 
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_1dof_bin_i8'
     start(1)=-1
     count(1)=-1
     call initdecomp_1dof_nf_i8(iosystem,basepiotype,dims,lenblocks,compdof,iodofr,start, count, iodesc)
@@ -633,7 +630,6 @@ contains
     integer(kind=PIO_offset) :: start(1), count(1)
     ! these are not used in the binary interface
 
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_1dof_bin_i4'
     start(1)=-1
     count(1)=-1
     call initdecomp_1dof_nf_i8(iosystem,basepiotype,dims,lenblocks, &
@@ -673,7 +669,6 @@ contains
     type (io_desc_t) :: tmp
 
 
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_2dof_nf_i4'
     call pio_initdecomp(iosystem, basepiotype,dims,lenblocks,int(compdof,kind=PIO_OFFSET),int(iodofr,kind=PIO_OFFSET), &
          int(iodofw,kind=PIO_OFFSET),start,count,iodesc)
 
@@ -694,7 +689,6 @@ contains
     type (io_desc_t) :: tmp
 
 
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_2dof_nf_i8'
     call initdecomp_1dof_nf_i8(iosystem, basepiotype, dims, lenblocks, compdof, iodofr, start, count, iodesc)
 
     call initdecomp_1dof_nf_i8(iosystem, basepiotype, dims, lenblocks, compdof, iodofw, start, count, tmp)
@@ -740,7 +734,6 @@ contains
     integer(kind=PIO_offset), intent(in) :: start(:), count(:)
 
 
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_1dof_nf_i4'
     call initdecomp_1dof_nf_i8(iosystem, basepiotype,dims,lenblocks,int(compdof,kind=pio_offset),int(iodof,kind=pio_offset),&
          start,count,iodesc)
 
@@ -772,7 +765,7 @@ contains
 #ifdef MEMCHK
     integer :: msize, rss, mshare, mtext, mstack
 #endif
-    print *,__PIO_FILE__,__LINE__,'inside initdecomp_1dof_nf_i8'
+
     nullify(iodesc%start)
     nullify(iodesc%count)
 
@@ -939,16 +932,12 @@ contains
     type (io_desc_t), intent(out)     :: iodesc
     integer(kind=PIO_OFFSET), pointer :: internal_compdof(:)
 
-    print *,__PIO_FILE__,__LINE__,'Attemping to allocate internal_compdof'
     allocate(internal_compdof(size(compdof)))
-    print *,__PIO_FILE__,__LINE__,'compdof allocated with ',size(compdof),' elements'
     internal_compdof = int(compdof,kind=pio_offset)
     
     if(present(iostart) .and. present(iocount) ) then
-       print *,__PIO_FILE__,__LINE__,'calling pio_initdecomp with IO'
        call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc, iostart, iocount)
     else
-       print *,__PIO_FILE__,__LINE__,'calling pio_initdecomp without IO'
        call pio_initdecomp(iosystem, basepiotype, dims, internal_compdof, iodesc)
     endif
     deallocate(internal_compdof)
@@ -1876,13 +1865,11 @@ contains
      integer :: msg
 
      if(iosystem%async_interface .and. iosystem%comp_rank==0) then
-        print *,'afinalize: {comp,io}_rank:',iosystem%comp_rank,iosystem%io_rank
        msg = PIO_MSG_EXIT
        call mpi_send(msg, 1, mpi_integer, iosystem%ioroot, 1, iosystem%union_comm, ierr)
      end if
 
 #ifndef _MPISERIAL
-     print *,'finalize: {comp,io}_rank:',iosystem%comp_rank,iosystem%io_rank
      if(iosystem%info .ne. mpi_info_null) then 
         call mpi_info_free(iosystem%info,ierr) 
      endif
