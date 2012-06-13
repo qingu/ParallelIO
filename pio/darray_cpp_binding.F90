@@ -6,6 +6,8 @@ module darray_cpp_binding
 
   use pio_kinds, only: i4, r4, r8, pio_offset
 
+  implicit none
+
   !  explicit export
 
   private
@@ -44,20 +46,20 @@ subroutine pio_cpp_read_darray_1d_int(file, varDesc, ioDesc, array, narray,   &
   use piodarray, only: pio_read_darray
 
   !  dummy arguments
-  type(c_ptr), value :: file
-  type(c_ptr), value :: varDesc
-  type(c_ptr), value :: ioDesc
-  type(c_ptr), value :: array
-  integer(c_int), value :: narray
-  integer(c_int), intent(out) :: iostat
+  type(c_ptr),       value :: file
+  type(c_ptr),       value :: varDesc
+  type(c_ptr),       value :: ioDesc
+  type(c_ptr),       value :: array
+  integer(c_int),    value :: narray
+  integer(c_int),    intent(out) :: iostat
 
   !  local
   type(file_desc_t), pointer :: file_desc
-  type(var_desc_t), pointer :: var_desc
-  type(io_desc_t), pointer :: iodesc_desc
-  integer(i4), dimension(:), pointer :: as_array
+  type(var_desc_t),  pointer :: var_desc
+  type(io_desc_t),   pointer :: iodesc_desc
+  integer(i4),       pointer :: as_array(:)
 
-  integer(i4) :: iostatus
+  integer(i4)                :: iostatus
 
   !  text
   continue
@@ -69,8 +71,8 @@ subroutine pio_cpp_read_darray_1d_int(file, varDesc, ioDesc, array, narray,   &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call read_darray_1d_int(file_desc, var_desc, io_desc,                       &
-                          int(as_array, i4), iostatus)
+  call pio_read_darray(file_desc, var_desc, iodesc_desc,                      &
+                       as_array, iostatus)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -109,7 +111,7 @@ subroutine pio_cpp_read_darray_1d_real(file, varDesc, ioDesc, array, narray,  &
   type(file_desc_t), pointer :: file_desc
   type(var_desc_t), pointer :: var_desc
   type(io_desc_t), pointer :: iodesc_desc
-  integer(r4), dimension(:), pointer :: as_array
+  real(r4), dimension(:), pointer :: as_array
 
   integer(i4) :: iostatus
 
@@ -123,8 +125,8 @@ subroutine pio_cpp_read_darray_1d_real(file, varDesc, ioDesc, array, narray,  &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call read_darray_1d_real(file_desc, var_desc, io_desc,                      &
-                           int(as_array, r4), iostatus)
+  call pio_read_darray(file_desc, var_desc, iodesc_desc,                      &
+                       as_array, iostatus)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -163,7 +165,7 @@ subroutine pio_cpp_read_darray_1d_double(file, varDesc, ioDesc, array,        &
   type(file_desc_t), pointer :: file_desc
   type(var_desc_t), pointer :: var_desc
   type(io_desc_t), pointer :: iodesc_desc
-  integer(r8), dimension(:), pointer :: as_array
+  real(r8), dimension(:), pointer :: as_array
 
   integer(i4) :: iostatus
 
@@ -177,8 +179,8 @@ subroutine pio_cpp_read_darray_1d_double(file, varDesc, ioDesc, array,        &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call read_darray_1d_real(file_desc, var_desc, io_desc,                      &
-                           int(as_array, r8), iostatus)
+  call pio_read_darray(file_desc, var_desc, iodesc_desc,                      &
+                       as_array, iostatus)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -207,18 +209,18 @@ subroutine pio_cpp_write_darray_1d_int(file, varDesc, ioDesc, array,          &
   use piodarray, only: pio_write_darray
 
   !  dummy arguments
-  type(c_ptr), value :: file
-  type(c_ptr), value :: varDesc
-  type(c_ptr), value :: ioDesc
-  type(c_ptr), value :: array
-  integer(c_int), value :: narray
-  integer(c_int), intent(out) :: iostat
+  type(c_ptr),       value :: file
+  type(c_ptr),       value :: varDesc
+  type(c_ptr),       value :: ioDesc
+  type(c_ptr),       value :: array
+  integer(c_int),    value :: narray
+  integer(c_int),    intent(out) :: iostat
 
   !  local
   type(file_desc_t), pointer :: file_desc
-  type(var_desc_t), pointer :: var_desc
-  type(io_desc_t), pointer :: iodesc_desc
-  integer(i4), dimension(:), pointer :: as_array
+  type(var_desc_t),  pointer :: var_desc
+  type(io_desc_t),   pointer :: iodesc_desc
+  integer(i4),       pointer :: as_array(:)
 
   integer(i4) :: iostatus
 
@@ -232,8 +234,8 @@ subroutine pio_cpp_write_darray_1d_int(file, varDesc, ioDesc, array,          &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call write_darray_1d_int(file_desc, var_desc, io_desc,                      &
-                           int(as_array, i4), iostatus)
+  call pio_write_darray(file_desc, var_desc, iodesc_desc,                     &
+                        int(as_array, i4), iostatus)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -289,8 +291,8 @@ subroutine pio_cpp_write_darray_1d_int_fill(file, varDesc, ioDesc, array,     &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call write_darray_1d_int(file_desc, var_desc, io_desc,                      &
-                           int(as_array, i4), iostatus, fillval)
+  call pio_write_darray(file_desc, var_desc, iodesc_desc,                     &
+                        int(as_array, i4), iostatus, fillval)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -330,7 +332,7 @@ subroutine pio_cpp_write_darray_1d_real(file, varDesc, ioDesc, array,         &
   type(file_desc_t), pointer :: file_desc
   type(var_desc_t), pointer :: var_desc
   type(io_desc_t), pointer :: iodesc_desc
-  integer(r4), dimension(:), pointer :: as_array
+  real(r4), dimension(:), pointer :: as_array
 
   integer(i4) :: iostatus
 
@@ -344,8 +346,8 @@ subroutine pio_cpp_write_darray_1d_real(file, varDesc, ioDesc, array,         &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call write_darray_1d_real(file_desc, var_desc, io_desc,                    &
-                            real(as_array, r4), iostatus)
+  call pio_write_darray(file_desc, var_desc, iodesc_desc,                     &
+                        real(as_array, r4), iostatus)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -388,7 +390,7 @@ subroutine pio_cpp_write_darray_1d_real_fill(file, varDesc, ioDesc, array,    &
   type(file_desc_t), pointer :: file_desc
   type(var_desc_t), pointer :: var_desc
   type(io_desc_t), pointer :: iodesc_desc
-  integer(r4), dimension(:), pointer :: as_array
+  real(r4), dimension(:), pointer :: as_array
 
   integer(i4) :: iostatus
 
@@ -402,8 +404,8 @@ subroutine pio_cpp_write_darray_1d_real_fill(file, varDesc, ioDesc, array,    &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call write_darray_1d_real(file_desc, var_desc, io_desc,                     &
-                            real(as_array, r4), iostatus, real(fillval, r4))
+  call pio_write_darray(file_desc, var_desc, iodesc_desc,                     &
+                        real(as_array, r4), iostatus, real(fillval, r4))
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -444,7 +446,7 @@ subroutine pio_cpp_write_darray_1d_double(file, varDesc, ioDesc, array,       &
   type(file_desc_t), pointer :: file_desc
   type(var_desc_t), pointer :: var_desc
   type(io_desc_t), pointer :: iodesc_desc
-  integer(r8), dimension(:), pointer :: as_array
+  real(r8), dimension(:), pointer :: as_array
 
   integer(i4) :: iostatus
 
@@ -458,8 +460,8 @@ subroutine pio_cpp_write_darray_1d_double(file, varDesc, ioDesc, array,       &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call write_darray_1d_double(file_desc, var_desc, io_desc,                   &
-                              real(as_array, r8), iostatus)
+  call pio_write_darray(file_desc, var_desc, iodesc_desc,                     &
+                        real(as_array, r8), iostatus)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)
@@ -501,9 +503,9 @@ subroutine pio_cpp_write_darray_1d_double_fill(file, varDesc, ioDesc, array,  &
 
   !  local
   type(file_desc_t), pointer :: file_desc
-  type(var_desc_t), pointer :: var_desc
-  type(io_desc_t), pointer :: iodesc_desc
-  integer(r8), dimension(:), pointer :: as_array
+  type(var_desc_t) , pointer :: var_desc
+  type(io_desc_t)  , pointer :: iodesc_desc
+  real(r8)         , pointer :: as_array(:)
 
   integer(i4) :: iostatus
 
@@ -517,8 +519,8 @@ subroutine pio_cpp_write_darray_1d_double_fill(file, varDesc, ioDesc, array,  &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
-  call write_darray_1d_double(file_desc, var_desc, io_desc,                   &
-                              real(as_array, r8), iostatus, real(fillval, r8))
+  call pio_write_darray(file_desc, var_desc, iodesc_desc,                     &
+                        real(as_array, r8), iostatus, real(fillval, r8))
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)

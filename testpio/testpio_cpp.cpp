@@ -280,7 +280,15 @@ int main(int argc, char *argv[]) {
   pio_io_desc_t IOdesc_r4;
   pio_io_desc_t IOdesc_i4;
 
-  int *testArrayI1;
+  int *testArray_i4;
+  float *testArray_r4;
+  double *testArray_r8;
+
+  pio_var_desc_t varDesc_i4;
+  pio_var_desc_t varDesc_r4;
+  pio_var_desc_t varDesc_r8;
+
+  int ncDims[1];
 
   //  gdecomp_type gdecomp;
   bool progOK = true;
@@ -409,6 +417,17 @@ int main(int argc, char *argv[]) {
       PRINTMSG(" allocated pio file desc, addr = " << (void *)File_i4);
     }
   }
+  // Allocate a variable descriptor
+  if (progOK) {
+    varDesc_i4 = (pio_var_desc_t)malloc(PIO_SIZE_VAR_DESC);
+    if ((pio_var_desc_t)NULL == varDesc_i4) {
+      PRINTMSG(" failed to allocate pio variable desc");
+      progOK = false;
+    } else {
+      PRINTMSG(" allocated pio variable desc, addr = " << (void *)varDesc_i4);
+    }
+  }
+
 
   if (progOK) {
     // Decomposition -- set up a problem
@@ -425,8 +444,8 @@ int main(int argc, char *argv[]) {
       numBlocks = (gDims3D[0] / nprocs);
     }
     peNumElem = blockSize * numBlocks;
-    testArrayI1 = (int *)malloc(peNumElem * sizeof(int));
-    if ((int *)NULL == testArrayI1) {
+    testArray_i4 = (int *)malloc(peNumElem * sizeof(int));
+    if ((int *)NULL == testArray_i4) {
       PRINTMSG(" failed to allocate integer test array");
       progOK = false;
     }
@@ -443,7 +462,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < numBlocks; i++) {
       for (int j = 0; j < gDims3D[1]; j++) {
         for (int k = 0; k < gDims3D[2]; k++) {
-          SET_LOCAL_VALUE(testArrayI1, i, j, k, numBlocks, gDims3D[1],
+          SET_LOCAL_VALUE(testArray_i4, i, j, k, numBlocks, gDims3D[1],
                           (getLocalOffset(i, j, k, numBlocks, gDims3D[1]) +
                            (my_task * 10000000)));
           SET_LOCAL_VALUE(compdof, i, j, k, numBlocks, gDims3D[1],
@@ -483,9 +502,38 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Create the variable
+  if (progOK && fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_def_dim");
+    localrc = pio_cpp_def_dim(File_i4, "testArray_i4", peNumElem, &ncDims[0]);
+    if (PIO_noerr != localrc) {
+      char errmsg[512];
+      sprintf(errmsg,
+              " ERROR: Attempt to create dimension, return code = %d\n",
+              localrc);
+      PRINTMSG(errmsg);
+      progOK = false;
+    }
+  }
+  if (progOK && fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_def_var_md");
+    localrc = pio_cpp_def_var_md(File_i4, "testArray_i4", PIO_int,
+                                 ncDims, 1, varDesc_i4);
+    if (PIO_noerr != localrc) {
+      char errmsg[512];
+      sprintf(errmsg,
+              " ERROR: Attempt to create NetCDF var, return code = %d\n",
+              localrc);
+      PRINTMSG(errmsg);
+      progOK = false;
+    }
+  }
+
   // Write the file
   if (progOK && fileOpen) {
-    PRINTMSGTSK("Calling pio_cpp_closefile");
+    PRINTMSGTSK("Calling pio_cpp_write_darray_1d_int");
+    pio_cpp_write_darray_1d_int(File_i4, varDesc_i4, IOdesc_i4,
+                                testArray_i4, peNumElem, &localrc);
   }
 
   // Close the file
@@ -528,9 +576,9 @@ int main(int argc, char *argv[]) {
     free(File_i4);
     File_i4 = (pio_file_desc_t)NULL;
   }
-  if ((int *)NULL != testArrayI1) {
-    free(testArrayI1);
-    testArrayI1 = (int *)NULL;
+  if ((int *)NULL != testArray_i4) {
+    free(testArray_i4);
+    testArray_i4 = (int *)NULL;
   }
   if ((int64_t *)NULL != compdof) {
     free(compdof);
