@@ -49,7 +49,7 @@ void pio_cpp_finalize(pio_iosystem_desc_t *iosystem,
 // is of type MPI_Offset. However, in order to use the C interoperability
 // features, we are limited so we choose the 64-bit integer version
 
-// subroutine pio_cpp_initdecomp_dof_i8(iosystem, basepiotype, dims, ndims,   &
+// subroutine pio_cpp_initdecomp_dof_io(iosystem, basepiotype, dims, ndims,   &
 //                                      compdof, ncompdof, iodesc, iostart,   &
 //                                      niostart, iocount, niocount) bind(c)
 
@@ -60,6 +60,9 @@ void pio_cpp_initdecomp_dof_io(pio_iosystem_desc_t *iosystem,
                                pio_io_desc_t iodesc,
                                int64_t* iostart, int niostart,
                                int64_t* iocount, int niocount);
+
+// subroutine pio_cpp_initdecomp_dof(iosystem, basepiotype, dims, ndims,      &
+//                                      compdof, ncompdof, iodesc) bind(c)
 
 void pio_cpp_initdecomp_dof(pio_iosystem_desc_t *iosystem,
                             int basepiotype,
@@ -258,12 +261,13 @@ void pio_cpp_read_darray_1d_double(void *file,
 // subroutine pio_cpp_write_darray_1d_int(file, varDesc, ioDesc, array,       &
 //                                        narray, iostat) bind(c)
 
-void pio_cpp_write_darray_1d_int(void *file,
-                                 void *varDesc,
-                                 void *ioDesc,
-                                 int *array,
-                                 int narray,
-                                 int *iostat);
+void pio_cpp_write_darray_int(void *file,
+                              void *varDesc,
+                              void *ioDesc,
+                              int *array,
+                              int *shape,
+                              int rank,
+                              int *iostat);
 
 // subroutine pio_cpp_write_darray_1d_int_fill(file, varDesc, ioDesc, array,  &
 //                                             narray, iostat) bind(c)

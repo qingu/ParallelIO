@@ -301,6 +301,7 @@ int main(int argc, char *argv[]) {
   int64_t numBlocks;
   int64_t blockStart;
   int     gDims3D[3];
+  int     totaldims;
 
   // Initialize MPI
 
@@ -439,6 +440,14 @@ int main(int argc, char *argv[]) {
     gDims3D[0] = namelist.nx_global;
     gDims3D[1] = namelist.ny_global;
     gDims3D[2] = namelist.nz_global;
+/////////////////////////
+//// Debug values
+/////////////////////////
+    gDims3D[0] = 8;
+    gDims3D[1] = 16;
+    gDims3D[2] = 2;
+/////////////////////////
+    totaldims = gDims3D[0]*gDims3D[1]*gDims3D[2];
     blockSize = gDims3D[1] * gDims3D[2];
     arrayNumElem = gDims3D[0] * blockSize;
     nMod = gDims3D[0] % nprocs;
@@ -488,8 +497,13 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    for (int i = 0; i < peNumElem; i++) {
+      if (compdof[i] != (i+1)) {
+        PRINTMSGTSK("WARNING: compdof(" << i << ") = " << compdof[i]);
+      }
+    }
     // Calculate a decomposition
-    PRINTMSGTSK("Calling pio_cpp_initdecomp_dof_i4");
+    PRINTMSGTSK("Calling pio_cpp_initdecomp_dof");
     pio_cpp_initdecomp_dof(&PIOSYS, PIO_int, gDims3D, 3,
                            compdof, peNumElem, IOdesc_i4);
     free(compdof);
@@ -570,8 +584,14 @@ int main(int argc, char *argv[]) {
   // Write the file
   if (progOK && fileOpen) {
     PRINTMSGTSK("Calling pio_cpp_write_darray_1d_int");
-    pio_cpp_write_darray_1d_int(File_i4, varDesc_i4, IOdesc_i4,
-                                testArray_i4, peNumElem, &localrc);
+    pio_cpp_write_darray_int(File_i4, varDesc_i4, IOdesc_i4,
+                             testArray_i4, gDims3D, 3, &localrc);
+  }
+
+  // Close the file
+  if (fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_syncfile");
+    pio_cpp_syncfile(File_i4);
   }
 
   // Close the file
