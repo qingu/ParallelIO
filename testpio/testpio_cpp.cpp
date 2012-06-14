@@ -51,8 +51,9 @@ static inline int getLocalOffset(int i, int j, int k, int dimi, int dimj) {
      (*((_arr) + getLocalOffset((_i), (_j), (_k), (_dimi), (_dimj))) = (_val))
 // Calculate the one-based global offset for a set of local indices
 // The offset is calculated for Fortran order
-static inline int getGlobalOffset(int i, int j, int k, int *dims) {
-  return (i + 1 + ((j + (k * dims[1])) * dims[0]));
+static inline int getGlobalOffset(int i, int j, int k, int *dims,
+                                  int64_t blkStart, int64_t blkSize) {
+  return (i + 1 + ((j + (k * dims[1])) * dims[0]) + (blkStart - 1));
 }
 
 #undef METHODNAME
@@ -274,31 +275,32 @@ int main(int argc, char *argv[]) {
 
   pio_iosystem_desc_t PIOSYS;
   pio_iosystem_desc_t piosystems[1];
-  pio_file_desc_t File, File_r8, File_r4, File_i4;
+  pio_file_desc_t     File, File_r8, File_r4, File_i4;
 
   pio_io_desc_t IOdesc_r8;
   pio_io_desc_t IOdesc_r4;
   pio_io_desc_t IOdesc_i4;
 
-  int *testArray_i4;
-  float *testArray_r4;
+  int    *testArray_i4;
+  float  *testArray_r4;
   double *testArray_r8;
 
   pio_var_desc_t varDesc_i4;
   pio_var_desc_t varDesc_r4;
   pio_var_desc_t varDesc_r8;
 
-  int ncDims[1];
+  int ncDims[3];
 
   //  gdecomp_type gdecomp;
-  bool progOK = true;
-  bool fileOpen = false;
+  bool    progOK = true;
+  bool    fileOpen = false;
   int64_t *compdof;
-  int blockSize;
-  int arrayNumElem;
-  int peNumElem;
-  int numBlocks;
-  int gDims3D[3];
+  int64_t blockSize;
+  int     arrayNumElem;
+  int64_t peNumElem;
+  int64_t numBlocks;
+  int64_t blockStart;
+  int     gDims3D[3];
 
   // Initialize MPI
 
@@ -352,11 +354,13 @@ int main(int argc, char *argv[]) {
       stride = atoi(optarg);
       break;
     case 'h':
-      std::cout << "Usage: " << argv[0] << std::endl;
-      std::cout << "Optional arguments: " << std::endl;
-      for (int i = 0;
-           i < (sizeof(long_options) / sizeof(struct option)); i++) {
-	std::cout << "  " << long_options[i].name << std::endl;
+      if (is_master_task) {
+        std::cout << "Usage: " << argv[0] << std::endl;
+        std::cout << "Optional arguments: " << std::endl;
+        for (int i = 0;
+             i < (sizeof(long_options) / sizeof(struct option)); i++) {
+          std::cout << "  " << long_options[i].name << std::endl;
+        }
       }
 #ifndef _MPISERIAL
       rval = MPI_Finalize();
@@ -440,10 +444,22 @@ int main(int argc, char *argv[]) {
     nMod = gDims3D[0] % nprocs;
     if (my_task < nMod) {
       numBlocks = ((gDims3D[0] / nprocs) + 1);
+      blockStart = (my_task * numBlocks) + 1; // Fortran based
     } else {
       numBlocks = (gDims3D[0] / nprocs);
+      blockStart = ((nMod * (numBlocks + 1)) +
+                    ((my_task - nMod) * numBlocks) + 1); // Fortran based
     }
     peNumElem = blockSize * numBlocks;
+    std::cout << "PE(" << my_task << "): numBlocks = " << numBlocks
+              << ", blockStart = " << blockStart << ", peNumElem = "
+              << peNumElem << ", range = ("
+              << getGlobalOffset(0, 0, 0, gDims3D, blockStart, blockSize)
+              << ", "
+              << getGlobalOffset((numBlocks - 1),
+                                 (gDims3D[1] - 1), (gDims3D[2] - 1),
+                                 gDims3D, blockStart, blockSize)
+              << ")" << std::endl;
     testArray_i4 = (int *)malloc(peNumElem * sizeof(int));
     if ((int *)NULL == testArray_i4) {
       PRINTMSG(" failed to allocate integer test array");
@@ -466,7 +482,8 @@ int main(int argc, char *argv[]) {
                           (getLocalOffset(i, j, k, numBlocks, gDims3D[1]) +
                            (my_task * 10000000)));
           SET_LOCAL_VALUE(compdof, i, j, k, numBlocks, gDims3D[1],
-                          getGlobalOffset(i, j, k, gDims3D));
+                          getGlobalOffset(i, j, k, gDims3D,
+                                          blockStart, blockSize));
         }
       }
     }
@@ -483,7 +500,9 @@ int main(int argc, char *argv[]) {
   if (progOK) {
     struct stat info;
     if (stat(filename, &info) != -1) {
-      PRINTMSG(" WARNING: file, " << filename << ", exists; overwriting");
+      if (is_master_task) {
+        PRINTMSG(" WARNING: file, " << filename << ", exists; overwriting");
+      }
     }
 
     // Open a file
@@ -491,11 +510,13 @@ int main(int argc, char *argv[]) {
     localrc = pio_cpp_createfile(&PIOSYS, File_i4, iotype,
                                  filename, PIO_CLOBBER);
     if (PIO_noerr != localrc) {
-      char errmsg[512];
-      sprintf(errmsg,
-              " ERROR: Attempt to create file, \"%s\", return code = %d\n",
-              filename, localrc);
-      PRINTMSG(errmsg);
+      if (is_master_task) {
+        char errmsg[512];
+        sprintf(errmsg,
+                " ERROR: Attempt to create file, \"%s\", return code = %d\n",
+                filename, localrc);
+        PRINTMSG(errmsg);
+      }
       progOK = false;
     } else {
       fileOpen = true;
@@ -504,25 +525,42 @@ int main(int argc, char *argv[]) {
 
   // Create the variable
   if (progOK && fileOpen) {
+    std::string axes[3] = { "x", "y", "z" };
     PRINTMSGTSK("Calling pio_cpp_def_dim");
-    localrc = pio_cpp_def_dim(File_i4, "testArray_i4", peNumElem, &ncDims[0]);
+    for (int i = 0; i < 3; i++) {
+      localrc = pio_cpp_def_dim(File_i4, axes[i].c_str(),
+                                gDims3D[i], &ncDims[i]);
+      if (PIO_noerr != localrc) {
+        char errmsg[512];
+        sprintf(errmsg,
+                " ERROR: Attempt to create dimension %d, return code = %d\n",
+                i, localrc);
+        PRINTMSG(errmsg);
+        progOK = false;
+        break;
+      }
+    }
+  }
+  if (progOK && fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_def_var_md");
+    localrc = pio_cpp_def_var_md(File_i4, "testArray_i4", PIO_int,
+                                 ncDims, 3, varDesc_i4);
     if (PIO_noerr != localrc) {
       char errmsg[512];
       sprintf(errmsg,
-              " ERROR: Attempt to create dimension, return code = %d\n",
+              " ERROR: Attempt to create NetCDF var, return code = %d\n",
               localrc);
       PRINTMSG(errmsg);
       progOK = false;
     }
   }
   if (progOK && fileOpen) {
-    PRINTMSGTSK("Calling pio_cpp_def_var_md");
-    localrc = pio_cpp_def_var_md(File_i4, "testArray_i4", PIO_int,
-                                 ncDims, 1, varDesc_i4);
+    PRINTMSGTSK("Calling pio_cpp_enddef");
+    localrc = pio_cpp_enddef(File_i4);
     if (PIO_noerr != localrc) {
       char errmsg[512];
       sprintf(errmsg,
-              " ERROR: Attempt to create NetCDF var, return code = %d\n",
+              " ERROR: Attempt to end NetCDF def mode, return code = %d\n",
               localrc);
       PRINTMSG(errmsg);
       progOK = false;
@@ -542,6 +580,11 @@ int main(int argc, char *argv[]) {
     pio_cpp_closefile(File_i4);
     fileOpen = false;
   }
+
+  // Reset the array
+  memset((void *)testArray_i4, 0, (peNumElem * sizeof(int)));
+
+  // Try reading in the file
 
   // Cleanup
 

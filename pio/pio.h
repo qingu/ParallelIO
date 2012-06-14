@@ -199,6 +199,10 @@ int pio_cpp_def_dim(pio_file_desc_t file,
                     int len,
                     int *dimid);
 
+// function pio_cpp_enddef(file) result(ierr) bind(c)
+
+int pio_cpp_enddef(pio_file_desc_t file);
+
 // function pio_cpp_def_var_0d(file, name, type, vardesc) result(ierr) bind(c)
 
 int pio_cpp_def_var_0d(pio_file_desc_t file,

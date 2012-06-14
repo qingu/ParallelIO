@@ -234,8 +234,9 @@ subroutine pio_cpp_write_darray_1d_int(file, varDesc, ioDesc, array,          &
   call c_f_pointer(array, as_array, shape= [ narray ])
 
   !  call the Fortran procedure
+  print *,__PIO_FILE__,':',__LINE__,' Calling pio_write_darray with ', narray, ' elements'
   call pio_write_darray(file_desc, var_desc, iodesc_desc,                     &
-                        int(as_array, i4), iostatus)
+                        as_array, iostatus)
 
   !  convert the arguments back to C
   iostat = int(iostatus, c_int)

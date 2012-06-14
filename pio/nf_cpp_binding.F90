@@ -15,7 +15,7 @@ module nf_cpp_binding
    ! public interface
 
   public :: pio_cpp_def_dim
-!   public :: PIO_enddef
+  public :: pio_cpp_enddef
 !   public :: PIO_redef
 !   public :: PIO_inquire
 !   public :: PIO_inq_dimid
@@ -109,6 +109,48 @@ function pio_cpp_def_dim(file, name, len, dimid) result(ierr) bind(c)
   !  return to the cpp caller
   return
 end function pio_cpp_def_dim
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_enddef(pio_file_desc_t file);
+
+function pio_cpp_enddef(file) result(ierr) bind(c)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_enddef
+
+  !  function result
+  integer(c_int) :: ierr
+
+  !  dummy arguments
+  type(c_ptr), value :: file
+
+  !  local
+  integer :: ierror
+
+  type(file_desc_t), pointer :: file_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_enddef(file_desc)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_enddef
 
 !  extern "C" int pio_cpp_def_var_0d(pio_file_desc_t file, const char *name,  &
 !                                    int type, pio_var_desc_t vardesc);
