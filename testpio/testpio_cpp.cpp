@@ -281,9 +281,12 @@ int main(int argc, char *argv[]) {
   pio_io_desc_t IOdesc_r4;
   pio_io_desc_t IOdesc_i4;
 
-  int    *testArray_i4;
-  float  *testArray_r4;
-  double *testArray_r8;
+  int    *testArray_i4  = (int *)NULL;
+  int    *checkArray_i4 = (int *)NULL;
+  float  *testArray_r4  = (float *)NULL;
+  float  *checkArray_r4 = (float *)NULL;;
+  double *testArray_r8  = (double *)NULL;;
+  double *checkArray_r8 = (double *)NULL;;;
 
   pio_var_desc_t varDesc_i4;
   pio_var_desc_t varDesc_r4;
@@ -391,7 +394,7 @@ int main(int argc, char *argv[]) {
               << num_aggregators << " MPI aggegrators" << std::endl;
   }
 
-  pio_cpp_setdebuglevel(0);
+  pio_cpp_setdebuglevel(3);
   PIOSYS = PIO_IOSYSTEM_DESC_NULL;
   PRINTMSG(" Calling pio_cpp_init_intracom, PIOSYS = " << PIOSYS);
   pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,
@@ -460,6 +463,7 @@ int main(int argc, char *argv[]) {
                     ((my_task - nMod) * numBlocks) + 1); // Fortran based
     }
     peNumElem = blockSize * numBlocks;
+#if 0
     std::cout << "PE(" << my_task << "): numBlocks = " << numBlocks
               << ", blockStart = " << blockStart << ", peNumElem = "
               << peNumElem << ", range = ("
@@ -469,6 +473,7 @@ int main(int argc, char *argv[]) {
                                  (gDims3D[1] - 1), (gDims3D[2] - 1),
                                  gDims3D, blockStart, blockSize)
               << ")" << std::endl;
+#endif
     testArray_i4 = (int *)malloc(peNumElem * sizeof(int));
     if ((int *)NULL == testArray_i4) {
       PRINTMSG(" failed to allocate integer test array");
@@ -497,11 +502,21 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    for (int i = 0; i < peNumElem; i++) {
-      if (compdof[i] != (i+1)) {
-        PRINTMSGTSK("WARNING: compdof(" << i << ") = " << compdof[i]);
+#if 0
+    if (0 == my_task) {
+      for (int i = 0; i < peNumElem; i++) {
+        PRINTMSGTSK("compdof(" << i << ") = " << compdof[i]);
       }
     }
+    rval = MPI_Barrier(MPI_COMM_WORLD);
+    CHECK_MPI_FUNC(rval, "MPI_Barrier");
+    if (1 == my_task) {
+      for (int i = 0; i < peNumElem; i++) {
+        PRINTMSGTSK("compdof(" << i << ") = " << compdof[i]);
+      }
+    }
+#endif
+
     // Calculate a decomposition
     PRINTMSGTSK("Calling pio_cpp_initdecomp_dof");
     pio_cpp_initdecomp_dof(&PIOSYS, PIO_int, gDims3D, 3,
@@ -519,7 +534,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Open a file
+    // Create the file
     PRINTMSG(" Calling pio_cpp_createfile");
     localrc = pio_cpp_createfile(&PIOSYS, File_i4, iotype,
                                  filename, PIO_CLOBBER);
@@ -583,9 +598,13 @@ int main(int argc, char *argv[]) {
 
   // Write the file
   if (progOK && fileOpen) {
+    rval = MPI_Barrier(MPI_COMM_WORLD);
+    CHECK_MPI_FUNC(rval, "MPI_Barrier");
     PRINTMSGTSK("Calling pio_cpp_write_darray_1d_int");
     pio_cpp_write_darray_int(File_i4, varDesc_i4, IOdesc_i4,
                              testArray_i4, gDims3D, 3, &localrc);
+    rval = MPI_Barrier(MPI_COMM_WORLD);
+    CHECK_MPI_FUNC(rval, "MPI_Barrier");
   }
 
   // Close the file
@@ -601,10 +620,39 @@ int main(int argc, char *argv[]) {
     fileOpen = false;
   }
 
-  // Reset the array
-  memset((void *)testArray_i4, 0, (peNumElem * sizeof(int)));
-
   // Try reading in the file
+  if (progOK) {
+    checkArray_i4 = (int *)malloc(peNumElem * sizeof(int));
+    if ((int *)NULL == checkArray_i4) {
+      PRINTMSG(" failed to allocate integer check array");
+      progOK = false;
+    }
+  }
+  if (progOK) {
+    // Open the file
+    PRINTMSG(" Calling pio_cpp_openfile");
+    localrc = pio_cpp_openfile(&PIOSYS, File_i4, iotype,
+                               filename, PIO_NOWRITE);
+    if (PIO_noerr != localrc) {
+      if (is_master_task) {
+        char errmsg[512];
+        sprintf(errmsg,
+                " ERROR: Attempt to open file, \"%s\", return code = %d\n",
+                filename, localrc);
+        PRINTMSG(errmsg);
+      }
+      progOK = false;
+    } else {
+      fileOpen = true;
+    }
+  }
+
+  // Close the file
+  if (fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_closefile");
+    pio_cpp_closefile(File_i4);
+    fileOpen = false;
+  }
 
   // Cleanup
 
@@ -623,9 +671,8 @@ int main(int argc, char *argv[]) {
   // Finalize PIO (always call this)
   rval = MPI_Barrier(MPI_COMM_WORLD);
   CHECK_MPI_FUNC(rval, "MPI_Barrier");
-  if (2 == my_task) {
-    PRINTMSGTSK("Calling pio_cpp_finalize");
-  }
+
+  PRINTMSGTSK("Calling pio_cpp_finalize");
   pio_cpp_finalize(&PIOSYS, &rval);
   if (rval != PIO_noerr) {
     std::cerr << "ERROR: pio_cpp_finalize returned " << rval << std::endl;
@@ -639,9 +686,33 @@ int main(int argc, char *argv[]) {
     free(File_i4);
     File_i4 = (pio_file_desc_t)NULL;
   }
+  if ((pio_var_desc_t)NULL != varDesc_i4) {
+    free(varDesc_i4);
+    varDesc_i4 = (pio_var_desc_t)NULL;
+  }
   if ((int *)NULL != testArray_i4) {
     free(testArray_i4);
     testArray_i4 = (int *)NULL;
+  }
+  if ((int *)NULL != checkArray_i4) {
+    free(checkArray_i4);
+    checkArray_i4 = (int *)NULL;
+  }
+  if ((float *)NULL != testArray_r4) {
+    free(testArray_r4);
+    testArray_r4 = (float *)NULL;
+  }
+  if ((float *)NULL != checkArray_r4) {
+    free(checkArray_r4);
+    checkArray_r4 = (float *)NULL;
+  }
+  if ((double *)NULL != testArray_r8) {
+    free(testArray_r8);
+    testArray_r8 = (double *)NULL;
+  }
+  if ((double *)NULL != checkArray_r8) {
+    free(checkArray_r8);
+    checkArray_r8 = (double *)NULL;
   }
   if ((int64_t *)NULL != compdof) {
     free(compdof);

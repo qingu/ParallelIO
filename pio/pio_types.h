@@ -42,7 +42,7 @@
 #define PIO_char          NF_CHAR
 #define PIO_noerr         NC_NOERR
 #define PIO_WRITE         NC_WRITE
-#define PIO_nowrite       NC_NOWRITE
+#define PIO_NOWRITE       NC_NOWRITE
 #define PIO_CLOBBER       NC_CLOBBER	
 #define PIO_NOCLOBBER     NC_NOCLOBBER	
 #define PIO_NOFILL        NC_NOFILL
@@ -60,7 +60,7 @@
 #define PIO_char          NF90_CHAR
 #define PIO_noerr         NC_NOERR
 #define PIO_WRITE         NC_WRITE
-#define PIO_nowrite       NC_NOWRITE
+#define PIO_NOWRITE       NC_NOWRITE
 #define PIO_CLOBBER       NC_CLOBBER	
 #define PIO_NOCLOBBER     NC_NOCLOBBER	
 #define PIO_NOFILL        NC_NOFILL
