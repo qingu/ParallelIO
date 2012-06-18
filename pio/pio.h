@@ -195,6 +195,18 @@ int pio_cpp_file_is_open(pio_file_desc_t file);
 //  NetCDF Interface Functions
 //
 /////////////////////////////////
+
+// function pio_cpp_inquire(File, nDimensions, nVariables,                    &
+//                          nAttributes, unlimitedDimID) result(ierr)
+
+int pio_cpp_inquire(pio_file_desc_t file, int nDimensions, int nVariables,
+                    int nAttributes, int unlimitedDimID);
+
+// function pio_cpp_inq_att_vid(file,varid,name,xtype,len) result(ierr)
+
+int pio_cpp_inq_att_vid(pio_file_desc_t file, int varid,
+                        const char *name, int len);
+
 // function pio_cpp_def_dim(file, name, len, dimid) result(ierr)
 
 int pio_cpp_def_dim(pio_file_desc_t file,
