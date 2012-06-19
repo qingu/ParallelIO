@@ -491,18 +491,18 @@ subroutine pio_cpp_initdecomp_dof(iosystem_handle, basepiotype, dims,         &
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle
-  integer(c_int), value :: basepiotype
-  type(c_ptr), value :: dims
-  integer(c_int), value :: ndims
-  type(c_ptr), value :: compdof
-  integer(c_int), value :: ncompdof
-  type(c_ptr), value :: iodesc
+  integer(c_int), value      :: basepiotype
+  type(c_ptr),    value      :: dims
+  integer(c_int), value      :: ndims
+  type(c_ptr),    value      :: compdof
+  integer(c_int), value      :: ncompdof
+  type(c_ptr),    value      :: iodesc
 
   !  local
   type(iosystem_desc_t), pointer :: iosystem_desc_p
-  integer(c_int), dimension(:), pointer :: as_dims
-  integer(c_int64_t), dimension(:), pointer :: as_compdof
-  type(io_desc_t), pointer :: iodesc_desc
+  integer(c_int),        pointer :: as_dims(:)
+  integer(c_int64_t),    pointer :: as_compdof(:)
+  type(io_desc_t),       pointer :: iodesc_desc
 
   !  text
   continue

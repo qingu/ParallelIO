@@ -207,6 +207,85 @@ int pio_cpp_inquire(pio_file_desc_t file, int nDimensions, int nVariables,
 int pio_cpp_inq_att_vid(pio_file_desc_t file, int varid,
                         const char *name, int len);
 
+// function pio_cpp_inq_attname_vid(file, varid, attnum, name) result(ierr)
+
+int pio_cpp_inq_attname_vid(pio_file_desc_t file, int varid,
+                            int attnum, char *name);
+
+// function pio_cpp_inq_attname_vdesc(file, vardesc, attnum, name)            &
+//          result(ierr)
+
+int pio_cpp_inq_attname_vdesc(pio_file_desc_t file, pio_var_desc_t vardesc,
+                              int attnum, char *name);
+
+// function pio_cpp_inq_varid_vid(file, name, varid) result(ierr)
+
+int pio_cpp_inq_varid_vid(pio_file_desc_t file, const char *name, int *varid);
+
+// function pio_cpp_inq_varid_vdesc(file, name, vardesc) result(ierr)
+
+int pio_cpp_inq_varid_vdesc(pio_file_desc_t file, const char *name,
+                            pio_var_desc_t vardesc);
+
+// function pio_cpp_inq_varname_vid(file, varid, name) result(ierr)
+
+int pio_cpp_inq_varname_vid(pio_file_desc_t file, int varid, char *name);
+
+// function pio_cpp_inq_varname_vdesc(file, vardesc, name) result(ierr)
+
+int pio_cpp_inq_varname_vdesc(pio_file_desc_t file,              
+                              pio_var_desc_t vardesc, char *name);
+
+//function pio_cpp_inq_varndims_vid(file, varid, ndims) result(ierr)
+
+int pio_cpp_inq_varndims_vid(pio_file_desc_t file, int varid, int *ndims);
+
+// function pio_cpp_inq_varndims_vdesc(file, vardesc, ndims) result(ierr)
+
+int pio_cpp_inq_varndims_vdesc(pio_file_desc_t file, pio_var_desc_t vardesc,
+                               int *ndims);
+
+//function pio_cpp_inq_vartype_vid(file, varid, type) result(ierr)
+
+int pio_cpp_inq_vartype_vid(pio_file_desc_t file, int varid, int *type);
+
+// function pio_cpp_inq_vartype_vdesc(file, vardesc, type) result(ierr)
+
+int pio_cpp_inq_vartype_vdesc(pio_file_desc_t file, pio_var_desc_t vardesc,
+                               int *type);
+
+// function pio_cpp_inq_vardimid_vid(file, varid, dimids, ndims) result(ierr)
+
+int pio_cpp_inq_vardimid_vid(pio_file_desc_t file,
+                             int varid, int *dimids, int ndims);
+
+// function pio_cpp_inq_vardimid_vdesc(file, vardesc, dimids, ndims)          &
+//          result(ierr)
+
+int pio_cpp_inq_vardimid_vdesc(pio_file_desc_t file,
+                               pio_var_desc_t vardesc, int *dimids, int ndims);
+
+//function pio_cpp_inq_varnatts_vid(file, varid, natts) result(ierr)
+
+int pio_cpp_inq_varnatts_vid(pio_file_desc_t file, int varid, int *natts);
+
+// function pio_cpp_inq_varnatts_vdesc(file, vardesc, natts) result(ierr)
+
+int pio_cpp_inq_varnatts_vdesc(pio_file_desc_t file, pio_var_desc_t vardesc,
+                               int *natts);
+
+// function pio_cpp_inq_dimid(file, name, dimid) result(ierr)
+
+int pio_cpp_inq_dimid(pio_file_desc_t file, const char *name, int *dimid);
+
+// function pio_cpp_inq_dimname(file, dimid, name) result(ierr)
+
+int pio_cpp_inq_dimname(pio_file_desc_t file, int dimid, char *name);
+
+// function pio_cpp_inq_dimlen(file, dimid, dimlen) result(ierr)
+
+int pio_cpp_inq_dimlen(pio_file_desc_t file, int dimid, int *dimlen);
+
 // function pio_cpp_def_dim(file, name, len, dimid) result(ierr)
 
 int pio_cpp_def_dim(pio_file_desc_t file,

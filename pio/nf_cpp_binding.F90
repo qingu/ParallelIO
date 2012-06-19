@@ -18,23 +18,30 @@ module nf_cpp_binding
   public :: pio_cpp_enddef
 !  public :: pio_cpp_redef
   public :: pio_cpp_inquire
-!  public :: PIO_inq_dimid
-!  public :: PIO_inq_dimname
-!  public :: PIO_inq_dimlen
-!  public :: PIO_inquire_dimension
-!  public :: PIO_copy_att
+  public :: pio_cpp_inq_dimid
+  public :: pio_cpp_inq_dimname
+  public :: pio_cpp_inq_dimlen
+!  public :: pio_inquire_dimension
+!  public :: pio_copy_att
   public :: pio_cpp_def_var_0d
   public :: pio_cpp_def_var_md
-!  public :: pio_inq_attname
+  public :: pio_cpp_inq_attname_vid
+  public :: pio_cpp_inq_attname_vdesc
   public :: pio_cpp_inq_att_vid
-!  public :: pio_cpp_inq_att_vardesc
+  public :: pio_cpp_inq_att_vdesc
 !  public :: pio_inq_attlen
-!  public :: pio_cpp_inq_varid
-!  public :: pio_inq_varname
-!  public :: pio_inq_vartype
-!  public :: pio_inq_varndims
-!  public :: pio_inq_vardimid
-!  public :: pio_inq_varnatts
+  public :: pio_cpp_inq_varid_vid
+  public :: pio_cpp_inq_varid_vdesc
+  public :: pio_cpp_inq_varname_vid
+  public :: pio_cpp_inq_varname_vdesc
+  public :: pio_cpp_inq_vartype_vid
+  public :: pio_cpp_inq_vartype_vdesc
+  public :: pio_cpp_inq_varndims_vid
+  public :: pio_cpp_inq_varndims_vdesc
+  public :: pio_cpp_inq_vardimid_vid
+  public :: pio_cpp_inq_vardimid_vdesc
+  public :: pio_cpp_inq_varnatts_vid
+  public :: pio_cpp_inq_varnatts_vdesc
 !  public :: pio_inquire_variab
 
   !  constants
@@ -45,7 +52,8 @@ module nf_cpp_binding
 
 ! ---------------------------------------------------------------------
 
-! extern "C" int pio_cpp_inquire(pio_file_desc_t file, int nDimensions,       &!                                int nVariables, int nAttributes,             &
+! extern "C" int pio_cpp_inquire(pio_file_desc_t file, int nDimensions,       &
+!                                int nVariables, int nAttributes,             &
 !                                int unlimitedDimID);
 
 function pio_cpp_inquire(File, nDimensions, nVariables, nAttributes,  &
@@ -167,13 +175,13 @@ function pio_cpp_inq_att_vid(file,varid,name,xtype,len) result(ierr)
   return
 end function pio_cpp_inq_att_vid
 
-! extern "C" int pio_cpp_inq_att_vardesc(pio_file_desc_t file,                &
+! extern "C" int pio_cpp_inq_att_vdesc(pio_file_desc_t file,                &
 !                                        pio_var_desc_t vardesc,              &
 !                                        const char *name, int len);
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_att_vardesc(file,vardesc,name,xtype,len) result(ierr)
+function pio_cpp_inq_att_vdesc(file,vardesc,name,xtype,len) result(ierr)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
@@ -239,7 +247,929 @@ function pio_cpp_inq_att_vardesc(file,vardesc,name,xtype,len) result(ierr)
 
   !  return to the cpp caller
   return
-end function pio_cpp_inq_att_vardesc
+end function pio_cpp_inq_att_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_attname_vid(pio_file_desc_t file, int varid,     &
+!                                        int attnum, char *name);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_attname_vid(file, varid, attnum, name) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_attname
+  use pio_cpp_utils, only: c_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: varid
+  integer(c_int), value       :: attnum
+  type(c_ptr),    value       :: name
+
+  !  local
+  integer                     :: ierror
+
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+  character(len= max_path_len)   :: name_local
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(name, c_filename)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_attname(file_desc, int(varid), int(attnum), name_local)
+
+  !  convert the arguments back to C
+  call c_chars(c_filename, name_local)
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_attname_vid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_attname_vdesc(pio_file_desc_t file,              &
+!                                              pio_var_desc_t vardesc,        &
+!                                              int attnum, char *name);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_attname_vdesc(file, vardesc, attnum, name) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_attname
+  use pio_cpp_utils, only: c_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr), value       :: vardesc
+  integer(c_int), value       :: attnum
+  type(c_ptr),    value       :: name
+
+  !  local
+  integer                     :: ierror
+
+  type(file_desc_t), pointer  :: file_desc
+  type(var_desc_t), pointer   :: var_desc
+  character(len= max_path_len)   :: name_local
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(vardesc, var_desc)
+  call c_f_pointer(name, c_filename)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_attname(file_desc, var_desc, int(attnum), name_local)
+
+  !  convert the arguments back to C
+  call c_chars(c_filename, name_local)
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_attname_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varid_vid(pio_file_desc_t file,                  &
+!                                      const char *name, int *varid);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varid_vid(file, name, varid) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varid
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: name
+  integer(c_int), intent(out) :: varid
+
+  !  local
+  integer                     :: ierror
+  integer                     :: varid_local
+
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+#ifdef ALLOC_CHARLEN_OK
+  character(len= :), allocatable :: filename
+#else
+  character(len= max_path_len) :: filename
+#endif
+
+  integer :: clen
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(name, c_filename)
+
+#ifdef ALLOC_CHARLEN_OK
+  allocate(filename, mold= filename(1: clen))
+  call f_chars(filename, c_filename(1: clen))
+#else
+  filename = c_filename(1:clen)
+#endif
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varid(file_desc, filename, varid_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  varid = int(varid_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varid_vid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varid_vdesc(pio_file_desc_t file,                &
+!                                        const char *name,                    &
+!                                        pio_vdesc_t vardesc);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varid_vdesc(file, name, vardesc) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varid
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: name
+  type(c_ptr),    value       :: vardesc
+
+  !  local
+  integer                     :: ierror
+
+  type(file_desc_t), pointer  :: file_desc
+  type(var_desc_t), pointer   :: var_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+#ifdef ALLOC_CHARLEN_OK
+  character(len= :), allocatable :: filename
+#else
+  character(len= max_path_len) :: filename
+#endif
+
+  integer :: clen
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(name, c_filename)
+  call c_f_pointer(vardesc, var_desc)
+
+#ifdef ALLOC_CHARLEN_OK
+  allocate(filename, mold= filename(1: clen))
+  call f_chars(filename, c_filename(1: clen))
+#else
+  filename = c_filename(1:clen)
+#endif
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varid(file_desc, filename, var_desc)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varid_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varname_vdesc(pio_file_desc_t file,              &
+!                                          pio_var_desc_t vardesc,            &
+!                                          char *name);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varname_vdesc(file, vardesc, name) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varname
+  use pio_cpp_utils, only: c_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: vardesc
+  type(c_ptr),    value       :: name
+
+  !  local
+  integer                     :: ierror
+
+  type(file_desc_t), pointer  :: file_desc
+  type(var_desc_t), pointer   :: var_desc
+  character(len= max_path_len)   :: name_local
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(vardesc, var_desc)
+  call c_f_pointer(name, c_filename)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varname(file_desc, var_desc, name_local)
+
+  !  convert the arguments back to C
+  call c_chars(c_filename, name_local)
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varname_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varname_vid(pio_file_desc_t file, int varid,     &
+!                                        char *name);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varname_vid(file, varid, name) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varname
+  use pio_cpp_utils, only: c_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: varid
+  type(c_ptr),    value       :: name
+
+  !  local
+  integer                     :: ierror
+
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+  character(len= max_path_len)   :: name_local
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(name, c_filename)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varname(file_desc, int(varid), name_local)
+
+  !  convert the arguments back to C
+  call c_chars(c_filename, name_local)
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varname_vid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varndims_vid(pio_file_desc_t file,               &
+!                                         int varid, int *ndims);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varndims_vid(file, varid, ndims) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varndims
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: varid
+  integer(c_int), intent(out) :: ndims
+
+  !  local
+  integer                     :: ierror
+  integer                     :: ndims_local
+
+  type(file_desc_t), pointer :: file_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varndims(file_desc, int(varid), ndims_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  ndims = int(ndims_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varndims_vid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varndims_vdesc(pio_file_desc_t file,             &
+!                                           pio_var_desc_t vardesc,           &
+!                                           int *ndims);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varndims_vdesc(file, vardesc, ndims) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varndims
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: vardesc
+  integer(c_int), intent(out) :: ndims
+
+  !  local
+  integer                     :: ierror
+  integer                     :: ndims_local
+
+  type(file_desc_t), pointer :: file_desc
+  type(var_desc_t),  pointer :: var_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(vardesc, var_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varndims(file_desc, var_desc, ndims_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  ndims = int(ndims_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varndims_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_vartype_vid(pio_file_desc_t file,               &
+!                                         int varid, int *type);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_vartype_vid(file, varid, type) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_vartype
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: varid
+  integer(c_int), intent(out) :: type
+
+  !  local
+  integer                     :: ierror
+  integer                     :: type_local
+
+  type(file_desc_t), pointer :: file_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_vartype(file_desc, int(varid), type_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  type = int(type_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_vartype_vid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_vardimid_vid(pio_file_desc_t file,               &
+!                                         int varid, int *dimids, int ndims);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_vardimid_vid(file, varid, dimids, ndims) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_vardimid
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: varid
+  type(c_ptr),    value       :: dimids
+  integer(c_int), value       :: ndims
+
+  !  local
+  integer                     :: ierror
+  type(file_desc_t), pointer  :: file_desc
+  integer(c_int),    pointer  :: as_dims(:)
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(dimids, as_dims, shape= [ ndims ])
+
+  !  call the Fortran procedure
+  ierror = pio_inq_vardimid(file_desc, int(varid), as_dims)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_vardimid_vid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_vardimid_vdesc(pio_file_desc_t file,             &
+!                                           int vardesc, int *dimids,         &
+!                                           int ndims);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_vardimid_vdesc(file, vardesc, dimids, ndims) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_vardimid
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: vardesc
+  type(c_ptr),    value       :: dimids
+  integer(c_int), value       :: ndims
+
+  !  local
+  integer                     :: ierror
+  integer(c_int),    pointer  :: as_dims(:)
+  type(file_desc_t), pointer  :: file_desc
+  type(var_desc_t),  pointer  :: var_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(vardesc, var_desc)
+  call c_f_pointer(dimids, as_dims, shape= [ ndims ])
+
+  !  call the Fortran procedure
+  ierror = pio_inq_vardimid(file_desc, var_desc, as_dims)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_vardimid_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_vartype_vdesc(pio_file_desc_t file,             &
+!                                           pio_var_desc_t vardesc,           &
+!                                           int *type);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_vartype_vdesc(file, vardesc, type) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_vartype
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: vardesc
+  integer(c_int), intent(out) :: type
+
+  !  local
+  integer                     :: ierror
+  integer                     :: type_local
+
+  type(file_desc_t), pointer :: file_desc
+  type(var_desc_t),  pointer :: var_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(vardesc, var_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_vartype(file_desc, var_desc, type_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  type = int(type_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_vartype_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varnatts_vid(pio_file_desc_t file,               &
+!                                         int varid, int *natts);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varnatts_vid(file, varid, natts) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varnatts
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: varid
+  integer(c_int), intent(out) :: natts
+
+  !  local
+  integer                     :: ierror
+  integer                     :: natts_local
+
+  type(file_desc_t), pointer :: file_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varnatts(file_desc, int(varid), natts_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  natts = int(natts_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varnatts_vid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_varnatts_vdesc(pio_file_desc_t file,             &
+!                                           pio_var_desc_t vardesc,           &
+!                                           int *natts);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_varnatts_vdesc(file, vardesc, natts) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_varnatts
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: vardesc
+  integer(c_int), intent(out) :: natts
+
+  !  local
+  integer                     :: ierror
+  integer                     :: natts_local
+
+  type(file_desc_t), pointer :: file_desc
+  type(var_desc_t),  pointer :: var_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(vardesc, var_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_varnatts(file_desc, var_desc, natts_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  natts = int(natts_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_varnatts_vdesc
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_dimid(pio_file_desc_t file,                      &
+!                                  const char *name, int *dimid);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_dimid(file, name, dimid) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_dimid
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: name
+  integer(c_int), intent(out) :: dimid
+
+  !  local
+  integer                     :: ierror
+  integer                     :: dimid_local
+
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+#ifdef ALLOC_CHARLEN_OK
+  character(len= :), allocatable :: filename
+#else
+  character(len= max_path_len) :: filename
+#endif
+
+  integer :: clen
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(name, c_filename)
+
+#ifdef ALLOC_CHARLEN_OK
+  allocate(filename, mold= filename(1: clen))
+  call f_chars(filename, c_filename(1: clen))
+#else
+  filename = c_filename(1:clen)
+#endif
+
+  !  call the Fortran procedure
+  ierror = pio_inq_dimid(file_desc, filename, dimid_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  dimid = int(dimid_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_dimid
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_dimname(pio_file_desc_t file, int dimid,         &
+!                                    char *name);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_dimname(file, dimid, name) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_dimname
+  use pio_cpp_utils, only: c_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: dimid
+  type(c_ptr),    value       :: name
+
+  !  local
+  integer                     :: ierror
+
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+  character(len= max_path_len)   :: name_local
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(name, c_filename)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_dimname(file_desc, int(dimid), name_local)
+
+  !  convert the arguments back to C
+  call c_chars(c_filename, name_local)
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_dimname
+
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_inq_dimlen(pio_file_desc_t file,                     &
+!                                   int dimid, int *dimlen);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_dimlen(file, dimid, dimlen) result(ierr)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_dimlen
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: dimid
+  integer(c_int), intent(out) :: dimlen
+
+  !  local
+  integer                     :: ierror
+  integer                     :: dimlen_local
+
+  type(file_desc_t), pointer :: file_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_inq_dimlen(file_desc, int(dimid), dimlen_local)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+  dimlen = int(dimlen_local, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_dimlen
+
+! ---------------------------------------------------------------------
 
 ! extern "C" int pio_cpp_def_dim(pio_file_desc_t file, const char *name,      &
 !                                int len, int *dimid);

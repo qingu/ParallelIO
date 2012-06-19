@@ -15,6 +15,7 @@ module pio_cpp_utils
    ! public interface
 
   public :: f_chars
+  public :: c_chars
   public :: c_len
   public :: max_string_len
   public :: max_path_len
@@ -47,12 +48,45 @@ pure subroutine f_chars(fc, cs)
   continue
 
   convert_kind: do i = 1, min(len(fc), len(cs))
-     fc(i: i) = char(ichar(cs(i: i)))
+    fc(i: i) = char(ichar(cs(i: i)))
   end do convert_kind
 
   return
 
 end subroutine f_chars
+
+! ---------------------------------------------------------------------
+
+! ---------------------------------------------------------------------
+
+!  copy a Fortran string to C, inserting a NULL
+
+pure subroutine c_chars(cs, fc)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_char, C_NULL_CHAR
+
+  !  dummy arguments
+
+  character(len= *), intent(in) :: fc
+  character(kind= c_char, len= *), intent(out) :: cs
+
+  !  local
+  integer :: i
+  integer :: len
+
+  !  text
+  continue
+
+  len = len_trim(fc)
+  convert_kind: do i = 1, len
+    cs(i: i) = fc(i: i)
+  end do convert_kind
+  cs(len+1:len+1) = C_NULL_CHAR
+
+  return
+
+end subroutine c_chars
 
 ! ---------------------------------------------------------------------
 
