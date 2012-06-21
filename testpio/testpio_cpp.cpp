@@ -648,7 +648,43 @@ int main(int argc, char *argv[]) {
   }
 
   // Check that our variable is in the file,
-  memset ((void *)varDesc_i4, 0, PIO_SIZE_VAR_DESC);
+  if (progOK && fileOpen) {
+    int nDim;
+    int nVar;
+    int nAtt;
+    int unlim;
+    PRINTMSGTSK("pio_cpp_inquire");
+    localrc = pio_cpp_inquire(File_i4, &nDim, &nVar, &nAtt, &unlim);
+    if (PIO_noerr != localrc) {
+      if (is_master_task) {
+        char errmsg[512];
+        sprintf(errmsg,
+                " ERROR: pio_cpp_inquire failed, return code = %d\n", localrc);
+        PRINTMSG(errmsg);
+      }
+      progOK = false;
+    } else {
+      PRINTMSGTSK("filename, nDim = " << nDim << ", nVar = " << nVar
+                  << ", nAtt = " << nAtt << ", unlim dim = " << unlim);
+      char name[FNAME_LEN];
+      for (int i = 1; i <= nVar; i++) {
+        PRINTMSGTSK("pio_cpp_inq_varname_vid");
+        localrc = pio_cpp_inq_varname_vid(File_i4, i, name);
+        if (PIO_noerr != localrc) {
+          if (is_master_task) {
+            char errmsg[512];
+            sprintf(errmsg,
+                    " ERROR: pio_cpp_inq_varname_vid failed, "
+                    "return code = %d\n", localrc);
+            PRINTMSG(errmsg);
+          }
+        } else {
+          PRINTMSGTSK("variable #" << i << " = " << name);
+        }
+      }
+    }
+  }
+
   if (progOK && fileOpen) {
     int varid;
     PRINTMSGTSK("pio_cpp_inq_varid_vid");
@@ -663,7 +699,21 @@ int main(int argc, char *argv[]) {
       }
       progOK = false;
     } else {
-      PRINTMSGTSK("testArray_i4 vid = " << varid);
+      PRINTMSGTSK("testArray_i4 vid = " << varid <<
+                  ", calling pio_cpp_read_darray_int");
+      pio_cpp_read_darray_int(File_i4, varDesc_i4, IOdesc_i4,
+                              checkArray_i4, gDims3D, 3, &localrc);
+      if (PIO_noerr != localrc) {
+        if (is_master_task) {
+          char errmsg[512];
+          sprintf(errmsg,
+                  " ERROR: read of test array failed, return code = %d\n",
+                  localrc);
+          PRINTMSG(errmsg);
+          progOK = false;
+        } else {
+        }
+      }
     }
   }
 

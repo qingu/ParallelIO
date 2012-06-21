@@ -742,6 +742,7 @@ AM_SUBST_NOTMAKE([ADDPIOINC])
 # Special macros for testpio
 
 if test "$BUILD_PIOCPP" = "yes"; then
+  CPPDEFS="$CPPDEFS -DSEQUENCE"
   AC_FC_LIBRARY_LDFLAGS
   SRCS4='SRCS4_F90=
 SRCS4_C=namelist.cpp testpio_cpp.cpp
