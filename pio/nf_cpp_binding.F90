@@ -551,6 +551,8 @@ function pio_cpp_inq_varid_vid(file, name, varid) result(ierr) bind(c)
   call c_f_pointer(file, file_desc)
   call c_f_pointer(name, c_filename)
 
+  clen = c_len(c_filename)
+
 #ifdef ALLOC_CHARLEN_OK
   allocate(filename, mold= filename(1: clen))
   call f_chars(filename, c_filename(1: clen))
@@ -559,7 +561,7 @@ function pio_cpp_inq_varid_vid(file, name, varid) result(ierr) bind(c)
 #endif
 
   !  call the Fortran procedure
-  ierror = pio_inq_varid(file_desc, filename, varid_local)
+  ierror = pio_inq_varid(file_desc, trim(filename), varid_local)
 
   !  convert the arguments back to C
   ierr = int(ierror, c_int)
@@ -618,6 +620,8 @@ function pio_cpp_inq_varid_vdesc(file, name, vardesc) result(ierr) bind(c)
   call c_f_pointer(file, file_desc)
   call c_f_pointer(name, c_filename)
   call c_f_pointer(vardesc, var_desc)
+
+  clen = c_len(c_filename)
 
 #ifdef ALLOC_CHARLEN_OK
   allocate(filename, mold= filename(1: clen))
@@ -1196,6 +1200,8 @@ function pio_cpp_inq_dimid(file, name, dimid) result(ierr) bind(c)
   !  convert the C pointers to a Fortran pointers
   call c_f_pointer(file, file_desc)
   call c_f_pointer(name, c_filename)
+
+  clen = c_len(c_filename)
 
 #ifdef ALLOC_CHARLEN_OK
   allocate(filename, mold= filename(1: clen))
