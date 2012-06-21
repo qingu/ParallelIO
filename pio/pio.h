@@ -199,13 +199,28 @@ int pio_cpp_file_is_open(pio_file_desc_t file);
 // function pio_cpp_inquire(File, nDimensions, nVariables,                    &
 //                          nAttributes, unlimitedDimID) result(ierr)
 
-int pio_cpp_inquire(pio_file_desc_t file, int nDimensions, int nVariables,
-                    int nAttributes, int unlimitedDimID);
+int pio_cpp_inquire(pio_file_desc_t file, int *nDimensions, int *nVariables,
+                    int *nAttributes, int *unlimitedDimID);
 
-// function pio_cpp_inq_att_vid(file,varid,name,xtype,len) result(ierr)
+// function pio_cpp_inq_att_vid(file, varid, name, xtype, len) result(ierr)
 
 int pio_cpp_inq_att_vid(pio_file_desc_t file, int varid,
-                        const char *name, int len);
+                        const char *name, int *xtype, int *len);
+
+// function pio_cpp_inq_att_vdesc(file, vardesc, name, xtype, len) result(ierr)
+
+int pio_cpp_inq_att_vdesc(pio_file_desc_t file, pio_var_desc_t vardesc,
+                          const char *name, int *xtype, int *len);
+
+// function pio_cpp_inq_attlen_vid(file, varid, name, len) result(ierr)
+
+int pio_cpp_inq_attlen_vid(pio_file_desc_t file, int varid,
+                           const char *name, int *len);
+
+// function pio_cpp_inq_attlen_vdesc(file, vardesc, name, len) result(ierr)
+
+int pio_cpp_inq_attlen_vdesc(pio_file_desc_t file, pio_var_desc_t vardesc,
+                             const char *name, int *len);
 
 // function pio_cpp_inq_attname_vid(file, varid, attnum, name) result(ierr)
 
@@ -297,6 +312,10 @@ int pio_cpp_def_dim(pio_file_desc_t file,
 
 int pio_cpp_enddef(pio_file_desc_t file);
 
+// function pio_cpp_redef(file) result(ierr) bind(c)
+
+int pio_cpp_redef(pio_file_desc_t file);
+
 // function pio_cpp_def_var_0d(file, name, type, vardesc) result(ierr) bind(c)
 
 int pio_cpp_def_var_0d(pio_file_desc_t file,
@@ -313,44 +332,66 @@ int pio_cpp_def_var_md(pio_file_desc_t file,
                        int *dimds, int ndimds,
                        pio_var_desc_t vardesc);
 
+// function pio_cpp_copy_att(infile, invarid, name, outfile, outvarid)        &
+//          result(ierr) bind(c)
+
+int pio_cpp_copy_att(pio_file_desc_t infile, int invarid, const char *name,
+                     pio_file_desc_t outfile, int outvarid);
+
+// This implemented in piocpp.cc
+int pio_cpp_inquire_variable_vid(pio_file_desc_t ncid, int varid,
+                                 char *name, int *xtype, int *ndims,
+                                 int *dimids, int *natts);
+
+// This implemented in piocpp.cc
+int pio_cpp_inquire_variable_vdesc(pio_file_desc_t ncid, pio_var_desc_t,
+                                   char *name, int *xtype, int *ndims,
+                                   int *dimids, int *natts);
+
+int pio_cpp_inquire_dimension(pio_file_desc_t ncid, int dimid,
+                              char *name, int *len);
+
 ///////////////////////////////////////////
 //
 //  darray read/write interface functions
 //
 ///////////////////////////////////////////
 
-// subroutine pio_cpp_read_darray_1d_int(file, varDesc, ioDesc, array,       &
-//                                       narray, iostat) bind(c)
+// subroutine pio_cpp_read_darray_int(file, varDesc, ioDesc, array,           &
+//                                    shape, rank, iostat) bind(c)
 
-void pio_cpp_read_darray_1d_int(void *file,
+void pio_cpp_read_darray_int(void *file,
+                             void *varDesc,
+                             void *ioDesc,
+                             int *array,
+                             int *shape,
+                             int rank,
+                             int *iostat);
+
+// subroutine pio_cpp_read_darray_real(file, varDesc, ioDesc, array,          &
+//                                     shape, rank, iostat) bind(c)
+
+void pio_cpp_read_darray_real(void *file,
+                              void *varDesc,
+                              void *ioDesc,
+                              float *array,
+                              int *shape,
+                              int rank,
+                              int *iostat);
+
+// subroutine pio_cpp_read_darray_double(file, varDesc, ioDesc, array,        &
+//                                       shape, rank, iostat) bind(c)
+
+void pio_cpp_read_darray_double(void *file,
                                 void *varDesc,
                                 void *ioDesc,
-                                int *array,
-                                int narray,
+                                double *array,
+                                int *shape,
+                                int rank,
                                 int *iostat);
 
-// subroutine pio_cpp_read_darray_1d_real(file, varDesc, ioDesc, array,       &
-//                                        narray, iostat) bind(c)
-
-void pio_cpp_read_darray_1d_real(void *file,
-                                 void *varDesc,
-                                 void *ioDesc,
-                                 float *array,
-                                 int narray,
-                                 int *iostat);
-
-// subroutine pio_cpp_read_darray_1d_double(file, varDesc, ioDesc, array,     &
-//                                          narray, iostat) bind(c)
-
-void pio_cpp_read_darray_1d_double(void *file,
-                                   void *varDesc,
-                                   void *ioDesc,
-                                   double *array,
-                                   int narray,
-                                   int *iostat);
-
-// subroutine pio_cpp_write_darray_1d_int(file, varDesc, ioDesc, array,       &
-//                                        narray, iostat) bind(c)
+// subroutine pio_cpp_write_darray_int(file, varDesc, ioDesc, array,          &
+//                                     shape, rank, iostat) bind(c)
 
 void pio_cpp_write_darray_int(void *file,
                               void *varDesc,
@@ -360,60 +401,66 @@ void pio_cpp_write_darray_int(void *file,
                               int rank,
                               int *iostat);
 
-// subroutine pio_cpp_write_darray_1d_int_fill(file, varDesc, ioDesc, array,  &
-//                                             narray, iostat) bind(c)
+// subroutine pio_cpp_write_darray_int_fill(file, varDesc, ioDesc, array,     &
+//                                          shape, rank, iostat, fillval)     &
+//                                             bind(c)
 
-void pio_cpp_write_darray_1d_int_fill(void *file,
-                                      void *varDesc,
-                                      void *ioDesc,
-                                      int *array,
-                                      int narray,
-                                      int *iostat,
-                                      int fillval);
+void pio_cpp_write_darray_int_fill(void *file,
+                                   void *varDesc,
+                                   void *ioDesc,
+                                   int *array,
+                                   int *shape,
+                                   int rank,
+                                   int *iostat,
+                                   int fillval);
 
-// subroutine pio_cpp_write_darray_1d_real(file, varDesc, ioDesc, array,      &
-//                                         narray, iostat) bind(c)
+// subroutine pio_cpp_write_darray_real(file, varDesc, ioDesc, array,         &
+//                                      shape, rank, iostat) bind(c)
 
-void pio_cpp_write_darray_1d_real(void *file,
-                                  void *varDesc,
-                                  void *ioDesc,
-                                  float *array,
-                                  int narray,
-                                  int *iostat);
+void pio_cpp_write_darray_real(void *file,
+                               void *varDesc,
+                               void *ioDesc,
+                               float *array,
+                               int *shape,
+                               int rank,
+                               int *iostat);
 
-// subroutine pio_cpp_write_darray_1d_real_fill(file, varDesc, ioDesc, array, &
-//                                              narray, iostat, fillval)      &
-//                                              bind(c)
+// subroutine pio_cpp_write_darray_real_fill(file, varDesc, ioDesc, array,    &
+//                                           shpe, rank, iostat, fillval)     &
+//                                           bind(c)
 
-void pio_cpp_write_darray_1d_real_fill(void *file,
-                                       void *varDesc,
-                                       void *ioDesc,
-                                       float *array,
-                                       int narray,
-                                       int *iostat,
-                                       float fillval);
-
-// subroutine pio_cpp_write_darray_1d_double(file, varDesc, ioDesc, array,    &
-//                                           narray, iostat) bind(c)
-
-void pio_cpp_write_darray_1d_double(void *file,
+void pio_cpp_write_darray_real_fill(void *file,
                                     void *varDesc,
                                     void *ioDesc,
-                                    double *array,
-                                    int narray,
-                                    int *iostat);
+                                    float *array,
+                                    int *shape,
+                                    int rank,
+                                    int *iostat,
+                                    float fillval);
 
-// subroutine pio_cpp_write_darray_1d_double_fill(file, varDesc, ioDesc,      &
-//                                                array, narray, iostat,      &
-//                                                fillval) bind(c)
+// subroutine pio_cpp_write_darray_double(file, varDesc, ioDesc, array,       &
+//                                        shape, rank, iostat) bind(c)
 
-void pio_cpp_write_darray_1d_double_fill(void *file,
-                                         void *varDesc,
-                                         void *ioDesc,
-                                         double *array,
-                                         int narray,
-                                         int *iostat,
-                                         double fillval);
+void pio_cpp_write_darray_double(void *file,
+                                 void *varDesc,
+                                 void *ioDesc,
+                                 double *array,
+                                 int *shape,
+                                 int rank,
+                                 int *iostat);
+
+// subroutine pio_cpp_write_darray_double_fill(file, varDesc, ioDesc,         &
+//                                             array, shape, rank, iostat,    &
+//                                             fillval) bind(c)
+
+void pio_cpp_write_darray_double_fill(void *file,
+                                      void *varDesc,
+                                      void *ioDesc,
+                                      double *array,
+                                      int *shape,
+                                      int rank,
+                                      int *iostat,
+                                      double fillval);
 
 } // extern "C"
 // ---------------------------------------------------------------------

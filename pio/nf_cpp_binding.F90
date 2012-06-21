@@ -16,20 +16,20 @@ module nf_cpp_binding
 
   public :: pio_cpp_def_dim
   public :: pio_cpp_enddef
-!  public :: pio_cpp_redef
-  public :: pio_cpp_inquire
+  public :: pio_cpp_redef
+  public :: pio_cpp_inquire_int
   public :: pio_cpp_inq_dimid
   public :: pio_cpp_inq_dimname
   public :: pio_cpp_inq_dimlen
-!  public :: pio_inquire_dimension
-!  public :: pio_copy_att
+  public :: pio_cpp_copy_att
   public :: pio_cpp_def_var_0d
   public :: pio_cpp_def_var_md
   public :: pio_cpp_inq_attname_vid
   public :: pio_cpp_inq_attname_vdesc
   public :: pio_cpp_inq_att_vid
   public :: pio_cpp_inq_att_vdesc
-!  public :: pio_inq_attlen
+  public :: pio_cpp_inq_attlen_vid
+  public :: pio_cpp_inq_attlen_vdesc
   public :: pio_cpp_inq_varid_vid
   public :: pio_cpp_inq_varid_vdesc
   public :: pio_cpp_inq_varname_vid
@@ -42,7 +42,6 @@ module nf_cpp_binding
   public :: pio_cpp_inq_vardimid_vdesc
   public :: pio_cpp_inq_varnatts_vid
   public :: pio_cpp_inq_varnatts_vdesc
-!  public :: pio_inquire_variab
 
   !  constants
 
@@ -52,12 +51,12 @@ module nf_cpp_binding
 
 ! ---------------------------------------------------------------------
 
-! extern "C" int pio_cpp_inquire(pio_file_desc_t file, int nDimensions,       &
-!                                int nVariables, int nAttributes,             &
-!                                int unlimitedDimID);
+! extern "C" int pio_cpp_inquire(pio_file_desc_t file, int *nDimensions,      &
+!                                int *nVariables, int *nAttributes,           &
+!                                int *unlimitedDimID);
 
-function pio_cpp_inquire(File, nDimensions, nVariables, nAttributes,  &
-                         unlimitedDimID) result(ierr)
+function pio_cpp_inquire_int(File, nDimensions, nVariables, nAttributes,      &
+                             unlimitedDimID) result(ierr) bind(c)
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
 
@@ -100,16 +99,17 @@ function pio_cpp_inquire(File, nDimensions, nVariables, nAttributes,  &
 
   !  return to the cpp caller
   return
-end function pio_cpp_inquire
+end function pio_cpp_inquire_int
 
 ! ---------------------------------------------------------------------
 
 ! extern "C" int pio_cpp_inq_att_vid(pio_file_desc_t file, int varid,         &
-!                                    const char *name, int len);
+!                                    const char *name, int *xtype, int *len);
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_att_vid(file,varid,name,xtype,len) result(ierr)
+function pio_cpp_inq_att_vid(file, varid, name, xtype, len)                   &
+         result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
@@ -175,13 +175,14 @@ function pio_cpp_inq_att_vid(file,varid,name,xtype,len) result(ierr)
   return
 end function pio_cpp_inq_att_vid
 
-! extern "C" int pio_cpp_inq_att_vdesc(pio_file_desc_t file,                &
-!                                        pio_var_desc_t vardesc,              &
-!                                        const char *name, int len);
+! extern "C" int pio_cpp_inq_att_vdesc(pio_file_desc_t file,                  &
+!                                      pio_var_desc_t vardesc,                &
+!                                      const char *name, int *xtype, int *len);
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_att_vdesc(file,vardesc,name,xtype,len) result(ierr)
+function pio_cpp_inq_att_vdesc(file, vardesc, name, xtype, len)               &
+         result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
@@ -251,12 +252,155 @@ end function pio_cpp_inq_att_vdesc
 
 ! ---------------------------------------------------------------------
 
+! extern "C" int pio_cpp_inq_attlen_vid(pio_file_desc_t file, int varid,      &
+   !                                    const char *name, int *len);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_attlen_vid(file, varid, name, len) result(ierr) bind(c)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_attlen
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  integer(c_int), value       :: varid
+  type(c_ptr),    value       :: name
+  integer(c_int), intent(out) :: len
+
+  !  local
+  integer                     :: ierror
+  integer                     :: len_local
+
+  type(file_desc_t), pointer :: file_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+#ifdef ALLOC_CHARLEN_OK
+  character(len= :), allocatable :: filename
+#else
+  character(len= max_path_len)   :: filename
+#endif
+  integer                        :: clen
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(name, c_filename)
+
+  !  convert the C string to Fortran characters
+  clen = c_len(c_filename)
+
+#ifdef ALLOC_CHARLEN_OK
+  allocate(filename, mold= filename(1: clen))
+  call f_chars(filename, c_filename(1: clen))
+#else
+  filename = c_filename(1:clen)
+#endif
+
+  !  call the Fortran procedure
+  ierror = pio_inq_attlen(file_desc, int(varid), trim(filename),              &
+                          len_local)
+
+  !  convert the arguments back to C
+  len = int(len_local, c_int)
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_attlen_vid
+
+! extern "C" int pio_cpp_inq_attlen_vdesc(pio_file_desc_t file,               &
+!                                         pio_var_desc_t vardesc,             &
+!                                         const char *name, int *len);
+
+! ---------------------------------------------------------------------
+
+function pio_cpp_inq_attlen_vdesc(file, vardesc, name, len)                   &
+         result(ierr) bind(c)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t, var_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_inq_attlen
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int)              :: ierr
+
+  !  dummy arguments
+  type(c_ptr),    value       :: file
+  type(c_ptr),    value       :: vardesc
+  type(c_ptr),    value       :: name
+  integer(c_int), intent(out) :: len
+
+  !  local
+  integer                     :: ierror
+  integer                     :: len_local
+
+  type(file_desc_t), pointer :: file_desc
+  type(var_desc_t), pointer :: var_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_filename
+#ifdef ALLOC_CHARLEN_OK
+  character(len= :), allocatable :: filename
+#else
+  character(len= max_path_len)   :: filename
+#endif
+  integer                        :: clen
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+  call c_f_pointer(vardesc, var_desc)
+  call c_f_pointer(name, c_filename)
+
+  !  convert the C string to Fortran characters
+  clen = c_len(c_filename)
+
+#ifdef ALLOC_CHARLEN_OK
+  allocate(filename, mold= filename(1: clen))
+  call f_chars(filename, c_filename(1: clen))
+#else
+  filename = c_filename(1:clen)
+#endif
+
+  !  call the Fortran procedure
+  ierror = pio_inq_attlen(file_desc, var_desc, trim(filename),                &
+                          len_local)
+
+  !  convert the arguments back to C
+  len = int(len_local, c_int)
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_inq_attlen_vdesc
+
+! ---------------------------------------------------------------------
+
 ! extern "C" int pio_cpp_inq_attname_vid(pio_file_desc_t file, int varid,     &
 !                                        int attnum, char *name);
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_attname_vid(file, varid, attnum, name) result(ierr)
+function pio_cpp_inq_attname_vid(file, varid, attnum, name)                   &
+         result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -310,7 +454,8 @@ end function pio_cpp_inq_attname_vid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_attname_vdesc(file, vardesc, attnum, name) result(ierr)
+function pio_cpp_inq_attname_vdesc(file, vardesc, attnum, name)               &
+         result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -365,7 +510,7 @@ end function pio_cpp_inq_attname_vdesc
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varid_vid(file, name, varid) result(ierr)
+function pio_cpp_inq_varid_vid(file, name, varid) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -432,7 +577,7 @@ end function pio_cpp_inq_varid_vid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varid_vdesc(file, name, vardesc) result(ierr)
+function pio_cpp_inq_varid_vdesc(file, name, vardesc) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -499,7 +644,7 @@ end function pio_cpp_inq_varid_vdesc
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varname_vdesc(file, vardesc, name) result(ierr)
+function pio_cpp_inq_varname_vdesc(file, vardesc, name) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -553,7 +698,7 @@ end function pio_cpp_inq_varname_vdesc
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varname_vid(file, varid, name) result(ierr)
+function pio_cpp_inq_varname_vid(file, varid, name) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -605,7 +750,7 @@ end function pio_cpp_inq_varname_vid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varndims_vid(file, varid, ndims) result(ierr)
+function pio_cpp_inq_varndims_vid(file, varid, ndims) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -655,7 +800,7 @@ end function pio_cpp_inq_varndims_vid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varndims_vdesc(file, vardesc, ndims) result(ierr)
+function pio_cpp_inq_varndims_vdesc(file, vardesc, ndims) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -706,7 +851,7 @@ end function pio_cpp_inq_varndims_vdesc
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_vartype_vid(file, varid, type) result(ierr)
+function pio_cpp_inq_vartype_vid(file, varid, type) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -755,7 +900,8 @@ end function pio_cpp_inq_vartype_vid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_vardimid_vid(file, varid, dimids, ndims) result(ierr)
+function pio_cpp_inq_vardimid_vid(file, varid, dimids, ndims)                 &
+         result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -805,7 +951,8 @@ end function pio_cpp_inq_vardimid_vid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_vardimid_vdesc(file, vardesc, dimids, ndims) result(ierr)
+function pio_cpp_inq_vardimid_vdesc(file, vardesc, dimids, ndims)             &
+         result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -857,7 +1004,7 @@ end function pio_cpp_inq_vardimid_vdesc
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_vartype_vdesc(file, vardesc, type) result(ierr)
+function pio_cpp_inq_vartype_vdesc(file, vardesc, type) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -908,7 +1055,7 @@ end function pio_cpp_inq_vartype_vdesc
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varnatts_vid(file, varid, natts) result(ierr)
+function pio_cpp_inq_varnatts_vid(file, varid, natts) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -958,7 +1105,7 @@ end function pio_cpp_inq_varnatts_vid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_varnatts_vdesc(file, vardesc, natts) result(ierr)
+function pio_cpp_inq_varnatts_vdesc(file, vardesc, natts) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -1009,7 +1156,7 @@ end function pio_cpp_inq_varnatts_vdesc
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_dimid(file, name, dimid) result(ierr)
+function pio_cpp_inq_dimid(file, name, dimid) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -1075,7 +1222,7 @@ end function pio_cpp_inq_dimid
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_dimname(file, dimid, name) result(ierr)
+function pio_cpp_inq_dimname(file, dimid, name) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_char, c_ptr, c_f_pointer
@@ -1127,7 +1274,7 @@ end function pio_cpp_inq_dimname
 
 ! ---------------------------------------------------------------------
 
-function pio_cpp_inq_dimlen(file, dimid, dimlen) result(ierr)
+function pio_cpp_inq_dimlen(file, dimid, dimlen) result(ierr) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
@@ -1279,6 +1426,48 @@ function pio_cpp_enddef(file) result(ierr) bind(c)
   return
 end function pio_cpp_enddef
 
+! ---------------------------------------------------------------------
+
+! extern "C" int pio_cpp_redef(pio_file_desc_t file);
+
+function pio_cpp_redef(file) result(ierr) bind(c)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_redef
+
+  !  function result
+  integer(c_int) :: ierr
+
+  !  dummy arguments
+  type(c_ptr), value :: file
+
+  !  local
+  integer :: ierror
+
+  type(file_desc_t), pointer :: file_desc
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
+
+  !  call the Fortran procedure
+  ierror = pio_redef(file_desc)
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+end function pio_cpp_redef
+
 !  extern "C" int pio_cpp_def_var_0d(pio_file_desc_t file, const char *name,  &
 !                                    int type, pio_var_desc_t vardesc);
 
@@ -1346,7 +1535,7 @@ function pio_cpp_def_var_0d(file, name, type, vardesc) result(ierr) bind(c)
 
 end function pio_cpp_def_var_0d
 
-! extern "C" int pio_cpp_def_var_0d(pio_file_desc_t file, const char *name,   &
+! extern "C" int pio_cpp_def_var_md(pio_file_desc_t file, const char *name,   &
 !                                   int type, int *dimds, int ndimds,         &
 !                                   pio_var_desc_t vardesc);
 
@@ -1419,6 +1608,77 @@ function pio_cpp_def_var_md(file, name, type, dimds, ndimds, vardesc)         &
   return
 
 end function pio_cpp_def_var_md
+
+! extern "C" int pio_cpp_copy_att(pio_file_desc_t infile, int invarid,        &
+!                                 const char *name,                           &
+!                                 pio_file_desc_t outfile, int outvarid);
+
+function pio_cpp_copy_att(infile, invarid, name, outfile, outvarid)           &
+         result(ierr) bind(c)
+
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr, c_f_pointer
+
+  !  import pio types
+  use pio_types, only: file_desc_t
+
+  !  import nf procedure signatures
+  use nf_mod, only: pio_copy_att
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+
+  !  function result
+  integer(c_int) :: ierr
+
+  !  dummy arguments
+  type(c_ptr), value             :: infile
+  type(c_ptr), value             :: outfile
+  type(c_ptr), value             :: name
+  integer(c_int), value          :: invarid
+  integer(c_int), value          :: outvarid
+
+  !  local
+  integer :: ierror
+
+  type(file_desc_t), pointer     :: infile_desc
+  type(file_desc_t), pointer     :: outfile_desc
+  character(kind= c_char, len= max_path_len), pointer :: c_attname
+#ifdef ALLOC_CHARLEN_OK
+  character(len= :), allocatable :: attname
+#else
+  character(len= max_path_len)   :: attname
+#endif
+
+  integer                        :: clen
+
+  !  text
+  continue
+
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(infile, infile_desc)
+  call c_f_pointer(infile, outfile_desc)
+  call c_f_pointer(name, c_attname)
+
+  !  convert the C string to Fortran characters
+  clen = c_len(c_attname)
+
+#ifdef ALLOC_CHARLEN_OK
+  allocate(attname, mold= attname(1: clen))
+  call f_chars(attname, c_attname(1: clen))
+#else
+  attname = c_attname(1:clen)
+#endif
+
+  !  call the Fortran procedure
+  ierror = pio_copy_att(infile_desc, int(invarid), trim(attname),             &
+                        outfile_desc, int(outvarid))
+
+  !  convert the arguments back to C
+  ierr = int(ierror, c_int)
+
+  !  return to the cpp caller
+  return
+
+end function pio_cpp_copy_att
 
 ! ---------------------------------------------------------------------
 end module nf_cpp_binding

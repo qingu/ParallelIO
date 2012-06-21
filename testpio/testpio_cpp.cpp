@@ -647,6 +647,26 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Check that our variable is in the file,
+  memset ((void *)varDesc_i4, 0, PIO_SIZE_VAR_DESC);
+  if (progOK && fileOpen) {
+    int varid;
+    PRINTMSGTSK("pio_cpp_inq_varid_vid");
+    localrc = pio_cpp_inq_varid_vid(File_i4, "testArray_i4", &varid);
+    if (PIO_noerr != localrc) {
+      if (is_master_task) {
+        char errmsg[512];
+        sprintf(errmsg,
+                " ERROR: Attempt to find id of, \"%s\", return code = %d\n",
+                "testArray_i4", localrc);
+        PRINTMSG(errmsg);
+      }
+      progOK = false;
+    } else {
+      PRINTMSGTSK("testArray_i4 vid = " << varid);
+    }
+  }
+
   // Close the file
   if (fileOpen) {
     PRINTMSGTSK("Calling pio_cpp_closefile");
