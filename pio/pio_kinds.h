@@ -23,7 +23,7 @@ typedef void *pio_file_desc_t;
 
 // sizeof( io_desc_t)
 typedef void *pio_io_desc_t;
-#define PIO_SIZE_IO_DESC        472
+#define PIO_SIZE_IO_DESC        488
 
 // sizeof( var_desc_t)
 typedef void *pio_var_desc_t;

@@ -394,7 +394,7 @@ int main(int argc, char *argv[]) {
               << num_aggregators << " MPI aggegrators" << std::endl;
   }
 
-  pio_cpp_setdebuglevel(3);
+  pio_cpp_setdebuglevel(0);
   PIOSYS = PIO_IOSYSTEM_DESC_NULL;
   PRINTMSG(" Calling pio_cpp_init_intracom, PIOSYS = " << PIOSYS);
   pio_cpp_init_intracom(my_task, MPI_COMM_WORLD, num_iotasks,
@@ -449,6 +449,7 @@ int main(int argc, char *argv[]) {
     gDims3D[0] = 8;
     gDims3D[1] = 16;
     gDims3D[2] = 2;
+    iotype = PIO_iotype_netcdf;
 /////////////////////////
     totaldims = gDims3D[0]*gDims3D[1]*gDims3D[2];
     blockSize = gDims3D[1] * gDims3D[2];
@@ -488,6 +489,8 @@ int main(int argc, char *argv[]) {
     }
   }
   if (progOK) {
+    int maxprint = 100;
+    int numerr = 0;
     // Fill the array and the DOF
     for (int i = 0; i < numBlocks; i++) {
       for (int j = 0; j < gDims3D[1]; j++) {
@@ -501,8 +504,20 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-
 #if 0
+    if (1 == nprocs) {
+      for (int i = 0; i < peNumElem; i++) {
+        if (testArray_i4[i] != i) {
+          numerr++;
+          if (maxprint-- > 0) {
+            PRINTMSGTSK("ERROR: testArray_i4[" << i <<
+                        "] = " << testArray_i4[i]);
+          }
+        }
+      }
+      std::cout << "Total errors = " << numerr << std::endl;
+    }
+
     if (0 == my_task) {
       for (int i = 0; i < peNumElem; i++) {
         PRINTMSGTSK("compdof(" << i << ") = " << compdof[i]);
@@ -516,7 +531,6 @@ int main(int argc, char *argv[]) {
       }
     }
 #endif
-
     // Calculate a decomposition
     PRINTMSGTSK("Calling pio_cpp_initdecomp_dof");
     pio_cpp_initdecomp_dof(&PIOSYS, PIO_int, gDims3D, 3,
@@ -552,6 +566,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  if (progOK && fileOpen) {
+  }
+
   // Create the variable
   if (progOK && fileOpen) {
     std::string axes[3] = { "x", "y", "z" };
@@ -577,9 +594,9 @@ int main(int argc, char *argv[]) {
     if (PIO_noerr != localrc) {
       char errmsg[512];
       sprintf(errmsg,
-              " ERROR: Attempt to create NetCDF var, return code = %d\n",
+              "ERROR: Attempt to create NetCDF var, return code = %d\n",
               localrc);
-      PRINTMSG(errmsg);
+      PRINTMSGTSK(errmsg);
       progOK = false;
     }
   }
@@ -589,9 +606,9 @@ int main(int argc, char *argv[]) {
     if (PIO_noerr != localrc) {
       char errmsg[512];
       sprintf(errmsg,
-              " ERROR: Attempt to end NetCDF def mode, return code = %d\n",
+              "ERROR: Attempt to end NetCDF def mode, return code = %d\n",
               localrc);
-      PRINTMSG(errmsg);
+      PRINTMSGTSK(errmsg);
       progOK = false;
     }
   }
@@ -605,6 +622,12 @@ int main(int argc, char *argv[]) {
                              testArray_i4, gDims3D, 3, &localrc);
     rval = MPI_Barrier(MPI_COMM_WORLD);
     CHECK_MPI_FUNC(rval, "MPI_Barrier");
+  }
+
+  // Sync the file
+  if (fileOpen) {
+    PRINTMSGTSK("Calling pio_cpp_syncfile");
+    pio_cpp_syncfile(File_i4);
   }
 
   // Close the file
