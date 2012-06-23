@@ -735,6 +735,12 @@ int main(int argc, char *argv[]) {
           PRINTMSG(errmsg);
           progOK = false;
         } else {
+          for (int i = 0; i < peNumElem; ++i) {
+            if (checkArray_i4[i] != testArray_i4[i]) {
+              PRINTMSGTSK("ERROR: checkArray != testArray at pos " << i <<
+                          checkArray_i4[i] << " != " << testArray_i4[i]);
+            }
+          }
         }
       }
     }
