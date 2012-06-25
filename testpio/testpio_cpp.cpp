@@ -52,7 +52,7 @@ static inline int getLocalOffset(int i, int j, int k, int dimi, int dimj) {
 // Calculate the one-based global offset for a set of local indices
 // The offset is calculated for Fortran order
 static inline int getGlobalOffset(int i, int j, int k, int *dims,
-                                  int64_t blkStart, int64_t blkSize) {
+                                  pio_dof_t blkStart, pio_dof_t blkSize) {
   return (i + 1 + ((j + (k * dims[1])) * dims[0]) + (blkStart - 1));
 }
 
@@ -297,12 +297,12 @@ int main(int argc, char *argv[]) {
   //  gdecomp_type gdecomp;
   bool    progOK = true;
   bool    fileOpen = false;
-  int64_t *compdof;
-  int64_t blockSize;
+  pio_dof_t *compdof;
+  pio_dof_t blockSize;
   int     arrayNumElem;
-  int64_t peNumElem;
-  int64_t numBlocks;
-  int64_t blockStart;
+  pio_dof_t peNumElem;
+  pio_dof_t numBlocks;
+  pio_dof_t blockStart;
   int     gDims3D[3];
   int     totaldims;
 
@@ -482,8 +482,8 @@ int main(int argc, char *argv[]) {
     }
   }
   if (progOK) {
-    compdof = (int64_t *)malloc(peNumElem * sizeof(int64_t));
-    if ((int64_t *)NULL == compdof) {
+    compdof = (pio_dof_t *)malloc(peNumElem * sizeof(pio_dof_t));
+    if ((pio_dof_t *)NULL == compdof) {
       PRINTMSG(" failed to allocate compdof");
       progOK = false;
     }
@@ -536,7 +536,7 @@ int main(int argc, char *argv[]) {
     pio_cpp_initdecomp_dof(&PIOSYS, PIO_int, gDims3D, 3,
                            compdof, peNumElem, IOdesc_i4);
     free(compdof);
-    compdof = (int64_t *)NULL;
+    compdof = (pio_dof_t *)NULL;
   }
 
   // See if the file already exists
@@ -813,9 +813,9 @@ int main(int argc, char *argv[]) {
     free(checkArray_r8);
     checkArray_r8 = (double *)NULL;
   }
-  if ((int64_t *)NULL != compdof) {
+  if ((pio_dof_t *)NULL != compdof) {
     free(compdof);
-    compdof = (int64_t *)NULL;
+    compdof = (pio_dof_t *)NULL;
   }
 
 #ifndef _MPISERIAL

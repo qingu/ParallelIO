@@ -30,6 +30,9 @@ typedef void *pio_var_desc_t;
 #define PIO_SIZE_VAR_DESC        16
 
 // PIO_OFFSET is the same type as MPI_Offset which is a typedef in C
-#define PIO_Offset MPI_Offset
+#define PIO_OFFSET MPI_Offset
+
+// pio_dof_t is the type for storing DOF information for I/O decomposition
+typedef int64_t pio_dof_t;
 
 #endif // __PIO_H_KINDS_INCLUDED_

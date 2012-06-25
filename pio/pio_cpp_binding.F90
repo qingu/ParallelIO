@@ -400,9 +400,9 @@ end subroutine pio_cpp_finalize
 ! ---------------------------------------------------------------------
 !  extern "C" void pio_cpp_initdecomp_dof_io(int* iosystem, int basepiotype,
 !                                            int* dims, int ndims,
-!                                            int64_t* compdof, int ncompdof,
-!                                            void* iodesc, int64_t* iostart,
-!                                            int niostart, int64_t* iocount,
+!                                            pio_dof_t* compdof, int ncompdof,
+!                                            void* iodesc, pio_dof_t* iostart,
+!                                            int niostart, pio_dof_t* iocount,
 !                                            int niocount);
 
 subroutine pio_cpp_initdecomp_dof_io(iosystem_handle, basepiotype, dims,      &
@@ -470,7 +470,7 @@ end subroutine pio_cpp_initdecomp_dof_io
 ! ---------------------------------------------------------------------
 !  extern "C" void pio_cpp_initdecomp_dof(int* iosystem, int basepiotype,
 !                                         int* dims, int ndims,
-!                                         int64_t* compdof, int ncompdof,
+!                                         pio_dof_t* compdof, int ncompdof,
 !                                         void* iodesc);
 
 subroutine pio_cpp_initdecomp_dof(iosystem_handle, basepiotype, dims,         &

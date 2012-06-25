@@ -56,10 +56,10 @@ void pio_cpp_finalize(pio_iosystem_desc_t *iosystem,
 void pio_cpp_initdecomp_dof_io(pio_iosystem_desc_t *iosystem,
                                int basepiotype,
                                int* dims, int ndims,
-                               int64_t* compdof, int ncompdof,
+                               pio_dof_t* compdof, int ncompdof,
                                pio_io_desc_t iodesc,
-                               int64_t* iostart, int niostart,
-                               int64_t* iocount, int niocount);
+                               pio_dof_t* iostart, int niostart,
+                               pio_dof_t* iocount, int niocount);
 
 // subroutine pio_cpp_initdecomp_dof(iosystem, basepiotype, dims, ndims,      &
 //                                      compdof, ncompdof, iodesc) bind(c)
@@ -67,7 +67,7 @@ void pio_cpp_initdecomp_dof_io(pio_iosystem_desc_t *iosystem,
 void pio_cpp_initdecomp_dof(pio_iosystem_desc_t *iosystem,
                             int basepiotype,
                             int* dims, int ndims,
-                            int64_t* compdof, int ncompdof,
+                            pio_dof_t* compdof, int ncompdof,
                             pio_io_desc_t iodesc);
 
 #if 0
