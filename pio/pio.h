@@ -364,7 +364,7 @@ void pio_cpp_read_darray_int(void *file,
                              void *varDesc,
                              void *ioDesc,
                              int *array,
-                             int *shape,
+                             const int *shape,
                              int rank,
                              int *iostat);
 
@@ -375,7 +375,7 @@ void pio_cpp_read_darray_real(void *file,
                               void *varDesc,
                               void *ioDesc,
                               float *array,
-                              int *shape,
+                              const int *shape,
                               int rank,
                               int *iostat);
 
@@ -386,7 +386,7 @@ void pio_cpp_read_darray_double(void *file,
                                 void *varDesc,
                                 void *ioDesc,
                                 double *array,
-                                int *shape,
+                                const int *shape,
                                 int rank,
                                 int *iostat);
 
@@ -397,7 +397,7 @@ void pio_cpp_write_darray_int(void *file,
                               void *varDesc,
                               void *ioDesc,
                               int *array,
-                              int *shape,
+                              const int *shape,
                               int rank,
                               int *iostat);
 
@@ -409,7 +409,7 @@ void pio_cpp_write_darray_int_fill(void *file,
                                    void *varDesc,
                                    void *ioDesc,
                                    int *array,
-                                   int *shape,
+                                   const int *shape,
                                    int rank,
                                    int *iostat,
                                    int fillval);
@@ -421,19 +421,19 @@ void pio_cpp_write_darray_real(void *file,
                                void *varDesc,
                                void *ioDesc,
                                float *array,
-                               int *shape,
+                               const int *shape,
                                int rank,
                                int *iostat);
 
 // subroutine pio_cpp_write_darray_real_fill(file, varDesc, ioDesc, array,    &
-//                                           shpe, rank, iostat, fillval)     &
+//                                           shape, rank, iostat, fillval)    &
 //                                           bind(c)
 
 void pio_cpp_write_darray_real_fill(void *file,
                                     void *varDesc,
                                     void *ioDesc,
                                     float *array,
-                                    int *shape,
+                                    const int *shape,
                                     int rank,
                                     int *iostat,
                                     float fillval);
@@ -445,7 +445,7 @@ void pio_cpp_write_darray_double(void *file,
                                  void *varDesc,
                                  void *ioDesc,
                                  double *array,
-                                 int *shape,
+                                 const int *shape,
                                  int rank,
                                  int *iostat);
 
@@ -457,7 +457,7 @@ void pio_cpp_write_darray_double_fill(void *file,
                                       void *varDesc,
                                       void *ioDesc,
                                       double *array,
-                                      int *shape,
+                                      const int *shape,
                                       int rank,
                                       int *iostat,
                                       double fillval);
