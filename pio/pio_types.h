@@ -37,7 +37,7 @@
 #define PIO_global        NC_GLOBAL
 #define PIO_unlimited     NC_UNLIMITED
 #define PIO_double        NC_DOUBLE
-#define PIO_real          NC_REAL
+#define PIO_real          NC_FLOAT
 #define PIO_int           NC_INT
 #define PIO_char          NC_CHAR
 #define PIO_noerr         NC_NOERR
@@ -55,7 +55,7 @@
 #define PIO_global        NC_GLOBAL
 #define PIO_unlimited     NC_UNLIMITED
 #define PIO_double        NC_DOUBLE
-#define PIO_real          NC_REAL
+#define PIO_real          NC_FLOAT
 #define PIO_int           NC_INT
 #define PIO_char          NC_CHAR
 #define PIO_noerr         NC_NOERR
