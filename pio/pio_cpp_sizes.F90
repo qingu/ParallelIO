@@ -1,0 +1,57 @@
+program pio_sizes
+
+  !  import C kind type parameters
+
+!  use, intrinsic :: iso_c_binding, only: c_char
+
+  !  import pio types
+
+  use :: pio_types, only: iosystem_desc_t, file_desc_t, io_desc_t, var_desc_t
+
+
+  !  types whose sizes we need
+  type( iosystem_desc_t) :: ios(2)
+  type( file_desc_t) :: file(2)
+  type( io_desc_t) :: iod(2)
+  type( var_desc_t) :: var(2)
+
+  print *, '#ifndef __PIO_H_KINDS_INCLUDED_'
+  print *, '#define __PIO_H_KINDS_INCLUDED_'
+  print *, ''
+  print *, '// ---------------------------------------------------------------------'
+  print *, '// Datatypes defined in pio_kinds.F90'
+  print *, '// ---------------------------------------------------------------------'
+  print *, ''
+  print *, '#include <stdint.h>'
+  print *, '#include <mpi.h>'
+  print *, ''
+  print *, '// ---------------------------------------------------------------------'
+  print *, '// types for and sizes of the PIO Fortran derived types'
+  print *, '// ---------------------------------------------------------------------'
+  print *, ''
+  print *, '// sizeof( iosystem_desc_t)'
+  print *, 'typedef int pio_iosystem_desc_t;'
+  print *, 'extern "C" const pio_iosystem_desc_t PIO_IOSYSTEM_DESC_NULL;'
+  print *, '#define PIO_SIZE_IOSYSTEM_DESC ', (loc(ios(2)) - loc(ios(1)))
+  print *, ''
+  print *, '// sizeof( file_desc_t)'
+  print *, 'typedef void *pio_file_desc_t;'
+  print *, '#define PIO_SIZE_FILE_DESC ', (loc(file(2)) - loc(file(1)))
+  print *, ''
+  print *, '// sizeof( io_desc_t)'
+  print *, 'typedef void *pio_io_desc_t;'
+  print *, '#define PIO_SIZE_IO_DESC        ', (loc(iod(2)) - loc(iod(1)))
+  print *, ''
+  print *, '// sizeof( var_desc_t)'
+  print *, 'typedef void *pio_var_desc_t;'
+  print *, '#define PIO_SIZE_VAR_DESC ', (loc(var(2)) - loc(var(1)))
+  print *, ''
+  print *, '// PIO_OFFSET is the same type as MPI_Offset which is a typedef in C'
+  print *, '#define PIO_OFFSET MPI_Offset'
+  print *, ''
+  print *, '// pio_dof_t is the type for storing DOF information for I/O decomposition'
+  print *, 'typedef int64_t pio_dof_t;'
+  print *, ''
+  print *, '#endif // __PIO_H_KINDS_INCLUDED_'
+
+end program pio_sizes
