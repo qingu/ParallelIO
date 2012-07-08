@@ -85,6 +85,9 @@ module pio_types
 
 
     type, public :: io_data_list
+#ifdef SEQUENCE
+	sequence
+#endif
        integer :: request
        real(r4), pointer :: data_real(:) => null()
        integer(i4), pointer :: data_int(:) => null()
@@ -99,6 +102,9 @@ module pio_types
 !! @brief File descriptor returned by \ref PIO_openfile or \ref PIO_createfile (see pio_types)
 !>
     type, public :: File_desc_t
+#ifdef SEQUENCE
+	sequence
+#endif
        type(iosystem_desc_t), pointer :: iosystem
        type(io_data_list), pointer :: data_list_top  => null()  ! used for non-blocking pnetcdf calls
        integer :: buffsize=0
