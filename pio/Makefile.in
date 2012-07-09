@@ -475,8 +475,6 @@ startandcount: calcdecomp.F90
 pio_cpp_sizes: pio_cpp_sizes.F90 pio_types.F90
 	$(FC) $(FFLAGS) $< -o $@
 
-pio_kinds.h: pio_cpp_sizes
-	./pio_cpp_sizes | sed -e 's/^[ ]*//' > $@
 #
 # Automatically generated module dependencies
 #
