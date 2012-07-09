@@ -50,7 +50,8 @@
 #define PIO_MAX_VAR_DIMS  NC_MAX_VAR_DIMS
 #define PIO_64BIT_OFFSET  NC_64BIT_OFFSET
 #define PIO_num_OST       16
-#elif _NETCDF
+#else // _PNETCDF
+#ifdef _NETCDF
 #include <netcdf.h>
 #define PIO_global        NC_GLOBAL
 #define PIO_unlimited     NC_UNLIMITED
@@ -68,7 +69,7 @@
 #define PIO_MAX_VAR_DIMS  NC_MAX_VAR_DIMS
 #define PIO_64BIT_OFFSET  NC_64BIT_OFFSET
 #define PIO_num_OST       16
-#else
+#else // _NETCDF
 #define PIO_global         0
 #define PIO_double         6
 #define PIO_real           5
@@ -83,6 +84,6 @@
 #define PIO_NOWRITE       21
 #define PIO_64BIT_OFFSET   0
 #define PIO_num_OST       16
-#endif
-
+#endif // _NETCDF
+#endif // _PNETCDF
 #endif // __PIO_H_TYPES_INCLUDED_
