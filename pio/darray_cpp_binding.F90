@@ -2,34 +2,6 @@
 ! ---------------------------------------------------------------------
 
 !  procedures for a cpp binding to PIO's read/write darray interface functions
-module darray_cpp_binding
-
-  use pio_kinds, only: i4, r4, r8, pio_offset
-
-  implicit none
-
-  !  explicit export
-
-  private
-
-  ! public interface
-  ! read/write routines
-  public :: pio_cpp_read_darray_int
-  public :: pio_cpp_read_darray_real
-  public :: pio_cpp_read_darray_double
-  public :: pio_cpp_write_darray_int
-  public :: pio_cpp_write_darray_int_fill
-  public :: pio_cpp_write_darray_real
-  public :: pio_cpp_write_darray_real_fill
-  public :: pio_cpp_write_darray_double
-  public :: pio_cpp_write_darray_double_fill
-
-  !  constants
-
-  integer, parameter :: max_string_len = 1024
-  integer, parameter :: max_path_len = 1024
-
-contains
 
 ! ---------------------------------------------------------------------
 !  extern "C" void pio_cpp_read_darray_int(void *file, void *varDesc,         &
@@ -44,6 +16,7 @@ subroutine pio_cpp_read_darray_int(file, varDesc, ioDesc, array, shape,       &
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
   !  import pio types
+  use pio_kinds, only: i4
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
 
   !  import pio procedure signatures
@@ -148,6 +121,7 @@ subroutine pio_cpp_read_darray_real(file, varDesc, ioDesc, array, shape,      &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4, r4
 
   !  import pio procedure signatures
   use piodarray, only: pio_read_darray
@@ -252,6 +226,7 @@ subroutine pio_cpp_read_darray_double(file, varDesc, ioDesc, array,           &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4, r8
 
   !  import pio procedure signatures
   use piodarray, only: pio_read_darray
@@ -357,6 +332,7 @@ subroutine pio_cpp_write_darray_int(file, varDesc, ioDesc, array,             &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4
 
   !  import pio procedure signatures
   use piodarray, only: pio_write_darray
@@ -462,6 +438,7 @@ subroutine pio_cpp_write_darray_int_fill(file, varDesc, ioDesc, array,        &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4
 
   !  import pio procedure signatures
   use piodarray, only: pio_write_darray
@@ -568,6 +545,7 @@ subroutine pio_cpp_write_darray_real(file, varDesc, ioDesc, array,         &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4, r4
 
   !  import pio procedure signatures
   use piodarray, only: pio_write_darray
@@ -675,6 +653,7 @@ subroutine pio_cpp_write_darray_real_fill(file, varDesc, ioDesc, array,       &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4, r4
 
   !  import pio procedure signatures
   use piodarray, only: pio_write_darray
@@ -782,6 +761,7 @@ subroutine pio_cpp_write_darray_double(file, varDesc, ioDesc, array,          &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4, r8
 
   !  import pio procedure signatures
   use piodarray, only: pio_write_darray
@@ -890,6 +870,7 @@ subroutine pio_cpp_write_darray_double_fill(file, varDesc, ioDesc, array,     &
 
   !  import pio types
   use pio_types, only: file_desc_t, io_desc_t, var_desc_t
+  use pio_kinds, only: i4, r8
 
   !  import pio procedure signatures
   use piodarray, only: pio_write_darray
@@ -982,4 +963,3 @@ subroutine pio_cpp_write_darray_double_fill(file, varDesc, ioDesc, array,     &
 end  subroutine pio_cpp_write_darray_double_fill
 
 ! ---------------------------------------------------------------------
-end module darray_cpp_binding

@@ -29,41 +29,41 @@ include $(TOPBUILDDIR)/Makefile.$(PIOARCH)
 export PIOARCH
 
 TEMPLATES_FC = pionfatt_mod.F90.in \
-	        pionfread_mod.F90.in \
-                pionfwrite_mod.F90.in \
-                pionfput_mod.F90.in \
-                pionfget_mod.F90.in \
-	        alloc_mod.F90.in \
-                box_rearrange.F90.in \
-                rearrange.F90.in \
-                pio_support.F90.in \
-	        iompi_mod.F90.in  \
-	        piodarray.F90.in \
-	        pio_spmd_utils.F90.in \
-	        pio_msg_getput_callbacks.F90.in
+	             pionfread_mod.F90.in \
+               pionfwrite_mod.F90.in \
+               pionfput_mod.F90.in \
+               pionfget_mod.F90.in \
+               alloc_mod.F90.in \
+               box_rearrange.F90.in \
+               rearrange.F90.in \
+               pio_support.F90.in \
+               iompi_mod.F90.in  \
+               piodarray.F90.in \
+               pio_spmd_utils.F90.in \
+               pio_msg_getput_callbacks.F90.in
 
 TEMPSRCFC = $(TEMPLATES_FC:.in=)
 
 SRCS_C = topology.c 
 
 SRCS_FC =  pio.F90 \
-            pio_kinds.F90  \
-            nf_mod.F90     \
-            ionf_mod.F90 \
-            pio_types.F90  \
-            calcdecomp.F90 \
-            piolib_mod.F90 \
-	    pio_mpi_utils.F90 \
-            pio_nf_utils.F90 \
-	    pio_utils.F90 \
-            pio_quicksort.F90 \
-            pio_msg_mod.F90 \
-	    calcdisplace_mod.F90 \
-	    pio_msg_callbacks.F90 
+           pio_kinds.F90  \
+           nf_mod.F90     \
+           ionf_mod.F90 \
+           pio_types.F90  \
+           calcdecomp.F90 \
+           piolib_mod.F90 \
+           pio_mpi_utils.F90 \
+           pio_nf_utils.F90 \
+           pio_utils.F90 \
+           pio_quicksort.F90 \
+           pio_msg_mod.F90 \
+           calcdisplace_mod.F90 \
+           pio_msg_callbacks.F90 
 
 if PIOCPP
-  SRCS_FC += pio_cpp_utils.F90      \
-             pio_cpp_binding.F90    \
+  SRCS_FC += pio_cpp_utils.F90
+  SRCS_FF =  pio_cpp_binding.F90    \
              nf_cpp_binding.F90     \
              darray_cpp_binding.F90
   SRCS_CC = piocpp.cc
@@ -72,9 +72,10 @@ else
 endif
 SRCS_FC += $(TEMPSRCFC)
 
-OBJS=  $(SRCS_C:.c=.o)       \
+OBJS=  $(SRCS_C:.c=.o)     \
        $(SRCS_CC:.cc=.o)   \
-       $(SRCS_FC:.F90=.o)
+       $(SRCS_FC:.F90=.o)  \
+       $(SRCS_FF:.F90=.o)
 
 
 @MODFILES@

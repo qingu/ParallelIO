@@ -2,50 +2,6 @@
 ! ---------------------------------------------------------------------
 
 !  procedures for a cpp binding to PIO's NetCDF interface functions
-module nf_cpp_binding
-
-  use pio_kinds, only: i4, r4, r8, pio_offset
-
-  implicit none
-
-   !  explicit export
-
-  private
-
-   ! public interface
-
-  public :: pio_cpp_def_dim
-  public :: pio_cpp_enddef
-  public :: pio_cpp_redef
-  public :: pio_cpp_inquire_int
-  public :: pio_cpp_inq_dimid
-  public :: pio_cpp_inq_dimname
-  public :: pio_cpp_inq_dimlen
-  public :: pio_cpp_copy_att
-  public :: pio_cpp_def_var_0d
-  public :: pio_cpp_def_var_md
-  public :: pio_cpp_inq_attname_vid
-  public :: pio_cpp_inq_attname_vdesc
-  public :: pio_cpp_inq_att_vid
-  public :: pio_cpp_inq_att_vdesc
-  public :: pio_cpp_inq_attlen_vid
-  public :: pio_cpp_inq_attlen_vdesc
-  public :: pio_cpp_inq_varid_vid
-  public :: pio_cpp_inq_varid_vdesc
-  public :: pio_cpp_inq_varname_vid
-  public :: pio_cpp_inq_varname_vdesc
-  public :: pio_cpp_inq_vartype_vid
-  public :: pio_cpp_inq_vartype_vdesc
-  public :: pio_cpp_inq_varndims_vid
-  public :: pio_cpp_inq_varndims_vdesc
-  public :: pio_cpp_inq_vardimid_vid
-  public :: pio_cpp_inq_vardimid_vdesc
-  public :: pio_cpp_inq_varnatts_vid
-  public :: pio_cpp_inq_varnatts_vdesc
-
-  !  constants
-
- contains
 
 !  the extern "C" functions()
 
@@ -1687,4 +1643,3 @@ function pio_cpp_copy_att(infile, invarid, name, outfile, outvarid)           &
 end function pio_cpp_copy_att
 
 ! ---------------------------------------------------------------------
-end module nf_cpp_binding

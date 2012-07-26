@@ -1,248 +1,12 @@
 #define __PIO_FILE__ "pio_cpp_binding.F90"
 ! ---------------------------------------------------------------------
 
-!  procedures for a cpp binding to pio
-
-module pio_cpp_binding
-
-   use pio_types, only: iosystem_desc_t
-
-#ifndef _MPISERIAL
-   use mpi, only: MPI_COMM_NULL   ! _EXTERNAL
-#endif
-
-   implicit none
-
-#ifdef _MPISERIAL
-   include 'mpif.h'      ! _EXTERNAL
-#endif
-
-   !  explicit export
-
-   private
-
-   ! public interface
-
-   public :: pio_cpp_init_intracom_int
-   public :: pio_cpp_init_intercom_int
-   public :: pio_cpp_finalize
-   public :: pio_cpp_initdecomp_dof_io
-   public :: pio_cpp_initdecomp_dof
-#if 0
-   public :: pio_cpp_initdecomp_dof_dof
-#endif
-   public :: pio_cpp_openfile
-   public :: pio_cpp_syncfile
-   public :: pio_cpp_createfile
-   public :: pio_cpp_closefile
-   public :: pio_cpp_setiotype
-   public :: pio_cpp_numtoread
-   public :: pio_cpp_numtowrite
-   public :: pio_cpp_setframe
-   public :: pio_cpp_advanceframe
-   public :: pio_cpp_setdebuglevel
-   public :: pio_cpp_seterrorhandlingf
-   public :: pio_cpp_seterrorhandlingi
-   public :: pio_cpp_get_local_array_size
-   public :: pio_cpp_freedecomp_ios
-   public :: pio_cpp_freedecomp_file
-   public :: pio_cpp_dupiodesc
-   public :: pio_cpp_getnumiotasks
-   public :: pio_cpp_set_hint
-   public :: pio_cpp_getnum_ost
-   public :: pio_cpp_setnum_ost
-   public :: pio_cpp_file_is_open
-
-   ! Utility functions for managing C handles for iosystem_desc_t instances
-
-   type, private :: PIO_C_HANDLE_NODE
-      integer :: c_handle_start
-      type(iosystem_desc_t), pointer :: PIO_descriptors(:)
-      type(PIO_C_HANDLE_NODE), pointer :: next
-   end type PIO_C_HANDLE_NODE
-
-   type(PIO_C_HANDLE_NODE), private, save, pointer :: PIO_Intracom_handles
-   integer, private :: PIO_c_handle_num = 0
-
-   private :: new_pio_iosys_handles
-   private :: get_pio_iosys_handle
-   private :: delete_pio_iosys_handle
-   !  private :: delete_all_pio_iosys_handles
-
-   !  constants
-
-   ! ---------------------------------------------------------------------
-
-   !  library
-
- contains
-
-   ! ---------------------------------------------------------------------
-
-   !  Obtain a PIO iosystem_desc_t object given its integer handle
-
-subroutine new_pio_iosys_handles(iosystem_handles, iosystem)
-
-   use pio_support, only : piodie, debug
-
-   !  dummy arguments
-   integer, intent(inout) :: iosystem_handles(:)
-   type(iosystem_desc_t), pointer :: iosystem(:)
-
-   ! local
-   type(PIO_C_HANDLE_NODE), pointer :: new_pio_c_handle_node(:)
-   type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
-   integer :: stat
-   integer :: num_handles
-   integer :: i
-
-   num_handles = size(iosystem_handles, 1)
-
-   ! First, create a new iosystem handle node
-   allocate(new_pio_c_handle_node(1), stat=stat)
-   if (stat .ne. 0) then
-      call piodie(__PIO_FILE__,__LINE__,       &
-                 'unable to allocate PIO_C_HANDLE_NODE')
-   endif
-   nullify(new_pio_c_handle_node(1)%next)
-   ! Now, create the new iosystem_desc_t array
-   allocate(new_pio_c_handle_node(1)%PIO_descriptors(num_handles), stat=stat)
-   if (stat .ne. 0) then
-      deallocate(new_pio_c_handle_node)
-      call piodie(__PIO_FILE__,__LINE__,'unable to allocate iosystem_desc_t')
-   endif
-   ! Fill in C starting handle number and increment
-   new_pio_c_handle_node(1)%c_handle_start = PIO_c_handle_num
-   PIO_c_handle_num = PIO_c_handle_num + num_handles
-   ! Find the end of the chain and insert new node
-   if (.not. associated(PIO_Intracom_handles)) then
-      PIO_Intracom_handles => new_pio_c_handle_node(1)
-   else
-      pio_handle_node => PIO_Intracom_handles
-      do while (associated(pio_handle_node%next))
-         pio_handle_node => pio_handle_node%next
-      end do
-      pio_handle_node%next => new_pio_c_handle_node(1)
-   end if
-   ! Set the PIO iosystem_desc_t output
-  iosystem => new_pio_c_handle_node(1)%PIO_descriptors
-  ! Fill in the c handle numbers
-  do i = 1, num_handles
-     iosystem_handles(i) = new_pio_c_handle_node(1)%c_handle_start + i
-  end do
-
-end subroutine new_pio_iosys_handles
-
-  !  Obtain a PIO iosystem_desc_t object given its integer handle
-
-subroutine get_pio_iosys_handle(iosystem_handle, iosystem)
-
-  use pio_support, only : piodie, debug
-
-  !  dummy arguments
-  integer, intent(in) :: iosystem_handle
-  type(iosystem_desc_t), pointer, intent(out) :: iosystem
-
-  ! local
-  logical :: found_handle = .false.
-  type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
-  integer :: num_handles
-  integer :: handle0
-
-  continue
-  ! Search for a structure with the correct handle number
-  pio_handle_node => PIO_Intracom_handles
-  do while (associated(pio_handle_node))
-     num_handles = size(pio_handle_node%PIO_descriptors, 1)
-     handle0 = pio_handle_node%c_handle_start
-     if ((iosystem_handle .gt. handle0) .and.   &
-         (iosystem_handle .le. (handle0 + num_handles))) then
-        iosystem => pio_handle_node%PIO_descriptors(iosystem_handle - handle0)
-        found_handle = .true.
-        exit
-     elseif (associated(pio_handle_node%next)) then
-        pio_handle_node => pio_handle_node%next
-     else
-        nullify(pio_handle_node)
-     end if
-  end do
-
-  if (.not. found_handle) then
-     print *,__PIO_FILE__,__LINE__,'No descriptor for ',iosystem_handle
-     call piodie(__PIO_FILE__,__LINE__,'Could not find descriptor')
-  end if
-
-end subroutine get_pio_iosys_handle
-
-  !  Delete a node containing a PIO iosystem object and corresponding C handle
-
-subroutine delete_pio_iosys_handle(iosystem_handle)
-
-  use pio_support, only : piodie, debug
-
-  !  dummy arguments
-  integer, intent(in) :: iosystem_handle
-  logical :: found_handle = .false.
-
-  ! local
-  type(PIO_C_HANDLE_NODE), pointer :: pio_handle_node
-  type(PIO_C_HANDLE_NODE), pointer :: prev_handle_node
-  integer :: stat
-  integer :: num_handles
-  integer :: handle0
-
-  nullify(prev_handle_node)
-  ! Search for a structure with the correct handle number
-  pio_handle_node => PIO_Intracom_handles
-  do while (associated(pio_handle_node))
-     num_handles = size(pio_handle_node%PIO_descriptors, 1)
-     handle0 = pio_handle_node%c_handle_start
-     if ((iosystem_handle .gt. handle0) .and.   &
-         (iosystem_handle .le. (handle0 + num_handles))) then
-        if (num_handles .gt. 1) then
-           print *,__PIO_FILE__,__LINE__,'WARNING: deleting ',   &
-                   num_handles,'handles'
-        end if
-        ! Remove node from list
-        if (associated(prev_handle_node)) then
-           prev_handle_node%next => pio_handle_node%next
-        else
-           PIO_Intracom_handles => pio_handle_node%next
-        end if
-        ! Clear the starting handle (probably unneccessary)
-        pio_handle_node%c_handle_start = -1
-        ! Now, delete the iosystem_desc_t array
-        deallocate(pio_handle_node%PIO_descriptors, stat=stat)
-        if (stat .ne. 0) then
-           print *,__PIO_FILE__,__LINE__,'Error ',stat,  &
-                   ' deallocating iosystem descriptor(s)'
-        endif
-        ! Finally, delete the iosystem handle node
-        deallocate(pio_handle_node, stat=stat)
-        if (stat .ne. 0) then
-           print *,__PIO_FILE__,__LINE__,'Error ',stat,  &
-                   ' deallocating iosystem node'
-        endif
-        found_handle = .true.
-        exit
-     else
-        prev_handle_node => pio_handle_node
-        pio_handle_node => pio_handle_node%next
-     end if
-  end do
-
-  if (.not. found_handle) then
-     print *,__PIO_FILE__,__LINE__,'No descriptor for ',iosystem_handle
-  end if
-
-end subroutine delete_pio_iosys_handle
+!  procedures for cpp bindings to functions in piolib_mod
 
 ! ---------------------------------------------------------------------
-
 !  the extern "C" functions()
 
 ! ---------------------------------------------------------------------
-
 !  extern "C" void pio_cpp_init_intracom(int comp_rank, int comp_comm,
 !                                        int num_tasks, int num_aggregator,
 !                                        int stride, int rearr,
@@ -252,8 +16,11 @@ subroutine pio_cpp_init_intracom_int(comp_rank, comp_comm, num_iotasks,      &
                                      num_aggregator, stride, rearr,          &
                                      iosystem_handle, base) bind(c)
 
-   !  bind to C
+  !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+
+  !  get the required utilities
+  use pio_cpp_utils, only: new_pio_iosys_handles
 
   !  import pio kinds
   use pio_kinds, only: i4
@@ -287,9 +54,9 @@ subroutine pio_cpp_init_intracom_int(comp_rank, comp_comm, num_iotasks,      &
 
   !  call the Fortran procedure
   call pio_init(int(comp_rank, i4), int(comp_comm, i4),              &
-                int(num_iotasks, i4), int(num_aggregator, i4),       &
-                int(stride, i4), int(rearr, i4), iosystem_desc_p(1), &
-                int(base, i4))
+       int(num_iotasks, i4), int(num_aggregator, i4),       &
+       int(stride, i4), int(rearr, i4), iosystem_desc_p(1), &
+       int(base, i4))
 
   ! Set the output C handle
   iosystem_handle = iosystem_handles(1)
@@ -299,13 +66,15 @@ subroutine pio_cpp_init_intracom_int(comp_rank, comp_comm, num_iotasks,      &
 end subroutine pio_cpp_init_intracom_int
 
 ! ---------------------------------------------------------------------
-
 !  extern "C" void pio_cpp_init_intercom(int component_count, int peer_comm,
 !                                        int* comp_comms, int io_comm,
 !                                        int** iosystem);
 
 subroutine pio_cpp_init_intercom_int(component_count, peer_comm, comp_comms,  &
                                      io_comm, iosystem_handles) bind(c)
+
+  !  get the required utilities
+  use pio_cpp_utils, only: new_pio_iosys_handles
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
@@ -337,11 +106,11 @@ subroutine pio_cpp_init_intercom_int(component_count, peer_comm, comp_comms,  &
 
   !  call the Fortran procedure
   call pio_init(int(component_count), int(peer_comm), int(comp_comms),        &
-                int(io_comm), iosystem_desc_p)
+       int(io_comm), iosystem_desc_p)
 
   ! Set the output C handles
   do i = 1, component_count
-     iosystem_handles(i) = iosystem_handle_array(i)
+    iosystem_handles(i) = iosystem_handle_array(i)
   end do
 
   return
@@ -349,10 +118,12 @@ subroutine pio_cpp_init_intercom_int(component_count, peer_comm, comp_comms,  &
 end subroutine pio_cpp_init_intercom_int
 
 ! ---------------------------------------------------------------------
-
 !  extern "C" void pio_cpp_finalize(int* iosystem, int* ierror);
 
 subroutine pio_cpp_finalize(iosystem_handle, ierr) bind(c)
+
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle, delete_pio_iosys_handle
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
@@ -410,6 +181,8 @@ subroutine pio_cpp_initdecomp_dof_io(iosystem_handle, basepiotype, dims,      &
                                      iostart, niostart, iocount, niocount)    &
                                      bind(c)
 
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_int64_t, c_ptr, c_f_pointer
 
@@ -480,6 +253,9 @@ subroutine pio_cpp_initdecomp_dof(iosystem_handle, basepiotype, dims,         &
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_int64_t, c_ptr, c_f_pointer
 
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
+
   !  import pio kinds
   use pio_kinds, only: i4, pio_offset
 
@@ -517,8 +293,8 @@ subroutine pio_cpp_initdecomp_dof(iosystem_handle, basepiotype, dims,         &
 
   !  call the Fortran procedure (passing optional arguments if passed in)
   call pio_initdecomp(iosystem_desc_p, int(basepiotype, i4),                  &
-                      int(as_dims, i4), int(as_compdof, pio_offset),          &
-                      iodesc_desc)
+       int(as_dims, i4), int(as_compdof, pio_offset),          &
+       iodesc_desc)
 
   !  return to the cpp caller
   return
@@ -540,6 +316,9 @@ subroutine pio_cpp_initdecomp_dof_dof(iosystem_handle, basepiotype, dims,     &
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
+
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
 
   !  import pio kinds
   use pio_kinds, only: i4, pio_offset
@@ -582,8 +361,8 @@ subroutine pio_cpp_initdecomp_dof_dof(iosystem_handle, basepiotype, dims,     &
 
   !  call the Fortran procedure
   call pio_initdecomp(iosystem_desc_p, int(basepiotype, i4),                  &
-                      int(as_dims, i4), int(as_compdof, pio_offset),          &
-                      iodesc_desc, int(as_iodof, pio_offset))
+       int(as_dims, i4), int(as_compdof, pio_offset),          &
+       iodesc_desc, int(as_iodof, pio_offset))
 
   !  return to the cpp caller
   return
@@ -608,7 +387,7 @@ function pio_cpp_openfile(iosystem_handle, file, iotype, fname, mode)         &
 
   !  import pio procedure signatures
   use piolib_mod, only: pio_openfile
-  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len, get_pio_iosys_handle
 
   !  function result
   integer(c_int) :: ierr
@@ -656,7 +435,7 @@ function pio_cpp_openfile(iosystem_handle, file, iotype, fname, mode)         &
 
   !  call the Fortran procedure
   ierror = pio_openfile(iosystem_desc_p, file_desc, int(iotype),              &
-                        trim(filename), int(mode))
+       trim(filename), int(mode))
 
   !  convert the arguments back to C
   ierr = int(ierror, c_int)
@@ -715,7 +494,7 @@ function pio_cpp_createfile(iosystem_handle, file, iotype, fname, amode_in)   &
 
   !  import pio procedure signatures
   use piolib_mod, only: pio_createfile
-  use pio_cpp_utils, only: f_chars, c_len, max_path_len
+  use pio_cpp_utils, only: f_chars, c_len, max_path_len, get_pio_iosys_handle
 
   !  function result
   integer(c_int) :: ierr
@@ -763,7 +542,7 @@ function pio_cpp_createfile(iosystem_handle, file, iotype, fname, amode_in)   &
 
   !  call the Fortran procedure
   ierror = pio_createfile(iosystem_desc_p, file_desc, int(iotype),            &
-                          trim(filename), int(amode_in))
+       trim(filename), int(amode_in))
 
   !  convert the arguments back to C
   ierr = int(ierror, c_int)
@@ -778,32 +557,32 @@ end function pio_cpp_createfile
 
 subroutine pio_cpp_closefile(file) bind(c)
 
- !  bind to C
- use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
+  !  bind to C
+  use, intrinsic :: iso_c_binding, only: c_ptr, c_f_pointer
 
- !  import pio types
- use pio_types, only: file_desc_t
+  !  import pio types
+  use pio_types, only: file_desc_t
 
- !  import pio procedure signatures
- use piolib_mod, only: pio_closefile
+  !  import pio procedure signatures
+  use piolib_mod, only: pio_closefile
 
- !  dummy arguments
- type(c_ptr), value :: file
+  !  dummy arguments
+  type(c_ptr), value :: file
 
- !  local
- type(file_desc_t), pointer :: file_desc
+  !  local
+  type(file_desc_t), pointer :: file_desc
 
- !  text
- continue
+  !  text
+  continue
 
- !  convert the C pointers to a Fortran pointers
- call c_f_pointer(file, file_desc)
+  !  convert the C pointers to a Fortran pointers
+  call c_f_pointer(file, file_desc)
 
- !  call the Fortran procedure
- call pio_closefile(file_desc)
+  !  call the Fortran procedure
+  call pio_closefile(file_desc)
 
- !  return to the cpp caller
- return
+  !  return to the cpp caller
+  return
 
 end subroutine pio_cpp_closefile
 
@@ -1071,6 +850,9 @@ subroutine pio_cpp_seterrorhandlingi(iosystem_handle, method) bind(c)
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
+
   !  import pio types
   use pio_types, only: iosystem_desc_t
 
@@ -1147,6 +929,9 @@ subroutine pio_cpp_freedecomp_ios(iosystem_handle, iodesc) bind(c)
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_f_pointer
 
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
+
   !  import pio types
   use pio_types, only: iosystem_desc_t, io_desc_t
 
@@ -1170,8 +955,14 @@ subroutine pio_cpp_freedecomp_ios(iosystem_handle, iodesc) bind(c)
   !  get the iosystem_desc_t for this connection
   call get_pio_iosys_handle(iosystem_handle, iosystem_desc_p)
 
+  ! Make sure we are all ready
+!  call MPI_Barrier(iosystem_desc_p%comp_comm, ierror);
+
   !  call the Fortran procedure
   call pio_freedecomp(iosystem_desc_p, io_desc)
+
+  ! Make sure we are all done
+!  call MPI_Barrier(iosystem_desc_p%comp_comm, ierror);
 
   !  return to the cpp caller
   return
@@ -1260,6 +1051,9 @@ subroutine pio_cpp_getnumiotasks(iosystem_handle, numiotasks) bind(c)
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
+
   !  import pio kinds
   use pio_kinds, only: i4
 
@@ -1307,7 +1101,7 @@ subroutine pio_cpp_set_hint(iosystem_handle, hint, hintval) bind(c)
 
   !  import pio procedure signatures
   use piolib_mod, only: pio_set_hint
-  use pio_cpp_utils, only: f_chars, c_len, max_string_len
+  use pio_cpp_utils, only: f_chars, c_len, max_string_len, get_pio_iosys_handle
 
   !  dummy arguments
   integer(c_int), intent(in) :: iosystem_handle
@@ -1372,6 +1166,9 @@ function pio_cpp_getnum_ost(iosystem_handle) result(numost) bind(c)
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
 
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
+
   !  import pio types
   use pio_types, only: iosystem_desc_t
 
@@ -1413,6 +1210,9 @@ subroutine pio_cpp_setnum_ost(iosystem_handle, numost) bind(c)
 
   !  bind to C
   use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+
+  !  get the required utilities
+  use pio_cpp_utils, only: get_pio_iosys_handle
 
   !  import pio kinds
   use pio_kinds, only: i4
@@ -1487,5 +1287,3 @@ function pio_cpp_file_is_open(file) result(is_open) bind(c)
 end function pio_cpp_file_is_open
 
 ! ---------------------------------------------------------------------
-
-end module pio_cpp_binding

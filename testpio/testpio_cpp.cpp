@@ -333,8 +333,7 @@ int main(int argc, char *argv[]) {
   master_task = 0;
   is_master_task = (my_task == master_task);
   num_iotasks = std::max((nprocs / 2), 1);
-  num_aggregators = num_iotasks;
-  bool numaggset = false;
+  num_aggregators = 1;
 
   // Process input args (if any)
   while (copt >= 0) {
@@ -343,7 +342,6 @@ int main(int argc, char *argv[]) {
     switch (copt) {
     case 'a':
       num_aggregators = atoi(optarg);
-      numaggset = true;
       break;
     case 'b':
       base = atoi(optarg);
@@ -381,9 +379,6 @@ int main(int argc, char *argv[]) {
       }
       // copt < 0 is normal termination
     }
-  }
-  if (!numaggset) {
-    num_aggregators = num_iotasks;
   }
 
   std::cout << "My rank is " << my_task << "/" << nprocs << ": "
