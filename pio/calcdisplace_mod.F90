@@ -5,7 +5,7 @@ MODULE calcdisplace_mod
   use pio_support, only : piodie
 
   private
-  public :: GCDblocksize,gcd
+  public :: GCDblocksize, gcd
   public :: calcdisplace, calcdisplace_box
 
   interface gcd_pair

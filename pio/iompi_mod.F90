@@ -28,7 +28,7 @@ module iompi_mod
 #ifdef NO_MPIMOD  
     include 'mpif.h'        ! _EXTERNAL
 #endif
-    public :: open_mpiio, create_mpiio, close_mpiio, write_mpiio,read_mpiio
+    public :: open_mpiio, create_mpiio, close_mpiio, write_mpiio, read_mpiio
 
 !>
 !! @private
