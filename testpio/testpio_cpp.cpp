@@ -2,7 +2,12 @@
 #include <cstdlib>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <getopt.h>
+#ifdef _AIX
+#define _NO_GETOPT
+#endif // _AIX
+#ifndef _NO_GETOPT
+#include "getopt.h"
+#endif // _NO_GETOPT
 #include <mpi.h>
 
 #include "pio.h"
@@ -177,9 +182,6 @@ static void printMPIErr(int err, std::string fname,
   case MPI_ERR_LOCKTYPE:
     errName = "MPI_ERR_LOCKTYPE";
     break;
-  case MPI_ERR_NAME:
-    errName = "MPI_ERR_NAME";
-    break;
   case MPI_ERR_NO_MEM:
     errName = "MPI_ERR_NO_MEM";
     break;
@@ -191,9 +193,6 @@ static void printMPIErr(int err, std::string fname,
     break;
   case MPI_ERR_NO_SUCH_FILE:
     errName = "MPI_ERR_NO_SUCH_FILE";
-    break;
-  case MPI_ERR_PORT:
-    errName = "MPI_ERR_PORT";
     break;
   case MPI_ERR_QUOTA:
     errName = "MPI_ERR_QUOTA";
@@ -207,15 +206,23 @@ static void printMPIErr(int err, std::string fname,
   case MPI_ERR_RMA_SYNC:
     errName = "MPI_ERR_RMA_SYNC";
     break;
-  case MPI_ERR_SERVICE:
-    errName = "MPI_ERR_SERVICE";
-    break;
   case MPI_ERR_SIZE:
     errName = "MPI_ERR_SIZE";
+    break;
+#ifndef _AIX
+  case MPI_ERR_NAME:
+    errName = "MPI_ERR_NAME";
+    break;
+  case MPI_ERR_PORT:
+    errName = "MPI_ERR_PORT";
+    break;
+  case MPI_ERR_SERVICE:
+    errName = "MPI_ERR_SERVICE";
     break;
   case MPI_ERR_SPAWN:
     errName = "MPI_ERR_SPAWN";
     break;
+#endif // _AIX
   case MPI_ERR_UNSUPPORTED_DATAREP:
     errName = "MPI_ERR_UNSUPPORTED_DATAREP";
     break;
@@ -233,11 +240,13 @@ static void printMPIErr(int err, std::string fname,
     errName = "MPI_ERROR";
   }
   if (err != MPI_SUCCESS) {
-    std::cout << "Call to " << fname << " returned " << errName
-              << " at " << file << ":" << line << std::endl;
+//    printf("Call to %s returned %s at %s
+    std::cout << "Call to " << fname.c_str() << " returned " << errName.c_str()
+              << " at " << file.c_str() << ":" << line << std::endl;
   }
 }
 
+#ifndef _NO_GETOPT
 static struct option long_options[] =
   { { "num_iotasks",                 required_argument, 0,           'i' },
     { "num_aggregators",             required_argument, 0,           'a' },
@@ -247,6 +256,7 @@ static struct option long_options[] =
     { "help",                        no_argument,       0,           'h' },
     { 0,                             0,                 0,            0  }
   };
+#endif // _NO_GETOPT
 
 #undef METHODNAME
 #define METHODNAME "main"
@@ -303,7 +313,8 @@ int main(int argc, char *argv[]) {
   pio_dof_t peNumElem;
   pio_dof_t numBlocks;
   pio_dof_t blockStart;
-  int     gDims3D[3];
+  int     gDims3D[3]; // Size of total array
+  int     peDims[3];  // Size of array on this rank
   int     totaldims;
 
   // Initialize MPI
@@ -336,6 +347,7 @@ int main(int argc, char *argv[]) {
   num_aggregators = 1;
 
   // Process input args (if any)
+#ifndef _AIX
   while (copt >= 0) {
     copt = getopt_long(argc, argv, "a:b:hi:r:s:",
 		       long_options, &option_index);
@@ -380,6 +392,7 @@ int main(int argc, char *argv[]) {
       // copt < 0 is normal termination
     }
   }
+#endif // _AIX
 
   std::cout << "My rank is " << my_task << "/" << nprocs << ": "
             << "I am" << (is_master_task ? "" : " not")
@@ -459,6 +472,9 @@ int main(int argc, char *argv[]) {
                     ((my_task - nMod) * numBlocks) + 1); // Fortran based
     }
     peNumElem = blockSize * numBlocks;
+    peDims[0] = numBlocks;
+    peDims[1] = gDims3D[1];
+    peDims[2] = gDims3D[2];
 #if 0
     std::cout << "PE(" << my_task << "): numBlocks = " << numBlocks
               << ", blockStart = " << blockStart << ", peNumElem = "
@@ -487,9 +503,9 @@ int main(int argc, char *argv[]) {
     int maxprint = 100;
     int numerr = 0;
     // Fill the array and the DOF
-    for (int i = 0; i < numBlocks; i++) {
-      for (int j = 0; j < gDims3D[1]; j++) {
-        for (int k = 0; k < gDims3D[2]; k++) {
+    for (int i = 0; i < peDims[0]; i++) {
+      for (int j = 0; j < peDims[1]; j++) {
+        for (int k = 0; k < peDims[2]; k++) {
           SET_LOCAL_VALUE(testArray_i4, i, j, k, numBlocks, gDims3D[1],
                           (getLocalOffset(i, j, k, numBlocks, gDims3D[1]) +
                            (my_task * 10000000)));
@@ -612,20 +628,16 @@ int main(int argc, char *argv[]) {
   if (progOK && fileOpen) {
     rval = MPI_Barrier(MPI_COMM_WORLD);
     CHECK_MPI_FUNC(rval, "MPI_Barrier");
-    PRINTMSGTSK("Calling pio_cpp_write_darray_1d_int");
+    PRINTMSGTSK("Calling pio_cpp_write_darray_1d_int with testArray_i4[" <<
+                  peDims[0] << ", " << peDims[1] << ", " << peDims[2] <<
+                  "]");
     pio_cpp_write_darray_int(File_i4, varDesc_i4, IOdesc_i4,
-                             testArray_i4, gDims3D, 3, &localrc);
+                             testArray_i4, peDims, 3, &localrc);
     rval = MPI_Barrier(MPI_COMM_WORLD);
     CHECK_MPI_FUNC(rval, "MPI_Barrier");
   }
 
   // Sync the file
-  if (fileOpen) {
-    PRINTMSGTSK("Calling pio_cpp_syncfile");
-    pio_cpp_syncfile(File_i4);
-  }
-
-  // Close the file
   if (fileOpen) {
     PRINTMSGTSK("Calling pio_cpp_syncfile");
     pio_cpp_syncfile(File_i4);
@@ -717,10 +729,27 @@ int main(int argc, char *argv[]) {
       }
       progOK = false;
     } else {
-      PRINTMSGTSK("testArray_i4 vid = " << varid <<
-                  ", calling pio_cpp_read_darray_int");
+      PRINTMSGTSK("testArray_i4 vid = " << varid);
+    }
+  }
+  if (progOK && fileOpen) {
+    PRINTMSGTSK("pio_cpp_inq_varid_vdesc");
+    localrc = pio_cpp_inq_varid_vdesc(File_i4, "testArray_i4", varDesc_i4);
+    if (PIO_noerr != localrc) {
+      if (is_master_task) {
+        char errmsg[512];
+        sprintf(errmsg,
+                " ERROR: Attempt to find desc for, \"%s\", return code = %d\n",
+                "testArray_i4", localrc);
+        PRINTMSG(errmsg);
+      }
+      progOK = false;
+    } else {
+      PRINTMSGTSK("calling pio_cpp_read_darray_int with checkArray_i4[" <<
+                  peDims[0] << ", " << peDims[1] << ", " << peDims[2] <<
+                  "]");
       pio_cpp_read_darray_int(File_i4, varDesc_i4, IOdesc_i4,
-                              checkArray_i4, gDims3D, 3, &localrc);
+                              checkArray_i4, peDims, 3, &localrc);
       if (PIO_noerr != localrc) {
         if (is_master_task) {
           char errmsg[512];
