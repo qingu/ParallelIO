@@ -83,7 +83,14 @@ module pio_types
     integer, parameter :: MAX_IO_SYSTEMS=6
     type(iosystem_list_t) :: iosystems(MAX_IO_SYSTEMS)
 
+#ifdef PNETCDF_BPUT
+    integer, parameter :: MAX_BPUT_REQUESTS=1000
 
+    type, public :: bput_requests
+       integer :: request_cnt=0
+       integer :: bput_request_list(MAX_BPUT_REQUESTS)
+    end type bput_requests
+#else
     type, public :: io_data_list
        integer :: request
        real(r4), pointer :: data_real(:) => null()
@@ -91,7 +98,7 @@ module pio_types
        real(r8), pointer :: data_double(:) => null()
        type(io_data_list), pointer :: next=> null()
     end type io_data_list
-
+#endif
      
 !> 
 !! @public
@@ -100,7 +107,11 @@ module pio_types
 !>
     type, public :: File_desc_t
        type(iosystem_desc_t), pointer :: iosystem
+#ifdef PNETCDF_BPUT
+       type(bput_requests) :: requests
+#else
        type(io_data_list), pointer :: data_list_top  => null()  ! used for non-blocking pnetcdf calls
+#endif
        integer :: buffsize=0
        integer :: request_cnt=0
        integer(i4) :: fh

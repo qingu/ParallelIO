@@ -48,7 +48,8 @@ module piodarray
 ! DIMS 1,2,3,4,5,6,7
      module procedure read_darray_{DIMS}d_{TYPE}
   end interface
-
+#ifdef _PNETCDF
+#ifndef PNETCDF_BPUT
 !>
 !! @private
 !<
@@ -56,7 +57,8 @@ module piodarray
 ! TYPE real,int,double
      module procedure add_data_to_buffer_{TYPE}
   end interface
-
+#endif
+#endif
 #ifdef _COMPRESSION
   interface 
      subroutine WriteVDC2Var(iobuf, start, kount, iocomm, ts, lod, reflevel, iotasks, name ) bind(C)
@@ -79,8 +81,8 @@ module piodarray
 
 #endif
   character(len=*), parameter, private  :: modName='piodarray'
-  integer :: total_buffsize=0
-  integer :: pio_buffer_size_limit= 100000000   ! 100MB default
+  integer(kind=MPI_OFFSET_KIND) :: total_buffsize=0
+  integer(kind=MPI_OFFSET_KIND), public :: pio_buffer_size_limit= 100000000   ! 100MB default
 
 #ifdef MEMCHK
 integer :: msize, rss, mshare, mtext, mstack, lastrss=0
@@ -491,8 +493,12 @@ contains
        !--------------------------------------------
     else
        if(file%iotype==pio_iotype_pnetcdf) then
+#ifdef PNETCF_BPUT
+          iobuf => array
+#else
           allocate(iobuf(size(array)))
           iobuf=array
+#endif
        else
           iobuf=>array
        end if
@@ -567,7 +573,12 @@ contains
 
     if(IOPROC) then
        if(file%iotype==pio_iotype_pnetcdf) then
+#ifdef PNETCDF_BPUT
+          file%requests%request_cnt=file%requests%request_cnt+1
+          file%requests%bput_request_list(file%requests%request_cnt)=request
+#else
           call add_data_to_buffer(File, IOBUF, request)
+#endif
        else if(Userearranger) then
           deallocate(iobuf)
        end if
@@ -1129,7 +1140,7 @@ contains
 #endif
 
   end subroutine read_darray_bin_{TYPE}
-
+#ifndef PNETCDF_BPUT
   ! TYPE real,int,double  
   subroutine add_data_to_buffer_{TYPE} (File, IOBUF, request)
     use pio_types, only : io_data_list
@@ -1182,9 +1193,24 @@ contains
 #endif
 
   end subroutine add_data_to_buffer_{TYPE}
+#endif
+#ifdef PNETCDF_BPUT
+  subroutine darray_write_complete(File)
+    use pnetcdf, only : nfmpi_wait_all !_EXTERNAL
+    type(file_desc_t), intent(inout) :: file
+    integer :: ierr
+    integer, allocatable :: status(:)
 
+    allocate(status(file%requests%request_cnt))
 
+    ierr = nfmpi_wait_all(file%fh, file%requests%request_cnt, file%requests%bput_request_list, status) 
+    call check_netcdf(File, ierr,'darray_write_complete',__LINE__)
 
+    file%requests%request_cnt=0
+    deallocate(status)
+
+  end subroutine darray_write_complete
+#else
   subroutine darray_write_complete(File)
     use pio_types, only : io_data_list
 #ifdef _PNETCDF
@@ -1249,7 +1275,7 @@ contains
     end if
 #endif
   end subroutine darray_write_complete
-    
+#endif    
 
 
 

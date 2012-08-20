@@ -39,12 +39,12 @@ contains
 #ifndef NO_MPIMOD
     use mpi !_EXTERNAL
 #endif
+#ifdef _PNETCDF
+    use pnetcdf !_EXTERNAL
+#endif
     implicit none
 #ifdef NO_MPIMOD
     include 'mpif.h'   !_EXTERNAL
-#endif
-#ifdef _PNETCDF
-#   include <pnetcdf.inc>   /* _EXTERNAL */
 #endif
 
     type (File_desc_t), intent(inout) :: File
@@ -83,11 +83,17 @@ contains
              call piodie(subname,__LINE__,'empty iobuf')
           end if
 #endif
-
+#ifdef PNETCDF_BPUT
+          file%requests%request_cnt=file%requests%request_cnt+1
+          ierr=nfmpi_bput_vara_{TYPE}( File%fh,varDesc%varid,start, &
+               count, IOBUF , &
+               file%requests%bput_request_list(file%requests%request_cnt))
+#else
           ierr=nfmpi_iput_vara( File%fh,varDesc%varid,start, &
                count, IOBUF , &
                iodesc%Write%n_ElemTYPE, &
                iodesc%Write%ElemTYPE, request)
+#endif
           if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
                '  IAM: ',File%iosystem%io_rank,' start: ',start,' count: ',count,&
                ' size :',iodesc%Write%n_ElemTYPE, ' error: ',ierr, &

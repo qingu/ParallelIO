@@ -1,6 +1,65 @@
 ===============================================================
 *** You must run 'make predist' in the pio subdirectory before committing. ***
 
+Tag name: pio1_5_3
+Originator(s): Jim
+Date: 12-08-02
+One-line Summary: move test_lib, fixes for serial build, vdc namelist fix 
+
+List all subroutines eliminated:
+
+List all subroutines added and what they do:
+
+List all existing files that have been modified, and describe the changes:
+
+Index: testpio/namelists/testpio_in.vdc01
+   Correct the decomp to be z only as in the ghost model.
+	
+Index: testpio/testpio.F90
+Index: testpio/gdecomp_mod.F90
+   Add a character string test
+	
+Index: pio/test_lib.F90
+Index: testpio/test_lib.F90
+   Move test_lib.F90 for vdc to testpio directory	
+Index: pio/calcdisplace_mod.F90
+   Further improve gaps array by allocating to correct size
+Index: pio/pio_types.F90
+   Initialize async_interface variable to .false.
+	
+Index: pio/box_rearrange.F90.in
+Index: pio/box_rearrange.F90
+   Change count variables to kount       
+       
+
+	
+List all component tags that were used to create pio tag:
+
+Describe the changes for each component above that was changed relative
+to the previous ccsm tag in this sequence (this includes description
+of new functionality and how user can use it):
+
+Bugs fixed:
+
+Describe any changes made to scripts/build system:
+
+Describe any substantial timing or memory changes:
+
+
+
+Code reviewed by: Jim
+
+Summary of pre-tag testing:  	                     
+
+  Regression tests: test complete on lynx_intel 81 tests PASS, 0 tests FAIL
+	            test complete on bluefire 114 tests PASS, 0 tests FAIL
+	
+
+
+===============================================================
+===============================================================
+*** You must run 'make predist' in the pio subdirectory before committing. ***
+
 Tag name: pio1_5_2
 Originator(s): Jim
 Date: 7-21-2012

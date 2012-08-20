@@ -12,7 +12,7 @@ module piolib_mod
   use pio_kinds
   !--------------
   use pio_types, only : file_desc_t, iosystem_desc_t, var_desc_t, io_desc_t, &
-	pio_iotype_pbinary, pio_iotype_binary, pio_iotype_direct_pbinary, &
+	pio_iotype_pbinary, pio_iotype_binary, pio_iotype_direct_pbinary, pio_iotype_vdc2, &
 	pio_iotype_netcdf, pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, &
         pio_noerr, pio_num_ost
   !--------------
@@ -2436,6 +2436,7 @@ contains
 !! @param file @copydoc file_desc_t
 !<
   subroutine syncfile(file)
+    use piodarray, only : darray_write_complete
     implicit none
     type (file_desc_t), target :: file
     integer :: ierr, msg
@@ -2453,10 +2454,14 @@ contains
     end if
 
     select case(file%iotype)
-    case( pio_iotype_pnetcdf, pio_iotype_netcdf)
+    case( pio_iotype_pnetcdf)
+       call darray_write_complete(File)
+       ierr = sync_nf(file)
+    case( pio_iotype_netcdf, pio_iotype_netcdf4c, pio_iotype_netcdf4p)
        ierr = sync_nf(file)
     case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
     case(pio_iotype_binary) 
+    case(pio_iotype_vdc2) 
     end select
   end subroutine syncfile
 !> 
@@ -2568,8 +2573,10 @@ contains
     select case(iotype)
     case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
        ierr = close_mpiio(file)
-    case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
+    case( pio_iotype_pnetcdf )
        call darray_write_complete(file)
+       ierr = close_nf(file)
+    case( pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
        ierr = close_nf(file)
     case(pio_iotype_binary)
        print *,'closefile: io type not supported'
