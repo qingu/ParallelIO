@@ -163,18 +163,23 @@ CONTAINS
   end subroutine calcdisplace_box
 
 
-  SUBROUTINE GCDblocksize(arr_in,bsize)
+  SUBROUTINE GCDblocksize(arr_in,bsize,debug)
     implicit none
 
     integer(kind=pio_offset),intent(in) ,dimension(:)  :: arr_in  !arr_in = rindex array from box_rearrange
     integer(kind=pio_offset),intent(out)               :: bsize   ! the gcd of the block length array
 
     ! Locals
-    integer(i4),dimension(:),allocatable   :: del_arr,loc_arr
+    integer(kind=pio_offset),dimension(:),allocatable   :: del_arr,loc_arr
     integer(kind=pio_offset),dimension(:),allocatable :: gaps, blk_len
-    integer(i4) :: i,j,k,n,numblks,numtimes,tloc,ii
+    integer(i4) :: i,j,k,n,numblks,numtimes,ii, numgaps
     integer(kind=pio_offset) :: bsizeg
+    integer, intent(in), optional :: debug
 
+
+    numblks=0
+    numtimes=0
+    numgaps=0
 
     n = size(arr_in)
 
@@ -185,22 +190,19 @@ CONTAINS
 
     do  i = 1,n-1  ! compute foward diff of the elements; if =1, still in a contiguous block,
        ! if /= 1 , the end of a block has been reached. 
-
        del_arr(i) = (arr_in(i+1) - arr_in(i))
 
-
     end do
-!    print *,'del_arr: ',del_arr
 
     numtimes = count( del_arr /= 1) 
     numblks  = numtimes + 1   ! the number of contiguous blocks.
      
+    if(present(debug)) print *,debug,': numtimes:',numtimes
 
     if ( numtimes == 0 ) then    ! new logic to account for the case that there is only
        allocate(loc_arr(numblks))  ! one contigious block in which case numtimes=0 and the 
     else                         ! error from the assignment in line 87 goes away
        allocate(loc_arr(numtimes))
-       allocate(gaps(numtimes))
     end if
     loc_arr = 1
 
@@ -210,29 +212,31 @@ CONTAINS
 
        if ( del_arr(i) == 1 ) cycle
 
-       tloc = i
-
        j = j+1
 
-       loc_arr(j) = tloc
+       loc_arr(j) = i
 
     end do
     
     if(numtimes>0) then 
        ii=1
-       do i=1,n-1
-         if(del_arr(i) .gt. 1) then
-            gaps(ii) = del_arr(i) -1
-	    ii=ii+1
-         endif
-       enddo
+       numgaps = count(del_arr > 1)
+       if(numgaps>0) then
+          allocate(gaps(numgaps))
+          do i=1,n-1
+             if(del_arr(i) > 1) then
+                gaps(ii) = del_arr(i) -1
+                ii=ii+1
+             endif
+          enddo
+       end if
     endif
 
     allocate(blk_len(numblks))
     blk_len(1) = loc_arr(1)
 
     do k = 2,numblks-1           ! computes the the length of each block by differencing the 
-       ! eleemts of the res array. 
+       ! elements of the res array. 
 
        blk_len(k)  = loc_arr(k) - loc_arr(k-1)
 
@@ -241,11 +245,23 @@ CONTAINS
     blk_len(numblks) = n - sum(blk_len(1:numblks-1)) ! computes the length of the last block
 
 
+
     bsize = gcd_array(blk_len) ! call to compute the gcd of the blk_len array.    
-    if(numtimes>0) then 
-       bsizeg = gcd_array(gaps(1:numtimes)) 
-       bsize = gcd_pair(bsize,bsizeg)
-       deallocate(gaps)
+
+    if(present(debug)) then
+	print *,debug,': numblks,blk_len :',numblks, minval(blk_len),minloc(blk_len),maxval(blk_len),maxloc(blk_len),bsize
+     endif
+
+
+     if(numgaps>0) then
+        bsizeg = gcd_array(gaps(1:numgaps)) 
+        bsize = gcd_pair(bsize,bsizeg)
+
+        if(present(debug)) then
+           print *,debug,': numblks,gaps :',numblks, minval(gaps(1:numgaps)),minloc(gaps(1:numgaps)),maxval(gaps(1:numgaps)),maxloc(gaps(1:numgaps)),bsize,bsizeg,arr_in(1)
+        endif
+
+        deallocate(gaps)
     endif
     if(arr_in(1)>0) then    ! account for an initial gap
        bsize = gcd_pair(bsize,arr_in(1))
@@ -262,41 +278,22 @@ CONTAINS
     integer(kind=pio_offset), intent(in),dimension(:) :: ain
 
     ! locals
-    integer(i8),allocatable :: gcr(:) 
-    integer(i8) :: i,j,x,index,n
-    integer(kind=pio_offset) :: a_min
+    integer(i8) :: i,n
 
     bsize=1
     n = size(ain) 
     ! First check, if an element is 1, then 1 is the gcd (i.e bsize)
     if(n==0 .or. any(ain <= 1)) return
 
-    allocate(gcr(n))
-    gcr = 0
-    !
-
-    ! Find and set the min value.
-
-    a_min = minval(ain)
-
-
-    !print*,"amin = ", a_min
-
-    ! Now compute the gcd between a_min and the rest of the array elements as long as a_min /= 1
-    ! otherwise gcd = a_min = 1.
+    ! Calculate GCD using GCD(a,b,c,...) = GCD(a,GCD(b,c...))
+    ! otherwise gcd = 1.
     ! Done by calling the external function that is below.
 
-    do i = 1,n
-       gcr(i) = gcd_pair(a_min,ain(i))
+    bsize = ain(1)
+    do i = 2,n
+       bsize = gcd_pair(bsize,ain(i))
+       if (bsize == 1) exit
     end do
-
-    !
-    ! Now look for the smallest value in the gcr array and and assign it to bsize.
-    !
-
-    bsize = minval(gcr)
-
-    deallocate(gcr)
 
   end function gcd_array_i8
 
@@ -307,41 +304,22 @@ CONTAINS
     integer(i4), intent(in),dimension(:) :: ain
 
     ! locals
-    integer(i4),allocatable :: gcr(:) 
-    integer(i4) :: i,j,x,index,n
-    integer(i4) :: a_min
+    integer(i4) :: i,n
 
     bsize=1
     n = size(ain) 
     ! First check, if an element is 1, then 1 is the gcd (i.e bsize)
     if(n==0 .or. any(ain <= 1)) return
 
-    allocate(gcr(n))
-    gcr = 0
-    !
-
-    ! Find and set the min value.
-
-    a_min = minval(ain)
-
-
-    !print*,"amin = ", a_min
-
-    ! Now compute the gcd between a_min and the rest of the array elements as long as a_min /= 1
-    ! otherwise gcd = a_min = 1.
+    ! Calculate GCD using GCD(a,b,c,...) = GCD(a,GCD(b,c...))
+    ! otherwise gcd = 1.
     ! Done by calling the external function that is below.
 
-    do i = 1,n
-       gcr(i) = gcd_pair(a_min,ain(i))
+    bsize = ain(1)
+    do i = 2,n
+       bsize = gcd_pair(bsize,ain(i))
+       if (bsize == 1) exit
     end do
-
-    !
-    ! Now look for the smallest value in the gcr array and and assign it to bsize.
-    !
-
-    bsize = minval(gcr)
-
-    deallocate(gcr)
 
   end function gcd_array_i4
 
