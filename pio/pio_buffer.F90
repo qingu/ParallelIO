@@ -139,9 +139,9 @@ contains
     implicit none
     type(file_desc_t) :: File
     integer :: ierr
-
+#ifdef _PNETCDF
     ierr = nfmpi_buffer_attach(File%fh, pio_buffer_size_limit)
-
+#endif
 
   end subroutine pio_buffer_attach
 
