@@ -1,4 +1,4 @@
-#define __PIO_FILE__ 'piodarray'
+#define __PIO_FILE__ "piodarray.F90.in"
 
 module piodarray
   use pio_types, only : file_desc_t, io_desc_t, var_desc_t, pio_noerr, iosystem_desc_t, &
@@ -12,6 +12,7 @@ module piodarray
   use iompi_mod
   use alloc_mod
   use rearrange
+  use pio_buffer, only : pio_buffer_add_request
 #ifdef _COMPRESSION
   use piovdc
 #endif
@@ -26,7 +27,7 @@ module piodarray
   include 'mpif.h'            !_EXTERNAL
 #endif
   private
-  public :: pio_read_darray, pio_write_darray, darray_write_complete, pio_set_buffer_size_limit
+  public :: pio_read_darray, pio_write_darray, darray_write_complete
   
 !> 
 !! @defgroup PIO_write_darray PIO_write_darray
@@ -49,6 +50,8 @@ module piodarray
      module procedure read_darray_{DIMS}d_{TYPE}
   end interface
 
+
+#ifdef PIO_MANAGE_BUFFER
 !>
 !! @private
 !<
@@ -56,6 +59,7 @@ module piodarray
 ! TYPE real,int,double
      module procedure add_data_to_buffer_{TYPE}
   end interface
+#endif
 
 #ifdef _COMPRESSION
   interface 
@@ -390,7 +394,7 @@ contains
     integer(pio_offset), pointer :: start(:), count(:)
 
     integer(i4), intent(out) :: iostat
-    integer :: request
+
     !EOP
     !BOC
     !-----------------------------------------------------------------------
@@ -562,7 +566,7 @@ contains
 #ifdef TIMING
     call t_startf("pio_write_nf")
 #endif
-    ierr = write_nf(File,IOBUF,varDesc,iodesc,start,count, request) 
+    ierr = write_nf(File,IOBUF,varDesc,iodesc,start,count) 
 #ifdef TIMING
     call t_stopf("pio_write_nf")
 #endif
@@ -570,9 +574,7 @@ contains
     call dealloc_check(count)
 
     if(IOPROC) then
-       if(file%iotype==pio_iotype_pnetcdf) then
-          call add_data_to_buffer(File, IOBUF, request)
-       else if(Userearranger) then
+       if(Userearranger) then
           deallocate(iobuf)
        end if
     end if
@@ -1133,7 +1135,7 @@ contains
 #endif
 
   end subroutine read_darray_bin_{TYPE}
-
+#ifdef PIO_MANAGE_BUFFER
   ! TYPE real,int,double  
   subroutine add_data_to_buffer_{TYPE} (File, IOBUF, request)
     use pio_types, only : io_data_list
@@ -1186,28 +1188,35 @@ contains
 #endif
 
   end subroutine add_data_to_buffer_{TYPE}
-
+#endif
 
 
   subroutine darray_write_complete(File)
+#ifdef PIO_MANAGE_BUFFER
     use pio_types, only : io_data_list
+#else
+    use pio_buffer, only : pio_buffer_add_request
+#endif
 #ifdef _PNETCDF
 #   include <pnetcdf.inc>   /* _EXTERNAL */    
 #endif
 
-    type(file_desc_t) :: File
+    type(file_desc_t), target :: File
+#ifdef PIO_MANAGE_BUFFER
     type(io_data_list), pointer :: ptr, prevptr
+#endif
     integer :: cnt, ierr
     integer, pointer :: array_of_requests(:), status(:)
 
+#ifdef PIO_MANAGE_BUFFER
     if(associated(file%data_list_top)) then
        if(debug) print *,__FILE__,__LINE__, file%request_cnt
 #ifdef MEMCHK	
-    call GPTLget_memusage(msize, rss, mshare, mtext, mstack)
-    if(rss>lastrss) then
-       lastrss=rss
-       print *,__PIO_FILE__,__LINE__,'mem=',rss
-    end if
+       call GPTLget_memusage(msize, rss, mshare, mtext, mstack)
+       if(rss>lastrss) then
+          lastrss=rss
+          print *,__PIO_FILE__,__LINE__,'mem=',rss
+       end if
 #endif
        allocate(array_of_requests(file%request_cnt), status(file%request_cnt))
        ptr=>file%data_list_top
@@ -1217,12 +1226,17 @@ contains
           cnt=cnt+1
           ptr=>ptr%next
        end do
-       if(DEBUG) print *,__FILE__,__LINE__, array_of_requests, cnt, file%request_cnt
+#else
+       array_of_requests => File%requests
+#endif
+
+       print *,__FILE__,__LINE__, array_of_requests, cnt, file%request_cnt
 #ifdef _PNETCDF
        ierr  = nfmpi_wait_all(file%fh, file%request_cnt, array_of_requests, status)
 #endif
        if(DEBUG) print *,__FILE__,__LINE__,status, ierr, total_buffsize
 
+#ifdef PIO_MANANGE_BUFFER
        ptr=>file%data_list_top
        do while(associated(ptr))
           if(associated(ptr%data_double)) then
@@ -1241,10 +1255,15 @@ contains
        total_buffsize=total_buffsize-file%buffsize
 
        file%buffsize=0
-       file%request_cnt=0
        deallocate(array_of_requests)
-       deallocate(status)
-    end if
+    endif
+#else
+    file%requests=MPI_REQUEST_NULL
+#endif
+       
+    file%request_cnt=0
+    deallocate(status)
+   
 #ifdef MEMCHK	
     call GPTLget_memusage(msize, rss, mshare, mtext, mstack)
     if(rss>lastrss) then

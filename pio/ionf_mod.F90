@@ -14,7 +14,7 @@ module ionf_mod
   use netcdf            ! _EXTERNAL
 #endif
   use pio_support, only : CheckMPIReturn
-
+  use pio_buffer, only : pio_buffer_attach
   implicit none
   private
 
@@ -58,9 +58,9 @@ contains
 #ifdef _PNETCDF
        case(PIO_iotype_pnetcdf)
           ierr  = nfmpi_create(File%iosystem%IO_comm,fname,nmode ,File%iosystem%info,File%fh)
-! Set default to NOFILL for performance.  
-!   pnetcdf is nofill by default and doesn't support a fill mode
-!	  ierr = nfmpi_set_fill(File%fh, NF_NOFILL, nmode)
+#ifndef PIO_MANAGE_BUFFER
+          call pio_buffer_attach(file)
+#endif
 #endif
 #ifdef _NETCDF
 #ifdef _NETCDF4
@@ -176,7 +176,11 @@ contains
              amode = NF_NOWRITE
           end if
           ierr  = nfmpi_open(File%iosystem%IO_comm,fname,amode,File%iosystem%info,File%fh)
-
+#ifndef PIO_MANAGE_BUFFER
+          if(iand(NF_WRITE,amode)==NF_WRITE) then
+             call pio_buffer_attach(file)
+          end if
+#endif
 #ifdef _NETCDF
 #ifdef _NETCDF4
           if(ierr /= PIO_NOERR) then    ! try hdf5 format
@@ -237,6 +241,7 @@ contains
 
 
   integer function close_nf(File) result(ierr)
+    use pio_buffer, only : pio_buffer_flush
     type (File_desc_t), intent(inout) :: File
 
     ierr=PIO_noerr
@@ -246,6 +251,17 @@ contains
        select case (File%iotype) 
 #ifdef _PNETCDF
        case(PIO_iotype_pnetcdf)
+#ifdef PIO_MANAGE_BUFFER
+          call darray_write_complete(file)
+#else
+          if(file%request_cnt>0) then
+             call pio_buffer_flush(File)
+             ierr = nfmpi_buffer_detach(File%fh)
+          end if
+#endif
+
+
+
           ierr=nfmpi_close(file%fh)
 #endif
 #ifdef _NETCDF

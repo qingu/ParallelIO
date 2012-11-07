@@ -83,15 +83,20 @@ module pio_types
     integer, parameter :: MAX_IO_SYSTEMS=6
     type(iosystem_list_t) :: iosystems(MAX_IO_SYSTEMS)
 
+    integer, parameter, public :: MAX_BUFFERED_REQUESTS=1000
 
-    type, public :: io_data_list
-       integer :: request
-       real(r4), pointer :: data_real(:) => null()
-       integer(i4), pointer :: data_int(:) => null()
-       real(r8), pointer :: data_double(:) => null()
-       type(io_data_list), pointer :: next=> null()
-    end type io_data_list
 
+
+#ifdef PIO_MANAGE_BUFFER
+  type, public :: io_data_list
+
+     integer :: request
+     real(r4), pointer :: data_real(:) => null()
+     integer(i4), pointer :: data_int(:) => null()
+     real(r8), pointer :: data_double(:) => null()
+     type(io_data_list), pointer :: next=> null()
+  end type io_data_list
+#endif
      
 !> 
 !! @public
@@ -100,7 +105,12 @@ module pio_types
 !>
     type, public :: File_desc_t
        type(iosystem_desc_t), pointer :: iosystem
+
+#ifdef PIO_MANAGE_BUFFER
        type(io_data_list), pointer :: data_list_top  => null()  ! used for non-blocking pnetcdf calls
+#else
+       integer :: requests(MAX_BUFFERED_REQUESTS)
+#endif
        integer :: buffsize=0
        integer :: request_cnt=0
        integer(i4) :: fh

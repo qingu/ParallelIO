@@ -15,21 +15,16 @@ module pionfput_mod
   use pio_utils, only : check_netcdf
   use pio_msg_mod
   use pio_support, only : Debug, DebugIO, piodie   
-#ifdef _NETCDF
-  use netcdf            ! _EXTERNAL
-#endif
-#ifndef NO_MPIMOD
-  use mpi   ! _EXTERNAL
+  use pio_buffer, only: pio_buffer_add_request
+#ifdef _PNETCDF
+  use pnetcdf   ! _EXTERNAL
 #endif
   implicit none
   private
-#ifdef _PNETCDF
-#include <pnetcdf.inc>  /* _EXTERNAL */
-#endif
-#ifdef _NETCDF
-! Required for netcdf bug workaround
-  integer, external :: nf_put_vars_text
-#endif
+!#ifdef _PNETCDF
+!#include <pnetcdf.inc>  /* _EXTERNAL */
+!#endif
+
 #ifdef NO_MPIMOD
   include 'mpif.h'   ! _EXTERNAL
 #endif
@@ -64,6 +59,13 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_var1_text (File,varid, index, ival) result(ierr)
+#ifdef _NETCDF
+  use netcdf            ! _EXTERNAL
+#endif
+#ifndef NO_MPIMOD
+  use mpi   ! _EXTERNAL
+#endif
+
     type (File_desc_t), intent(inout) :: File
     integer, intent(in) :: varid, index(:)
     character(len=*), intent(in) :: ival
@@ -71,7 +73,7 @@ contains
     integer :: iotype
     type(iosystem_desc_t), pointer :: ios
     integer :: xlen, msg, mpierr
-
+    integer :: request
 #ifdef TIMING
     call t_startf("pio_put_var1_text")
 #endif 
@@ -111,7 +113,7 @@ contains
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
-#ifdef USE_INDEP_WRITE
+#if defined( USE_INDEP_WRITE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara (File%fh, varid, int(index,kind=PIO_OFFSET), int(count,kind=PIO_OFFSET), &
@@ -120,9 +122,13 @@ contains
           if(ierr==PIO_NOERR) then
              ierr = nfmpi_end_indep_data(File%fh)
           end if
-#else
+#elif defined( USE_BLOCKING_WRITE )
              ierr = nfmpi_put_vara_all (File%fh, varid, int(index,kind=PIO_OFFSET), int(count,kind=PIO_OFFSET), &
                   ival, int(count,kind=PIO_OFFSET), MPI_CHARACTER)
+#else
+             ierr = nfmpi_bput_vara_text (File%fh, varid, int(index,kind=PIO_OFFSET), int(count,kind=PIO_OFFSET), &
+                  ival, request)
+             call pio_buffer_add_request(file, request)
 #endif
 
 #endif
@@ -160,6 +166,12 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_var1_{TYPE} (File,varid, index, ival) result(ierr)
+#ifdef _NETCDF
+  use netcdf            ! _EXTERNAL
+#endif
+#ifndef NO_MPIMOD
+  use mpi   ! _EXTERNAL
+#endif
     type (File_desc_t), intent(inout) :: File
     integer, intent(in) :: varid, index(:)
     {VTYPE}, intent(in) :: ival
@@ -167,6 +179,7 @@ contains
     integer :: iotype
     type(iosystem_desc_t), pointer :: ios
     integer :: xlen, msg, mpierr
+    integer :: request
 
 #ifdef TIMING
     call t_startf("pio_put_var1_{TYPE}")
@@ -203,7 +216,7 @@ contains
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
-#ifdef USE_INDEP_WRITE
+#if defined( USE_INDEP_WRITE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara (File%fh, varid, int(index,kind=PIO_OFFSET), int(count,kind=PIO_OFFSET), &
@@ -212,10 +225,14 @@ contains
           if(ierr==PIO_NOERR) then
              ierr = nfmpi_end_indep_data(File%fh)
           end if
-#else
+#elif defined( USE_BLOCKING_WRITE )
           ierr = nfmpi_put_vara_all (File%fh, varid, int(index,kind=PIO_OFFSET), int(count,kind=PIO_OFFSET), &
                ival, int(count,kind=PIO_OFFSET), {MPITYPE})
-
+#else
+          if(Ios%io_rank==0) then
+             ierr = nfmpi_bput_var1_{TYPE} (File%fh, varid, int(index,kind=PIO_OFFSET), ival, request)
+             call pio_buffer_add_request(file, request)
+          endif
 #endif
 #endif
 #ifdef _NETCDF
@@ -261,7 +278,6 @@ contains
   end function put_var1_vdesc_{TYPE}
 
 ! DIMS 0,1,2,3,4,5
-! TYPE text
 !>
 !! @public
 !! @ingroup PIO_put_var
@@ -274,6 +290,13 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_var_{DIMS}d_text (File,varid, ival) result(ierr)
+#ifdef _NETCDF
+    use netcdf            ! _EXTERNAL
+#endif
+#ifndef NO_MPIMOD
+    use mpi   ! _EXTERNAL
+#endif
+    use pio_buffer, only : pio_buffer_add_request
     type (File_desc_t), intent(inout) :: File
     integer, intent(in) :: varid
     character(len=*), intent(in) :: ival{DIMSTR}
@@ -282,6 +305,13 @@ contains
     type(iosystem_desc_t), pointer :: ios
     integer :: dims({DIMS})
     integer :: start({DIMS}+1), count({DIMS}+1)
+    integer :: request
+#ifdef _NETCDF
+! Required for netcdf bug workaround
+  integer, external :: nf_put_vars_text
+#endif
+
+
 #ifdef TIMING
     call t_startf("pio_put_var_{DIMS}d_text")
 #endif 
@@ -313,9 +343,9 @@ contains
 
     if(ios%async_interface ) then
 #if({DIMS}==0)       
-       call MPI_BCAST(ival,1,{MPITYPE},ios%CompMaster, ios%my_comm , mpierr)
+       call MPI_BCAST(ival,1,MPI_CHARACTER,ios%CompMaster, ios%my_comm , mpierr)
 #else
-       call MPI_BCAST(ival,size(ival),{MPITYPE},ios%CompMaster, ios%my_comm , mpierr)
+       call MPI_BCAST(ival,size(ival),MPI_CHARACTER,ios%CompMaster, ios%my_comm , mpierr)
 #endif
     end if
 
@@ -332,13 +362,21 @@ contains
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
+#if defined (USE_INDEP_MODE) 
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
-             ierr = nfmpi_put_var_{TYPE} (File%fh, varid, ival)
+             ierr = nfmpi_put_var_text (File%fh, varid, ival)
           end if
           if(ierr==PIO_NOERR) then
              ierr = nfmpi_end_indep_data(File%fh)
           end if
+#else
+          request = MPI_REQUEST_NULL
+          if(Ios%io_rank==0 ) then
+             ierr = nfmpi_bput_var_text (File%fh, varid, ival, request)
+          end if
+          call pio_buffer_add_request(File, request)
+#endif
 #endif
 #ifdef _NETCDF
        case(pio_iotype_netcdf4p)
@@ -397,15 +435,23 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_var_{DIMS}d_{TYPE} (File,varid, ival) result(ierr)
+#ifdef _NETCDF
+  use netcdf            ! _EXTERNAL
+#endif
+#ifndef NO_MPIMOD
+  use mpi   ! _EXTERNAL
+#endif
+
     type (File_desc_t), intent(inout) :: File
     integer, intent(in) :: varid
-    {VTYPE}, intent(in) :: ival{DIMSTR}
+    {VTYPE}, intent(in), target :: ival{DIMSTR}
+    {VTYPE}, pointer :: pval(:)
     integer :: iotype
     integer :: i, is, msg, mpierr, xlen
     type(iosystem_desc_t), pointer :: ios
     integer :: dims({DIMS})
     integer :: start({DIMS}), count({DIMS})
-
+    integer :: request
 
 
     ierr=PIO_NOERR
@@ -415,17 +461,6 @@ contains
     count = 0
     is=0       
 
-#ifdef _PNETCDF
-#if({DIMS}>0)
-    if(iotype == pio_iotype_pnetcdf) then
-       do i=1,{DIMS}
-          count(i) = size(ival,i)
-       end do
-       ierr = put_vara_{DIMS}d_{TYPE} (File, varid, start, count, ival)
-       return
-    end if
-#endif
-#endif
 #ifdef TIMING
     call t_startf("pio_put_var_{DIMS}d_{TYPE}")
 #endif 
@@ -459,11 +494,14 @@ contains
           do i=1,{DIMS}
              count(i+is) = size(ival,i)
           end do
+#else
+          count=1
 #endif
        end if
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
+#if defined ( USE_INDEP_MODE ) 
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_var_{TYPE} (File%fh, varid, ival)
@@ -471,6 +509,23 @@ contains
           if(ierr==PIO_NOERR) then
              ierr = nfmpi_end_indep_data(File%fh)
           end if
+#else
+          request = MPI_REQUEST_NULL
+!          if(Ios%io_rank==0 ) then
+!             ierr = nfmpi_bput_var_{TYPE} (File%fh, varid, ival, request)
+!          end if
+#if({DIMS}==0)       
+          if(Ios%io_rank==0 ) then
+             ierr = nfmpi_bput_var1_{TYPE} (File%fh, varid, int(start,kind=PIO_OFFSET), &
+                  ival, request)
+          end if
+#else
+          ierr = nfmpi_bput_vara_{TYPE} (File%fh, varid, int(start,kind=PIO_OFFSET), &
+               int(count,kind=PIO_OFFSET), ival, request)
+#endif
+          call pio_buffer_add_request(File, request)
+
+#endif
 #endif
 #ifdef _NETCDF
        case(pio_iotype_netcdf4p)
@@ -533,6 +588,13 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_vara_{DIMS}d_text (File,varid, start, count, ival) result(ierr)
+#ifdef _NETCDF
+  use netcdf            ! _EXTERNAL
+#endif
+#ifndef NO_MPIMOD
+  use mpi   ! _EXTERNAL
+#endif
+
     use nf_mod, only : pio_inq_varndims
     type (File_desc_t), intent(inout) :: File
     integer, intent(in) :: varid, start(:), count(:)
@@ -544,6 +606,7 @@ contains
     integer(kind=pio_offset) :: clen
     type(iosystem_desc_t), pointer :: ios
     integer :: dims({DIMS}), xlen
+    integer :: request
 #ifdef TIMING
     call t_startf("pio_put_vara_{DIMS}d_text")
 #endif 
@@ -598,7 +661,7 @@ contains
           do i=2,size(count)
              clen=clen*count(i)
           end do
-#ifdef USE_INDEP_WRITE
+#if defined( USE_INDEP_WRITE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara_{TYPE} (File%fh, varid, pstart, &
@@ -607,9 +670,14 @@ contains
           if(ierr==PIO_NOERR) then
              ierr = nfmpi_end_indep_data(File%fh)
           end if
-#else
-             ierr = nfmpi_put_vara_{TYPE}_all (File%fh, varid, pstart, &
+#elif defined( USE_BLOCKING_WRITE )
+             ierr = nfmpi_put_vara_text_all (File%fh, varid, pstart, &
                   pcount, ival, clen, {MPITYPE})
+#else
+             request=MPI_REQUEST_NULL
+             ierr = nfmpi_bput_vara_text (File%fh, varid, pstart, &
+                  pcount, ival, request)
+             call pio_buffer_add_request(File,request)
 
 #endif
 #endif
@@ -649,6 +717,13 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_vara_{DIMS}d_{TYPE} (File,varid, start, count, ival) result(ierr)
+#ifdef _NETCDF
+  use netcdf            ! _EXTERNAL
+#endif
+#ifndef NO_MPIMOD
+  use mpi   ! _EXTERNAL
+#endif
+
     use nf_mod, only : pio_inq_varndims
     type (File_desc_t), intent(inout) :: File
     integer, intent(in) :: varid, start(:), count(:)
@@ -660,6 +735,8 @@ contains
     integer(kind=pio_offset) :: clen
     type(iosystem_desc_t), pointer :: ios
     integer :: dims({DIMS}), xlen
+    integer :: request
+
 #ifdef TIMING
     call t_startf("pio_put_vara_{DIMS}d_{TYPE}")
 #endif 
@@ -712,7 +789,7 @@ contains
           do i=2,size(count)
              clen=clen*count(i)
           end do
-#ifdef USE_INDEP_WRITE
+#if defined( USE_INDEP_WRITE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara_{TYPE} (File%fh, varid, pstart, &
@@ -721,9 +798,13 @@ contains
           if(ierr==PIO_NOERR) then
              ierr = nfmpi_end_indep_data(File%fh)
           end if
-#else
+#elif defined( USE_BLOCKING_WRITE )
           ierr = nfmpi_put_vara_{TYPE}_all (File%fh, varid, pstart, &
                pcount, ival, clen, {MPITYPE})
+#else
+          ierr = nfmpi_bput_vara_{TYPE} (File%fh, varid, pstart, &
+               pcount, ival, request)
+          call pio_buffer_add_request(File, request)
 
 #endif
 #endif
