@@ -293,7 +293,7 @@ sub loadmodules{
 	module("load ncarcompilers/1.0");
         module("unload netcdf");
         module("load netcdf/4.2");
-        module("load pnetcdf/1.3.0");
+#        module("load pnetcdf/1.3.0");
         module("load ncarenv/1.0");
 	module("load ncarbinlibs/0.0");
 	module("list");

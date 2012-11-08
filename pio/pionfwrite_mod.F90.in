@@ -83,10 +83,14 @@ contains
              call piodie(subname,__LINE__,'empty iobuf')
           end if
 #endif
-
+          call pio_buffer_check(File, size(IOBUF)*sizeof(IOBUF))
+#ifdef PIO_MANAGE_BUFFER
+          ierr=nfmpi_iput_vara_{TYPE} ( File%fh,varDesc%varid,start, &
+               count, IOBUF , request )
+#else
           ierr=nfmpi_bput_vara_{TYPE} ( File%fh,varDesc%varid,start, &
                count, IOBUF , request )
-
+#endif
 !               iodesc%Write%n_ElemTYPE, &
 !               iodesc%Write%ElemTYPE, request)
           if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
@@ -97,7 +101,6 @@ contains
                '  IAM: ',File%iosystem%io_rank,'minval: ',minval(IOBUF),'maxval: ',maxval(IOBUF)
 
           call pio_buffer_add_request(File,request)
-          call pio_buffer_check(File)
 
 #endif
 

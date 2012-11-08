@@ -57,7 +57,7 @@ contains
     integer :: maxrequestcnt
     integer :: mpierr
 
-    if(request/=MPI_REQUEST_NULL) then
+!    if(request/=MPI_REQUEST_NULL) then
        File%request_cnt=File%request_cnt+1
 
        if(File%request_cnt>=MAX_BUFFERED_REQUESTS) then
@@ -66,7 +66,7 @@ contains
 
 
        File%requests(File%request_cnt)=request
-    end if
+!    end if
 
 
     if(DebugBuffers) then
@@ -74,7 +74,7 @@ contains
        call CheckMPIreturn('close_mpiio: after call to file_close: ',mpierr)        
 
        if(maxrequestcnt==MAX_BUFFERED_REQUESTS) then
-          ! Flush write buffer here
+          call pio_buffer_flush(File)
        end if
     end if
 
@@ -124,7 +124,7 @@ contains
        call darray_write_complete(File)
     endif
 
-    if(debug) print *,__FILE__,__LINE__,'buffsize = ',file%buffsize,file%request_cnt
+    if(debugbuffers) print *,__FILE__,__LINE__,'buffsize = ',file%buffsize,file%request_cnt
 #ifdef MEMCHK	
     call GPTLget_memusage(msize, rss, mshare, mtext, mstack)
     if(rss>lastrss) then
@@ -160,9 +160,9 @@ contains
   end subroutine pio_buffer_flush
 
 
-  subroutine pio_buffer_check(File)
+  subroutine pio_buffer_check(File, addsize)
     type(file_desc_t) :: File
-    integer :: ierr
+    integer :: ierr, addsize
 
     integer(kind=pio_offset) :: bufsize, maxbufsize
 
@@ -170,7 +170,11 @@ contains
 
     ierr = nfmpi_inq_buffer_usage(File%fh,bufsize)
 
+    bufsize = bufsize+int(addsize*8,kind=pio_offset)
+
     call MPI_ALLREDUCE(bufsize,maxbufsize,1,MPI_INTEGER8,MPI_MAX,file%iosystem%io_comm, ierr)
+
+    if(debugbuffers) print *,__FILE__,__LINE__,'buffsize = ',bufsize,file%request_cnt,maxbufsize
 
     if(maxbufsize > pio_buffer_size_limit) then
        call pio_buffer_flush(File)

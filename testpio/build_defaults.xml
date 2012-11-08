@@ -34,7 +34,7 @@
  />  
 
 <yellowstone
-  PNETCDF_PATH="${PNETCDF}"
+  PNETCDF_PATH="/glade/u/home/jedwards/pnetcdf/svn1104/intel/"
   NETCDF_PATH="${NETCDF}"
   ENV_MP_LABELIO="yes"
   ENV_MP_MPILIB="mpich2"
