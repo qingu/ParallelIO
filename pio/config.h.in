@@ -24,6 +24,12 @@
 /* Define if the netCDF library is compiled with netCDF 4 API. */
 #undef HAVE_NETCDF4
 
+/* Define if you have the PNETCDF library. */
+#undef HAVE_PNETCDF
+
+/* Define if the pnetcdf library has bput support */
+#undef HAVE_PNETCDF_BPUT
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 

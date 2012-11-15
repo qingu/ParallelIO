@@ -2542,11 +2542,6 @@ contains
 !! @param file @copydoc file_desc_t
 !< 
   subroutine closefile(file)
-#ifdef PIO_MANAGE_BUFFER
-    use piodarray, only : darray_write_complete
-#else
-    use pio_buffer, only : pio_buffer_flush
-#endif
     type (file_desc_t),intent(inout)   :: file
 
     integer :: ierr, msg
@@ -2571,11 +2566,6 @@ contains
     case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
        ierr = close_mpiio(file)
     case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
-#ifdef PIO_MANAGE_BUFFER
-       call darray_write_complete(file)
-#else
-       call pio_buffer_flush(File)
-#endif
        ierr = close_nf(file)
     case(pio_iotype_binary)
        print *,'closefile: io type not supported'

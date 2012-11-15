@@ -25,7 +25,7 @@ module pio
         pio_rearr_box, pio_internal_error, pio_bcast_error, pio_return_error
 
   use piodarray, only : pio_read_darray, pio_write_darray
-  use pio_buffer, only: pio_set_buffer_size_limit  
+  use pio_buffer, only: pio_set_buffer_size_limit
 
   use nf_mod, only:        &
        PIO_enddef,            &

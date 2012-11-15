@@ -1,5 +1,6 @@
 module pionfwrite_mod
   use pio_kinds, only : r4, r8, i4, pio_offset
+  
   implicit none
   private
 !>
@@ -29,7 +30,8 @@ contains
     use pio_utils, only : check_netcdf, bad_iotype
     use alloc_mod, only: alloc_check
     use pio_support, only : Debug, DebugIO, piodie, checkmpireturn 
-    use pio_buffer,  only: pio_buffer_add_request, pio_buffer_check
+
+    use pio_buffer
 #ifdef _NETCDF
     use netcdf, only : nf90_put_var, nf90_inquire_variable  !_EXTERNAL
 #endif
@@ -48,7 +50,7 @@ contains
 #endif
 
     type (File_desc_t), intent(inout) :: File
-    {VTYPE} , intent(in), target      :: IOBUF(:)
+    {VTYPE} , intent(in), pointer     :: IOBUF(:)
     type (var_desc_t), intent(in)     :: varDesc
     type (IO_desc_t), intent(in)      :: IODesc
 
@@ -83,26 +85,19 @@ contains
              call piodie(subname,__LINE__,'empty iobuf')
           end if
 #endif
-          call pio_buffer_check(File, size(IOBUF)*sizeof(IOBUF))
 #ifdef PIO_MANAGE_BUFFER
           ierr=nfmpi_iput_vara_{TYPE} ( File%fh,varDesc%varid,start, &
                count, IOBUF , request )
+          call pio_buffer_add_request(File,request)
+          call pio_buffer_add_data (File, IOBUF)
 #else
           ierr=nfmpi_bput_vara_{TYPE} ( File%fh,varDesc%varid,start, &
                count, IOBUF , request )
-#endif
-!               iodesc%Write%n_ElemTYPE, &
-!               iodesc%Write%ElemTYPE, request)
-          if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
-               '  IAM: ',File%iosystem%io_rank,' start: ',start,' count: ',count,&
-               ' size :',iodesc%Write%n_ElemTYPE, ' error: ',ierr, &
-               iodesc%Write%ElemTYPE, request
-          if(Debug.or.ierr/=PIO_noerr) print *,subname,__LINE__, &
-               '  IAM: ',File%iosystem%io_rank,'minval: ',minval(IOBUF),'maxval: ',maxval(IOBUF)
-
           call pio_buffer_add_request(File,request)
-
 #endif
+#endif
+
+
 
 #ifdef _NETCDF
        case(PIO_iotype_netcdf4p)	

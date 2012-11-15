@@ -1,3 +1,7 @@
+#ifdef PIO_MANAGE_BUFFER
+#define USE_BLOCKING_WRITE 1
+#endif
+
 #define __PIO_FILE__ "pionfput_mod.F90"
 module pionfput_mod
   !pl  This file is input to the perl program genf90.pl which generates  
@@ -16,15 +20,18 @@ module pionfput_mod
   use pio_msg_mod
   use pio_support, only : Debug, DebugIO, piodie   
   use pio_buffer, only: pio_buffer_add_request
+#ifndef PIO_MANAGE_BUFFER
 #ifdef _PNETCDF
   use pnetcdf   ! _EXTERNAL
 #endif
+#endif
   implicit none
   private
-!#ifdef _PNETCDF
-!#include <pnetcdf.inc>  /* _EXTERNAL */
-!#endif
-
+#ifdef PIO_MANAGE_BUFFER
+#ifdef _PNETCDF
+#include <pnetcdf.inc>  /* _EXTERNAL */
+#endif
+#endif
 #ifdef NO_MPIMOD
   include 'mpif.h'   ! _EXTERNAL
 #endif
@@ -113,7 +120,7 @@ contains
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
-#if defined( USE_INDEP_WRITE )
+#if defined( USE_INDEP_MODE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara (File%fh, varid, int(index,kind=PIO_OFFSET), int(count,kind=PIO_OFFSET), &
@@ -216,7 +223,7 @@ contains
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
-#if defined( USE_INDEP_WRITE )
+#if defined( USE_INDEP_MODE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara (File%fh, varid, int(index,kind=PIO_OFFSET), int(count,kind=PIO_OFFSET), &
@@ -362,7 +369,7 @@ contains
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
-#if defined (USE_INDEP_MODE) 
+#if defined (USE_INDEP_MODE) || defined (USE_BLOCKING_WRITE) 
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_var_text (File%fh, varid, ival)
@@ -501,7 +508,7 @@ contains
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
-#if defined ( USE_INDEP_MODE ) 
+#if defined ( USE_INDEP_MODE ) || defined (USE_BLOCKING_WRITE)
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_var_{TYPE} (File%fh, varid, ival)
@@ -511,9 +518,6 @@ contains
           end if
 #else
           request = MPI_REQUEST_NULL
-!          if(Ios%io_rank==0 ) then
-!             ierr = nfmpi_bput_var_{TYPE} (File%fh, varid, ival, request)
-!          end if
 #if({DIMS}==0)       
           if(Ios%io_rank==0 ) then
              ierr = nfmpi_bput_var1_{TYPE} (File%fh, varid, int(start,kind=PIO_OFFSET), &
@@ -661,7 +665,7 @@ contains
           do i=2,size(count)
              clen=clen*count(i)
           end do
-#if defined( USE_INDEP_WRITE )
+#if defined( USE_INDEP_MODE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara_{TYPE} (File%fh, varid, pstart, &
@@ -672,7 +676,7 @@ contains
           end if
 #elif defined( USE_BLOCKING_WRITE )
              ierr = nfmpi_put_vara_text_all (File%fh, varid, pstart, &
-                  pcount, ival, clen, {MPITYPE})
+                  pcount, ival)
 #else
              request=MPI_REQUEST_NULL
              ierr = nfmpi_bput_vara_text (File%fh, varid, pstart, &
@@ -789,7 +793,7 @@ contains
           do i=2,size(count)
              clen=clen*count(i)
           end do
-#if defined( USE_INDEP_WRITE )
+#if defined( USE_INDEP_MODE )
           ierr = nfmpi_begin_indep_data(File%fh)
           if(Ios%io_rank==0 .and. (ierr==NF_EINDEP .or. ierr==PIO_NOERR)) then
              ierr = nfmpi_put_vara_{TYPE} (File%fh, varid, pstart, &

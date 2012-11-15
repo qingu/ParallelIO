@@ -1,6 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-AC_INIT(PIO, 1.3.0)
+AC_INIT(PIO, 1.5.8)
 AC_CONFIG_MACRO_DIR([m4])
 #
 # take input from Makefile.conf.in
@@ -459,36 +459,29 @@ if test ! "$USE_PNETCDF" = "no"
   then
        if test -n "$PNETCDF_PATH"
          then echo "using PNETCDF_PATH from environment"
-         else PNETCDF_PATH=/usr/local/pnetcdf
-              AC_MSG_WARN( [PNETCDF_PATH not found in environment, \
-                           defaulting to $PNETCDF_PATH])
-       fi
-       USE_PNETCDF="yes"
-       AC_MSG_CHECKING([for pnetcdf.inc in $PNETCDF_PATH/include])
-       if test -f $PNETCDF_PATH/include/pnetcdf.inc
-       then AC_MSG_RESULT([yes])
+	 with_pnetcdf=$PNETCDF_PATH
        else
-         AC_MSG_WARN( [pnetcdf.inc not found in $PNETCDF_PATH/include \
-                             disabling pnetcdf support ])
-         USE_PNETCDF=no
+         PNETCDF_PATH=$with_pnetcdf
        fi
 
-       AC_MSG_CHECKING([for libpnetcdf.a in $PNETCDF_PATH/lib])
-       if test -f $PNETCDF_PATH/lib/libpnetcdf.a
-         then
-	 AC_MSG_RESULT(yes) 
-         else
-         AC_MSG_WARN( [libpnetcdf.a not found in $PNETCDF_PATH/lib \
-                             disabling pnetcdf support ])
-         USE_PNETCDF=no
-       fi
+       AC_LANG_PUSH(Fortran)
+       AC_FC_SRCEXT(F90)
+       ACX_PNETCDF()
+
+       AC_LANG_POP(Fortran)
+       
 fi
-if test "$USE_PNETCDF" = "yes"
+
+if test "$acx_pnetcdf_ok" = "yes"
   then
      #  AC_MSG_CHECKING([for pnetcdf])
+        if test "$acx_pnetcdf_bput_ok" != "yes"
+        then
+          CPPDEFS="$CPPDEFS -DPIO_MANAGE_BUFFER"
+        fi
         CPPDEFS="$CPPDEFS -D_PNETCDF"
-        INCLUDEPATH=" $INCLUDEPATH -I$PNETCDF_PATH/include"
-        LDLIBS=" $LDLIBS -L$PNETCDF_PATH/lib -lpnetcdf"
+        INCLUDEPATH=" $INCLUDEPATH $PNETCDF_CPPFLAGS"
+        LDLIBS=" $LDLIBS $PNETCDF_LDFLAGS $PNETCDF_LIBS"
   else
        CPPDEFS="$CPPDEFS -D_NOPNETCDF"
        USE_PNETCDF=no

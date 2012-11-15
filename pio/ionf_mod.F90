@@ -14,7 +14,7 @@ module ionf_mod
   use netcdf            ! _EXTERNAL
 #endif
   use pio_support, only : CheckMPIReturn
-  use pio_buffer, only : pio_buffer_attach
+  use pio_buffer
   implicit none
   private
 
@@ -241,7 +241,9 @@ contains
 
 
   integer function close_nf(File) result(ierr)
+#ifndef PIO_MANAGE_BUFFER
     use pio_buffer, only : pio_buffer_flush
+#endif
     type (File_desc_t), intent(inout) :: File
 
     ierr=PIO_noerr
@@ -251,14 +253,12 @@ contains
        select case (File%iotype) 
 #ifdef _PNETCDF
        case(PIO_iotype_pnetcdf)
-#ifdef PIO_MANAGE_BUFFER
-          call darray_write_complete(file)
-#else
           if(file%request_cnt>0) then
              call pio_buffer_flush(File)
+#ifndef PIO_MANAGE_BUFFER
              ierr = nfmpi_buffer_detach(File%fh)
-          end if
 #endif
+          end if
 
 
 

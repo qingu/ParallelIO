@@ -160,7 +160,6 @@ subroutine box_rearrange_comp2io_{TYPE} (IOsystem, ioDesc, s1, src, s2, &
 
   ! begin
 
-!  ndof   = size(ioDesc%dest_ioindex)
   ndof= iodesc%ndof
   num_tasks   = IOsystem%num_tasks
   num_iotasks = IOsystem%num_iotasks
@@ -274,7 +273,7 @@ subroutine box_rearrange_comp2io_{TYPE} (IOsystem, ioDesc, s1, src, niodof, &
     endif
   endif
 
-  ndof   = size(ioDesc%dest_ioindex)
+  ndof   = size(ioDesc%dest_ioindex,1)
   nrecvs = ioDesc%nrecvs             ! number of distinct senders to the ioproc
   myrank = IOsystem%union_rank
   nprocs = IOsystem%num_tasks
@@ -460,7 +459,7 @@ subroutine box_rearrange_io2comp_{TYPE} (IOsystem, ioDesc, s1, iobuf, &
   ! begin
   compbuf(:) = 0
   ndof   = iodesc%ndof
-  niodof = size(iobuf)
+  niodof = s1
   num_tasks   = IOsystem%num_tasks
   num_iotasks = IOsystem%num_iotasks
 
@@ -469,9 +468,9 @@ subroutine box_rearrange_io2comp_{TYPE} (IOsystem, ioDesc, s1, iobuf, &
                  'built with -D_MPISERIAL but num_tasks=', num_tasks, &
                  'num_iotasks=', num_iotasks )
 
-  if (size(compbuf) > 0 .and. size(compbuf)<ndof) &
+  if (s2 > 0 .and. s2<ndof) &
     call piodie( __PIO_FILE__,__LINE__, &
-                 'box_rearrange_io2comp: size(compbuf)=', size(compbuf), &
+                 'box_rearrange_io2comp: size(compbuf)=', s2, &
                  ' not equal to size(compdof)=', ndof)
 
   do i=1,ndof
@@ -573,15 +572,15 @@ subroutine box_rearrange_io2comp_{TYPE} (IOsystem,ioDesc,s1, iobuf,s2, compbuf, 
 
   compbuf(:) = 0
   ndof   = iodesc%ndof
-  niodof = size(iobuf)
+  niodof = s1
   nrecvs = ioDesc%nrecvs             ! number of distinct senders to the ioproc
   myrank = IOsystem%union_rank
   nprocs = IOsystem%num_tasks
   num_iotasks = IOsystem%num_iotasks
 
-  if (size(compbuf) > 0 .and. size(compbuf)<ndof) &
+  if (s2 > 0 .and. s2 < ndof) &
     call piodie( __PIO_FILE__,__LINE__, &
-                 'box_rearrange_io2comp: size(compbuf)=', size(compbuf), &
+                 'box_rearrange_io2comp: size(compbuf)=', s2, &
                  ' not equal to size(compdof)=', ndof)
 
   if (IOsystem%IOproc) then
@@ -992,8 +991,8 @@ end subroutine box_rearrange_io2comp_{TYPE}
 !!!!!!
     ! Gather iodesc%start,iodesc%count from IO procs to root IO proc
     ! then broadcast to all procs
-    if(ndim.ne.size(iodesc%start)) then
-       print *,__PIO_FILE__,__LINE__,ndim, size(iodesc%start)
+    if(ndim.ne.size(iodesc%start,1)) then
+       print *,__PIO_FILE__,__LINE__,ndim, size(iodesc%start,1)
        call piodie(__PIO_FILE__,__LINE__,'bad ndim size',ndim)
     end if
 
@@ -1700,8 +1699,8 @@ end subroutine box_rearrange_io2comp_{TYPE}
 !!!!!!
     ! Gather iodesc%start,iodesc%count from IO procs to root IO proc
     ! then broadcast to all procs
-    if(ndim.ne.size(iodesc%start)) then
-       print *,__PIO_FILE__,__LINE__,ndim, size(iodesc%start)
+    if(ndim.ne.size(iodesc%start,1)) then
+       print *,__PIO_FILE__,__LINE__,ndim, size(iodesc%start,1)
        call piodie(__PIO_FILE__,__LINE__,'bad ndim size',ndim)
     end if
 
