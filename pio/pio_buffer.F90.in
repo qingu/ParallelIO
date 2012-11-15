@@ -1,0 +1,221 @@
+#define __PIO_FILE__ "pio_buffer.F90"
+module pio_buffer
+#ifndef NO_MPIMOD
+  use mpi   ! _EXTERNAL
+#endif
+  use pio_support, only : CheckMPIReturn, Debug, piodie
+  use pio_kinds, only : pio_offset
+  use pio_types, only : file_desc_t
+
+#ifdef _PNETCDF
+  use pnetcdf    ! _EXTERNAL
+#endif
+
+  implicit none
+#ifdef NO_MPIMOD
+  include 'mpif.h'   ! _EXTERNAL
+#endif
+  private
+
+#ifdef PIO_MANAGE_BUFFER
+!>
+!! @private
+!<
+  interface pio_buffer_add_data
+! TYPE real,int,double
+     module procedure pio_buffer_add_data_{TYPE}
+  end interface
+  public :: pio_buffer_add_data
+#endif
+  logical :: DebugBuffers=.false.
+
+  integer :: total_buffsize=0
+  integer(kind=pio_offset) :: pio_buffer_size_limit= 100000000   ! 100MB default
+
+! provided for backwards compatability
+
+  public :: pio_set_buffer_size_limit
+
+
+  public :: pio_buffer_add_request
+#ifndef PIO_MANAGE_BUFFER
+  public :: pio_buffer_attach
+#endif
+  public :: pio_buffer_flush
+  public :: pio_buffer_check
+
+contains
+
+  subroutine pio_set_buffer_size_limit(newlimit)
+    integer, intent(in) :: newlimit 
+
+    if(newlimit<0) then
+       call piodie(__PIO_FILE__,__LINE__,' bad value to buffer_size_limit',newlimit)
+    end if
+    pio_buffer_size_limit=newlimit
+
+  end subroutine pio_set_buffer_size_limit
+
+
+  subroutine pio_buffer_add_request(File, request)
+    use pio_types, only : file_desc_t, max_buffered_requests
+    type(file_desc_t) :: File
+    integer, intent(in) :: request
+    integer :: maxrequestcnt
+    integer :: mpierr
+
+    File%request_cnt=File%request_cnt+1
+
+    if(File%request_cnt>=MAX_BUFFERED_REQUESTS) then
+       call piodie(__FILE__,__LINE__,"maximum outstanding pio buffer limit reached")
+    endif
+    File%requests(File%request_cnt)=request
+
+    if(DebugBuffers) then
+       call MPI_ALLREDUCE(File%request_cnt,maxrequestcnt,1,MPI_INTEGER,MPI_MAX,File%iosystem%io_comm, mpierr)
+       call CheckMPIreturn('close_mpiio: after call to file_close: ',mpierr)        
+
+       if(maxrequestcnt==MAX_BUFFERED_REQUESTS) then
+          call pio_buffer_flush(File)
+       end if
+    end if
+
+
+  end subroutine pio_buffer_add_request
+
+  subroutine pio_buffer_attach(File)
+    implicit none
+    type(file_desc_t) :: File
+    integer :: ierr
+#ifdef _PNETCDF
+#ifndef PIO_MANAGE_BUFFER  
+    ierr = nfmpi_buffer_attach(File%fh, pio_buffer_size_limit)
+#endif
+#endif
+
+  end subroutine pio_buffer_attach
+
+
+  subroutine pio_buffer_flush(File)
+#ifdef PIO_MANAGE_BUFFER
+    use pio_types, only : io_data_list
+#endif
+    type(file_desc_t) :: File
+    integer, pointer :: status(:)
+    integer :: ierr
+#ifdef PIO_MANAGE_BUFFER
+    type(io_data_list), pointer :: ptr, prevptr
+#endif
+
+
+    allocate(status(file%request_cnt))
+#ifdef _PNETCDF
+    ierr  = nfmpi_wait_all(file%fh, file%request_cnt, file%requests, status)
+#endif
+    deallocate(status)
+    file%request_cnt=0
+    file%requests=MPI_REQUEST_NULL
+
+#ifdef PIO_MANAGE_BUFFER
+
+    ptr=>file%data_list_top
+    do while(associated(ptr))
+       if(associated(ptr%data_double)) then
+          deallocate(ptr%data_double)
+       else if(associated(ptr%data_real)) then
+          deallocate(ptr%data_real)
+       else if(associated(ptr%data_int)) then
+          deallocate(ptr%data_int)
+       end if
+       prevptr=>ptr
+       ptr => ptr%next
+       deallocate(prevptr)
+    end do
+    nullify(file%data_list_top)
+    
+    total_buffsize=total_buffsize-file%buffsize
+    
+    file%buffsize=0
+
+
+#endif
+    
+  end subroutine pio_buffer_flush
+
+  subroutine pio_buffer_check(File, addsize)
+    type(file_desc_t) :: File
+    integer :: ierr, addsize
+
+    integer(kind=pio_offset) :: bufsize, maxbufsize
+
+
+#ifdef PIO_MANAGE_BUFFER
+    bufsize = file%buffsize
+#else
+#ifdef _PNETCDF
+    ierr = nfmpi_inq_buffer_usage(File%fh,bufsize)
+#endif
+#endif
+    bufsize = bufsize+int(addsize,kind=pio_offset)
+
+    call MPI_ALLREDUCE(bufsize,maxbufsize,1,MPI_INTEGER8,MPI_MAX,file%iosystem%io_comm, ierr)
+
+    if(debugbuffers) print *,__FILE__,__LINE__,'buffsize = ',bufsize,file%request_cnt,maxbufsize
+
+    if(maxbufsize > pio_buffer_size_limit) then
+       call pio_buffer_flush(File)
+#ifdef PIO_MANAGE_BUFFER
+    else
+       file%buffsize = file%buffsize+addsize
+#endif
+    endif
+    
+  end subroutine pio_buffer_check
+#ifdef PIO_MANAGE_BUFFER
+
+! TYPE real,int,double  
+  subroutine pio_buffer_add_data_{TYPE} (File, IOBUF)
+    use pio_kinds, only : r4, r8, i4
+    use pio_types, only : io_data_list
+    type(file_desc_t) :: File
+    {VTYPE}, pointer :: IOBUF(:)
+    integer :: cnt, mpierr, maxbuffsize, this_buffsize
+    type(io_data_list), pointer :: ptr
+#ifdef MEMCHK	
+    call GPTLget_memusage(msize, rss, mshare, mtext, mstack)
+    if(rss>lastrss) then
+       lastrss=rss
+       print *,__PIO_FILE__,__LINE__,'mem=',rss
+    end if
+#endif
+
+    if(.not. associated(File%data_list_top)) then
+       allocate(file%data_list_top)
+       ptr => file%data_list_top
+    else
+       ptr => file%data_list_top
+       do while(associated(ptr%next))
+          ptr => ptr%next
+       end do
+       
+       allocate(ptr%next)
+       ptr=>ptr%next
+       nullify(ptr%next)
+    end if
+
+    this_buffsize = size(iobuf)*sizeof(iobuf(1))
+    call pio_buffer_check(File,this_buffsize)
+
+    ptr%data_{TYPE} => IOBUF
+    
+    if(debugbuffers) print *,__FILE__,__LINE__,'buffsize = ',file%buffsize,file%request_cnt
+#ifdef MEMCHK	
+    call GPTLget_memusage(msize, rss, mshare, mtext, mstack)
+    if(rss>lastrss) then
+       lastrss=rss
+       print *,__PIO_FILE__,__LINE__,'mem=',rss
+    end if
+#endif
+  end subroutine pio_buffer_add_data_{TYPE}
+#endif
+end module pio_buffer
