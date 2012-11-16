@@ -33,7 +33,7 @@ my $logfile_date_suffix = '';  # Optional suffix to logfile date (e.g., a,b,c,et
 my $logfile_name_comment = '';
 my $logfile_suffix;
 my $logfile_name_user = '';  # Overrides automated logfile construction
-my $enablenetcdf4;
+my $enablenetcdf4='';
 
 my $root = '';
 my $found = 0;
@@ -272,7 +272,7 @@ foreach(keys %attributes){
 #	print F "\$ENV{$1}=\"$attributes{$_}\"\;\n";
 	print "\$ENV{$1}=\"$attributes{$_}\"\;\n";
     }elsif(/NETCDF_PATH/){
-	if($attributes{NETCDF_PATH} =~ /netcdf-4/){
+	if($attributes{netcdf4} =~ /true/){
 	    $enablenetcdf4="--enable-netcdf4";
 	}
     }    
@@ -522,7 +522,7 @@ if ($logfile_name_user ne '') {
   $logfile = $logfile_name_user;
 } else {
 #  $logfile = $cal_date . $logfile_date_suffix . "_" . $host . "_"
-    $logfile = $host . "_" . $logfile_name_comment . $suffix . "_" . $logfile_suffix;
+    $logfile = $host . "_" . $logfile_name_comment . $suffix . "_" . $configuration{logfile_suffix};
 }
 
 my $testname = "bench." . $date . "." . $suffix;

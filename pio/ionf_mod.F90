@@ -60,6 +60,8 @@ contains
           ierr  = nfmpi_create(File%iosystem%IO_comm,fname,nmode ,File%iosystem%info,File%fh)
 #ifndef PIO_MANAGE_BUFFER
           call pio_buffer_attach(file)
+	  file%request_cnt=0
+	  file%requests=NF_REQUEST_NULL
 #endif
 #endif
 #ifdef _NETCDF
@@ -179,6 +181,8 @@ contains
 #ifndef PIO_MANAGE_BUFFER
           if(iand(NF_WRITE,amode)==NF_WRITE) then
              call pio_buffer_attach(file)
+	     file%request_cnt=0
+	     file%requests=NF_REQUEST_NULL
           end if
 #endif
 #ifdef _NETCDF

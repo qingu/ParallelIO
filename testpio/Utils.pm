@@ -239,7 +239,7 @@ sub loadmodules{
     }elsif($host =~ "hopper"){
 	require "/opt/modules/default/init/perl";
 	module(" load netcdf-hdf5parallel/4.2.0");      
-	module(" load parallel-netcdf/1.2.0");
+#	module(" load parallel-netcdf/1.2.0");
         module("list");
     }elsif($host =~ "pleiades"){
         module(" load netcdf/4.0-i10.1");

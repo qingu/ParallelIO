@@ -487,27 +487,7 @@
 #PBS -V"
 />
 
-<lynx_gnu_ampi
-  ADDENV_PATH = "/contrib/charm/6.2/gnu/mpi-crayxt/bin"
-  MPIFC = "ampif90 "
-  MPICC  = "ampicc "
-  FC    = "gfortran "
-  CC     = "gcc "
-  FFLAGS = "-D_USE_FLOW_CONTROL -DAMPI -Wl,-zmuldefs "
-  MPI_INC = "-I/contrib/charm/6.2/gnu/mpi-crayxt/include"
-  NETCDF_PATH = "/contrib/netcdf/3.6.3/gnu"
-  PNETCDF_PATH = "/contrib/charm/6.2/gnu/mpi-crayxt/pnetcdf/"
-  workdir = "/ptmp/${USER}/testpio"
-  run = "charmrun"
-  corespernode = "12"
-  submit = "qsub "
-  conopts = " --disable-mpi2   "
-  preamble="
-#PBS -N testpio_suite
-#PBS -l walltime=01:50:00
-#PBS -j oe
-#PBS -V"
-/>
+
 <hopper
   MPIFC = "ftn "
   MPICC  = "cc "
@@ -516,7 +496,7 @@
 
   CPPDEFS = " -DFORTRANUNDERSCORE -D_NO_MPI_RSEND"
   NETCDF_PATH = "${NETCDF_DIR}"
-  PNETCDF_PATH = "${PARALLEL_NETCDF_DIR}"
+  PNETCDF_PATH = "/global/project/projectdirs/ccsm1/pnetcdf/svn1104a/pgi/12.5.0"
   LDLIBS="`nf-config --flibs`"
   workdir = "/scratch/scratchdirs/${USER}/testpio.norsend"
   run = "aprun"

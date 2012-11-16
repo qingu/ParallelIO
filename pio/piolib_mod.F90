@@ -982,6 +982,8 @@ contains
     integer(i4) :: iosize               ! rml
     integer(i4) :: msg
     logical :: is_async=.false.
+    integer :: num_aiotasks
+
 #ifdef MEMCHK
     integer :: msize, rss, mshare, mtext, mstack
 #endif
@@ -1084,9 +1086,8 @@ contains
           endif
           vdc_ts = num_ts
           
-          iosystem%num_aiotasks = iosystem%num_iotasks
 
-          call init_vdc2(iosystem%io_rank, dims, vdc_bsize, vdc_iostart, vdc_iocount, iosystem%num_aiotasks)
+          call init_vdc2(iosystem%io_rank, dims, vdc_bsize, vdc_iostart, vdc_iocount, num_aiotasks)
           
           if(debug) then
              print *, 'rank: ', iosystem%comp_rank, ' pio_init iostart: ' , vdc_iostart, ' iocount: ', vdc_iocount
@@ -1098,7 +1099,7 @@ contains
 #endif	
        else
           call calcstartandcount(basepiotype, ndims, dims, iosystem%num_iotasks, iosystem%io_rank,&
-               iodesc%start, iodesc%count,iosystem%num_aiotasks)
+               iodesc%start, iodesc%count, num_aiotasks)
        endif
 
        iosize=1
@@ -1110,7 +1111,10 @@ contains
 
        if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount: count is: ',iodesc%count
 
-       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, num_aiotasks is: ', iosystem%num_aiotasks
+       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, num_aiotasks is: ', num_aiotasks
+
+       if(debug .and. iosystem%io_rank>=0) print *,__FILE__,__LINE__,iosystem%io_rank,num_aiotasks,iodesc%maxiobuflen
+
 
        lenblocks=iodesc%count(1)
 
@@ -1592,7 +1596,6 @@ contains
     call PIO_set_hint(iosystem, 'romio_ds_read','disable') 
     call PIO_set_hint(iosystem,'romio_ds_write','disable') 
 #endif
-    iosystem%num_aiotasks = iosystem%num_iotasks
     iosystem%numost = PIO_NUM_OST
     if(debug) print *,__LINE__,'init: iam: ',comp_rank,'io processor: ',iosystem%ioproc, 'io rank ',&
          iosystem%io_rank, iosystem%iomaster, iosystem%comp_comm, iosystem%io_comm
@@ -1820,7 +1823,6 @@ contains
     if(DebugAsync) print*,__PIO_FILE__,__LINE__, iosystem(1)%ioranks
 
 
-    iosystem%num_aiotasks = iosystem%num_iotasks
     iosystem%numost = PIO_NUM_OST
 
     ! This routine does not return

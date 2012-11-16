@@ -30,7 +30,7 @@ module pio_buffer
   logical :: DebugBuffers=.false.
 
   integer :: total_buffsize=0
-  integer(kind=pio_offset) :: pio_buffer_size_limit= 100000000   ! 100MB default
+  integer(kind=pio_offset) :: pio_buffer_size_limit= 1024*1024*100   ! 100 MB default
 
 ! provided for backwards compatability
 
@@ -44,17 +44,30 @@ module pio_buffer
   public :: pio_buffer_flush
   public :: pio_buffer_check
 
+  interface pio_set_buffer_size_limit
+     module procedure pio_set_buffer_size_limit_i4
+     module procedure pio_set_buffer_size_limit_i8
+  end interface
+
 contains
 
-  subroutine pio_set_buffer_size_limit(newlimit)
+  subroutine pio_set_buffer_size_limit_i4(newlimit)
     integer, intent(in) :: newlimit 
 
+    call pio_set_buffer_size_limit_i8(int(newlimit,kind=pio_offset))
+
+  end subroutine pio_set_buffer_size_limit_i4
+
+
+  subroutine pio_set_buffer_size_limit_i8(newlimit)
+    integer(kind=pio_offset), intent(in) :: newlimit 
+
     if(newlimit<0) then
-       call piodie(__PIO_FILE__,__LINE__,' bad value to buffer_size_limit',newlimit)
+       call piodie(__PIO_FILE__,__LINE__,' bad value to buffer_size_limit',int(newlimit))
     end if
     pio_buffer_size_limit=newlimit
 
-  end subroutine pio_set_buffer_size_limit
+  end subroutine pio_set_buffer_size_limit_i8
 
 
   subroutine pio_buffer_add_request(File, request)
@@ -65,6 +78,7 @@ contains
     integer :: mpierr
 
     File%request_cnt=File%request_cnt+1
+
 
     if(File%request_cnt>=MAX_BUFFERED_REQUESTS) then
        call piodie(__FILE__,__LINE__,"maximum outstanding pio buffer limit reached")
@@ -90,6 +104,7 @@ contains
 #ifdef _PNETCDF
 #ifndef PIO_MANAGE_BUFFER  
     ierr = nfmpi_buffer_attach(File%fh, pio_buffer_size_limit)
+    if(debugbuffers) print *,__FILE__,__LINE__,'Attached buffer of size ',pio_buffer_size_limit,ierr
 #endif
 #endif
 
@@ -103,6 +118,8 @@ contains
     type(file_desc_t) :: File
     integer, pointer :: status(:)
     integer :: ierr
+    integer(kind=pio_offset) :: bufsize
+
 #ifdef PIO_MANAGE_BUFFER
     type(io_data_list), pointer :: ptr, prevptr
 #endif
@@ -112,9 +129,14 @@ contains
 #ifdef _PNETCDF
     ierr  = nfmpi_wait_all(file%fh, file%request_cnt, file%requests, status)
 #endif
-    deallocate(status)
     file%request_cnt=0
-    file%requests=MPI_REQUEST_NULL
+    file%requests=NF_REQUEST_NULL
+    if(debugbuffers) then
+       ierr = nfmpi_inq_buffer_usage(file%fh,bufsize)
+       print *,__FILE__,__LINE__, file%iosystem%io_rank,bufsize,ierr,status
+    end if
+    deallocate(status)
+    
 
 #ifdef PIO_MANAGE_BUFFER
 
@@ -146,24 +168,32 @@ contains
     type(file_desc_t) :: File
     integer :: ierr, addsize
 
-    integer(kind=pio_offset) :: bufsize, maxbufsize
+    integer(kind=pio_offset) :: bufsize(2), maxbufsize(2)
 
 
 #ifdef PIO_MANAGE_BUFFER
     bufsize = file%buffsize
 #else
 #ifdef _PNETCDF
-    ierr = nfmpi_inq_buffer_usage(File%fh,bufsize)
+    ierr = nfmpi_inq_buffer_usage(File%fh,bufsize(1))
 #endif
 #endif
-    bufsize = bufsize+int(addsize,kind=pio_offset)
+    bufsize(2) = int(addsize,kind=pio_offset)
 
-    call MPI_ALLREDUCE(bufsize,maxbufsize,1,MPI_INTEGER8,MPI_MAX,file%iosystem%io_comm, ierr)
+    call MPI_ALLREDUCE(bufsize,maxbufsize,2,MPI_INTEGER8,MPI_MAX,file%iosystem%io_comm, ierr)
 
-    if(debugbuffers) print *,__FILE__,__LINE__,'buffsize = ',bufsize,file%request_cnt,maxbufsize
+    if(debugbuffers) print *,__FILE__,__LINE__,'buffsize = ',file%iosystem%io_rank,bufsize,file%request_cnt,maxbufsize,pio_buffer_size_limit
 
-    if(maxbufsize > pio_buffer_size_limit) then
-       call pio_buffer_flush(File)
+    if(sum(maxbufsize) >= pio_buffer_size_limit) then
+       if(file%request_cnt>0) then
+          call pio_buffer_flush(File)
+       end if
+       if(maxbufsize(2) >= pio_buffer_size_limit) then
+          ierr = nfmpi_buffer_detach(File%fh)
+          if(file%iosystem%io_rank==0) print *,__FILE__,__LINE__,'Adjusting pio_buffer_size_limit ',pio_buffer_size_limit,maxbufsize
+          call pio_set_buffer_size_limit(maxbufsize(2))
+          call pio_buffer_attach(File)
+       end if
 #ifdef PIO_MANAGE_BUFFER
     else
        file%buffsize = file%buffsize+addsize

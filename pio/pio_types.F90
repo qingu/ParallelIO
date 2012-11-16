@@ -46,7 +46,7 @@ module pio_types
         integer(i4)              :: my_comm=MPI_COMM_NULL            ! either comp_comm or intercomm
         integer(i4)              :: num_tasks          !  number of tasks
         integer(i4)              :: num_iotasks        ! total number of IO tasks
-        integer(i4)              :: num_aiotasks       ! number of actual IO tasks
+!        integer(i4)              :: num_aiotasks       ! number of actual IO tasks
         integer(i4)              :: num_comptasks
 
         integer(i4)              :: union_rank

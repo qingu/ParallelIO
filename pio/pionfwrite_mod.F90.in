@@ -68,7 +68,7 @@ contains
     integer i, ndims
     integer :: fh, vid, oldval
 
-    request = MPI_REQUEST_NULL
+    request = NF_REQUEST_NULL
 
 #ifdef TIMING
     call t_startf("pio_write_nfdarray_{TYPE}")
@@ -91,9 +91,11 @@ contains
           call pio_buffer_add_request(File,request)
           call pio_buffer_add_data (File, IOBUF)
 #else
+	  call pio_buffer_check(File,size(iobuf)*sizeof(iobuf(1)))
           ierr=nfmpi_bput_vara_{TYPE} ( File%fh,varDesc%varid,start, &
                count, IOBUF , request )
           call pio_buffer_add_request(File,request)
+	  
 #endif
 #endif
 
