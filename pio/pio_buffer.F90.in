@@ -130,7 +130,7 @@ contains
     ierr  = nfmpi_wait_all(file%fh, file%request_cnt, file%requests, status)
 #endif
     file%request_cnt=0
-    file%requests=NF_REQUEST_NULL
+    file%requests=NF_REQ_NULL
     if(debugbuffers) then
        ierr = nfmpi_inq_buffer_usage(file%fh,bufsize)
        print *,__FILE__,__LINE__, file%iosystem%io_rank,bufsize,ierr,status

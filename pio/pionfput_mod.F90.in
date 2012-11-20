@@ -378,7 +378,7 @@ contains
              ierr = nfmpi_end_indep_data(File%fh)
           end if
 #else
-          request = NF_REQUEST_NULL
+          request = NF_REQ_NULL
           if(Ios%io_rank==0 ) then
              ierr = nfmpi_bput_var_text (File%fh, varid, ival, request)
           end if
@@ -517,7 +517,7 @@ contains
              ierr = nfmpi_end_indep_data(File%fh)
           end if
 #else
-          request = NF_REQUEST_NULL
+          request = NF_REQ_NULL
 #if({DIMS}==0)       
           if(Ios%io_rank==0 ) then
              ierr = nfmpi_bput_var1_{TYPE} (File%fh, varid, int(start,kind=PIO_OFFSET), &
@@ -678,7 +678,7 @@ contains
              ierr = nfmpi_put_vara_text_all (File%fh, varid, pstart, &
                   pcount, ival)
 #else
-             request=NF_REQUEST_NULL
+             request=NF_REQ_NULL
              ierr = nfmpi_bput_vara_text (File%fh, varid, pstart, &
                   pcount, ival, request)
              call pio_buffer_add_request(File,request)

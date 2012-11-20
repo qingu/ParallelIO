@@ -61,7 +61,7 @@ contains
 #ifndef PIO_MANAGE_BUFFER
           call pio_buffer_attach(file)
 	  file%request_cnt=0
-	  file%requests=NF_REQUEST_NULL
+	  file%requests=NF_REQ_NULL
 #endif
 #endif
 #ifdef _NETCDF
@@ -182,7 +182,7 @@ contains
           if(iand(NF_WRITE,amode)==NF_WRITE) then
              call pio_buffer_attach(file)
 	     file%request_cnt=0
-	     file%requests=NF_REQUEST_NULL
+	     file%requests=NF_REQ_NULL
           end if
 #endif
 #ifdef _NETCDF

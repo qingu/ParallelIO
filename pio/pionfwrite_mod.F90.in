@@ -68,7 +68,7 @@ contains
     integer i, ndims
     integer :: fh, vid, oldval
 
-    request = NF_REQUEST_NULL
+    request = NF_REQ_NULL
 
 #ifdef TIMING
     call t_startf("pio_write_nfdarray_{TYPE}")
