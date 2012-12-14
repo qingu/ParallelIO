@@ -1,3 +1,10 @@
+Tagname: cesm1_0_5_rel_tags/cesm1_0_5_n02_pio1_2_6
+Originator : Jim
+Date: 12-13-2012
+
+Fix mpi-serial issue in pio_callbacks.F90
+
+
 Tagname: branch_tag/cesm1_0_4_pio1_4_1_tags/tag02
 Originator: Jim
 Date: 05-21-2012
