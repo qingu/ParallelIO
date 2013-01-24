@@ -963,13 +963,17 @@ contains
     integer (kind=pio_offset), intent(in)          :: compdof(:)   ! global degrees of freedom for computational decomposition
     integer (kind=PIO_offset), optional :: iostart(:), iocount(:)
     type (io_desc_t), intent(inout)     :: iodesc
+    !vdf optionals
+    integer(i4), intent(in), optional:: num_ts, bsize(3)
+
+
+    ! Local variables
 
     integer(i4) :: length,n_iotasks
     integer(i4) :: ndims
     integer (i4)                       :: lenblocks
     integer(i4)                       ::  piotype
-    !vdf optionals
-    integer(i4), intent(in), optional:: num_ts, bsize(3)
+
     integer(i4), pointer :: displace(:)  ! the displacements for the mpi data structure (read)
 
     integer(i4) :: prev
@@ -1110,12 +1114,10 @@ contains
        call mpi_allreduce(iosize, iodesc%maxiobuflen, 1, mpi_integer, mpi_max, iosystem%io_comm, ierr)
        call checkmpireturn('mpi_allreduce in initdecomp',ierr)
 
+       lenblocks = get_lenblocks(compdof)
+
        if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount: count is: ',iodesc%count
-
-       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, num_aiotasks is: ', iosystem%num_aiotasks
-
-       lenblocks=iodesc%count(1)
-
+       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, lenblocks is: ' , lenblocks
 
        if(lenblocks>0) then
           ndisp=iosize/lenblocks
@@ -2628,7 +2630,41 @@ contains
 
   end subroutine read_ascii
 
+  !
+  ! Find the lcd length of contiguous blocks in compdof
+  ! 
 
+  function get_lenblocks(compdof) result (lenblocks)
+    integer(i8), intent(in) :: compdof(:)
+    integer(i4) :: lenblocks
+
+    integer(i4) :: i, ndof, blklen, cnt
+
+    ndof = size(compdof)
+    cnt=1
+    lenblocks=0
+    do i=2,ndof
+       if(compdof(i)-compdof(i-1)==1) then
+          cnt=cnt+1
+       else
+          blklen=cnt
+          cnt=1
+          if(lenblocks==0) then
+             lenblocks=blklen
+          elseif(blklen<lenblocks) then
+             if(mod(lenblocks,blklen)==0) then
+                lenblocks=blklen
+             else
+                lenblocks=-1
+             endif
+          else
+             if(mod(blklen,lenblocks)/=0) then
+                lenblocks=-1
+             endif
+          endif
+       endif
+    enddo
+  end function get_lenblocks
 
 
 end module piolib_mod

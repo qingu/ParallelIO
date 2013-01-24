@@ -62,14 +62,14 @@ CONTAINS
     !!
 
     integer(i4):: ndisp
-    integer(i4) :: gstride(ndim)
+    integer(i8) :: gstride(ndim)
     integer i,j
     integer iosize
-    integer(i4) :: myloc(ndim)
-    integer(i4) :: ub(ndim)
+    integer(i8) :: myloc(ndim)
+    integer(i8) :: ub(ndim)
     integer idim
     logical done
-    integer(i4) ::  gindex
+    integer(i8) ::  gindex
 
     gstride(1)=gsize(1)
     do i=2,ndim
@@ -86,10 +86,10 @@ CONTAINS
 
     if (iosize<1 .or. ndisp<1) return
 
-    if (ndisp/=iosize) then
-       print *,__PIO_FILE__,__LINE__,ndisp
-       call piodie(__PIO_FILE__,__LINE__,'ndisp /= iosize=',iosize)
-    endif
+!    if (ndisp/=iosize) then
+!       print *,__PIO_FILE__,__LINE__,ndisp
+!       call piodie(__PIO_FILE__,__LINE__,'ndisp /= iosize=',iosize)
+!    endif
 
     do i=1,ndim
        ub(i)=start(i)+count(i)-1
@@ -104,16 +104,12 @@ CONTAINS
     displace(1)=1
     myloc=start
 
-    do i=1,iosize
+    do i=1,ndisp
        ! go from myloc() to 1-based global index
        gindex=myloc(1)
        do j=2,ndim
           gindex=gindex+(myloc(j)-1)*gstride(j-1)
        end do
-
-       ! rml
-       ! following original but is that right???
-       ! seems like the 'if' is erroneous
 
        gindex=gindex-1
 
@@ -121,13 +117,17 @@ CONTAINS
 
        displace(i)=gindex
 
+       if(displace(i)<0) then
+          print *,__FILE__,__LINE__,i,displace(i),count(1),gindex
+       ENDif
+
        ! increment myloc to next position
 
 
        idim=2                    ! dimension to increment
        done=.false.
 
-       if (i<iosize) then
+       if (i<ndisp) then
           do while (.not. done)
              if (myloc(idim)<ub(idim)) then
                 myloc(idim)=myloc(idim)+1
@@ -142,22 +142,22 @@ CONTAINS
 
     end do
 
-    do i=2,ndim
-       if (myloc(i) /= ub(i)) then
-          print *,'myloc=',myloc
-          print *,'ub=',ub
-          call piodie( __PIO_FILE__,__LINE__,'myloc/=ub')
-       endif
-    end do
-
-
+!    do i=2,ndim
+!       if (myloc(i) /= ub(i)) then
+!          print *,'myloc=',myloc
+!          print *,'ub=',ub
+!          call piodie( __PIO_FILE__,__LINE__,'myloc/=ub')
+!       endif
+!    end do
     ! check for strictly increasing
-
     do i=1,ndisp-1	
        if(displace(i) > displace(i+1)) then
+          print *,__FILE__,__LINE__,i,displace(i:i+1),ndisp
           call piodie(__PIO_FILE__,__LINE__,'displace is not increasing')
        endif
     enddo
+
+
 
   end subroutine calcdisplace_box
 
