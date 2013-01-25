@@ -52,9 +52,10 @@ CONTAINS
 
 
 
-  subroutine calcdisplace_box(gsize,start,count,ndim,displace)
+  subroutine calcdisplace_box(gsize,lenblock,start,count,ndim,displace)
 
     integer(i4),intent(in) :: gsize(:)   ! global size of output domain
+    integer(i4),intent(in) :: lenblock
     integer(kind=PIO_offset),intent(in) :: start(:), count(:)
     integer(i4), intent(in) :: ndim
     integer(i4),intent(inout) :: displace(:)  ! mpi displacments
@@ -62,14 +63,14 @@ CONTAINS
     !!
 
     integer(i4):: ndisp
-    integer(i8) :: gstride(ndim)
+    integer(i4) :: gstride(ndim)
     integer i,j
     integer iosize
-    integer(i8) :: myloc(ndim)
-    integer(i8) :: ub(ndim)
+    integer(i4) :: myloc(ndim)
+    integer(i4) :: ub(ndim)
     integer idim
     logical done
-    integer(i8) ::  gindex
+    integer(i4) ::  gindex
 
     gstride(1)=gsize(1)
     do i=2,ndim
@@ -82,7 +83,6 @@ CONTAINS
     end do
 
     ndisp=size(displace)
-
 
     if (iosize<1 .or. ndisp<1) return
 
@@ -113,21 +113,14 @@ CONTAINS
 
        gindex=gindex-1
 
-       gindex=gindex/count(1)    ! gindex/lenblock
+       gindex=gindex/lenblock   ! gindex/lenblock
 
        displace(i)=gindex
-
-       if(displace(i)<0) then
-          print *,__FILE__,__LINE__,i,displace(i),count(1),gindex
-       ENDif
-
-       ! increment myloc to next position
-
 
        idim=2                    ! dimension to increment
        done=.false.
 
-       if (i<ndisp) then
+       if (i<iosize) then
           do while (.not. done)
              if (myloc(idim)<ub(idim)) then
                 myloc(idim)=myloc(idim)+1
@@ -149,15 +142,16 @@ CONTAINS
 !          call piodie( __PIO_FILE__,__LINE__,'myloc/=ub')
 !       endif
 !    end do
+
+
     ! check for strictly increasing
+
     do i=1,ndisp-1	
        if(displace(i) > displace(i+1)) then
-          print *,__FILE__,__LINE__,i,displace(i:i+1),ndisp
+          print *,__FILE__,__LINE__,i,displace(i:i+1)
           call piodie(__PIO_FILE__,__LINE__,'displace is not increasing')
        endif
     enddo
-
-
 
   end subroutine calcdisplace_box
 

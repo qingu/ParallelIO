@@ -963,17 +963,13 @@ contains
     integer (kind=pio_offset), intent(in)          :: compdof(:)   ! global degrees of freedom for computational decomposition
     integer (kind=PIO_offset), optional :: iostart(:), iocount(:)
     type (io_desc_t), intent(inout)     :: iodesc
-    !vdf optionals
-    integer(i4), intent(in), optional:: num_ts, bsize(3)
-
-
-    ! Local variables
 
     integer(i4) :: length,n_iotasks
     integer(i4) :: ndims
     integer (i4)                       :: lenblocks
     integer(i4)                       ::  piotype
-
+    !vdf optionals
+    integer(i4), intent(in), optional:: num_ts, bsize(3)
     integer(i4), pointer :: displace(:)  ! the displacements for the mpi data structure (read)
 
     integer(i4) :: prev
@@ -1114,10 +1110,14 @@ contains
        call mpi_allreduce(iosize, iodesc%maxiobuflen, 1, mpi_integer, mpi_max, iosystem%io_comm, ierr)
        call checkmpireturn('mpi_allreduce in initdecomp',ierr)
 
-       lenblocks = get_lenblocks(compdof)
-
-       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount: count is: ',iodesc%count
-       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, lenblocks is: ' , lenblocks
+       lenblocks=1
+       do i=1,ndims
+          if(iodesc%count(i) == dims(i)) then
+             lenblocks=lenblocks*iodesc%count(i)
+          else
+             exit
+          endif
+       enddo
 
        if(lenblocks>0) then
           ndisp=iosize/lenblocks
@@ -1125,14 +1125,18 @@ contains
           ndisp=0
        end if
        call alloc_check(displace,int(ndisp))
-       
+
+       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount: count is: ',iodesc%count,&
+            ' lenblocks =',lenblocks,' ndisp=',ndisp
+
+       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, num_aiotasks is: ', iosystem%num_aiotasks       
        !--------------------------------------------
        ! calculate mpi data structure displacements 
        !--------------------------------------------
       
        if(debug) print *,'PIO_initdecomp: calcdisplace', &
             ndisp,iosize,lenblocks, iodesc%start, iodesc%count
-       call calcdisplace_box(dims,iodesc%start,iodesc%count,ndims,displace)
+       call calcdisplace_box(dims,lenblocks,iodesc%start,iodesc%count,ndims,displace)
           
        n_iotasks = iosystem%num_iotasks
        length = iosize                      ! rml
@@ -1183,7 +1187,8 @@ contains
        call genindexedblock(lenblocks,piotype,iodesc%write%elemtype,iodesc%write%filetype,displace)
        
        if(debug) print *,__PIO_FILE__,__LINE__,iodesc%write%n_elemtype, &
-        iodesc%write%n_words,iodesc%write%elemtype,iodesc%write%filetype
+        iodesc%write%n_words,iodesc%write%elemtype,iodesc%write%filetype, lenblocks
+
     else
        iodesc%write%n_elemtype=0
        iodesc%write%n_words=0
@@ -1201,12 +1206,6 @@ contains
 
     call dupiodesc2(iodesc%write,iodesc%read)
     
-!    if(debug) then
-!       print*, __PIO_FILE__,__LINE__,iodesc%read%filetype,iodesc%read%elemtype,&
-!            iodesc%read%n_elemtype,iodesc%read%n_words   
-!       print *, __PIO_FILE__,__LINE__,iodesc%write%filetype,iodesc%write%elemtype,&
-!            iodesc%write%n_elemtype,iodesc%write%n_words
-!    end if
 
     if (iosystem%ioproc) then
        call dealloc_check(displace)
@@ -1317,12 +1316,19 @@ contains
        if(check) call checkmpireturn('genindexedblock: after call to type_create_indexed_block: ',ierr)
        call mpi_type_commit(filetype,ierr)
        if(check) call checkmpireturn('genindexedblock: after call to type_commit: ',ierr)
-       call mpi_type_get_envelope(elemtype, nints, nadds, ndtypes, comb, ierr)
+       if(debug) then
+          call mpi_type_get_envelope(filetype, nints, nadds, ndtypes, comb, ierr)
+          print *,__FILE__,__LINE__,nints,nadds,ndtypes,comb,ierr
+       endif
+
     end if
     ! _MPISERIAL
 #endif
 
   end subroutine genindexedblock
+
+
+
 !> 
 !! @public
 !! @ingroup PIO_init
@@ -2630,41 +2636,7 @@ contains
 
   end subroutine read_ascii
 
-  !
-  ! Find the lcd length of contiguous blocks in compdof
-  ! 
 
-  function get_lenblocks(compdof) result (lenblocks)
-    integer(i8), intent(in) :: compdof(:)
-    integer(i4) :: lenblocks
-
-    integer(i4) :: i, ndof, blklen, cnt
-
-    ndof = size(compdof)
-    cnt=1
-    lenblocks=0
-    do i=2,ndof
-       if(compdof(i)-compdof(i-1)==1) then
-          cnt=cnt+1
-       else
-          blklen=cnt
-          cnt=1
-          if(lenblocks==0) then
-             lenblocks=blklen
-          elseif(blklen<lenblocks) then
-             if(mod(lenblocks,blklen)==0) then
-                lenblocks=blklen
-             else
-                lenblocks=-1
-             endif
-          else
-             if(mod(blklen,lenblocks)/=0) then
-                lenblocks=-1
-             endif
-          endif
-       endif
-    enddo
-  end function get_lenblocks
 
 
 end module piolib_mod
