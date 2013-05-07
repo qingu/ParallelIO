@@ -40,13 +40,26 @@ Program pio_unit_test_driver
 ! Ignore namelist values if PIO not built with correct options
 ! (i.e. don't test pnetcdf if not built with pnetcdf)
 #ifndef USEMPIIO
-    ltest_bin_direct = .false.
+    if (ltest_bin.or.ltest_bin_direct) then
+      write(*,"(A,x,A)") "WARNING: can not test binary files because PIO", &
+                         "was not compiled with -DUSEMPIIO"
+      ltest_bin        = .false.
+      ltest_bin_direct = .false.
+    end if
 #endif
 #ifndef _NETCDF
-    ltest_netcdf     = .false.
+    if (ltest_netcdf) then
+      write(*,"(A,x,A)") "WARNING: can not test netcdf files because PIO", &
+                         "was not compiled with -D_NETCDF"
+      ltest_netcdf     = .false.
+    end if
 #endif
 #ifndef _PNETCDF
-    ltest_pnetcdf    = .false.
+    if (ltest_pnetcdf) then
+      write(*,"(A,x,A)") "WARNING: can not test pnetcdf files because PIO", &
+                         "was not compiled with -D_PNETCDF"
+      ltest_pnetcdf    = .false.
+    end if
 #endif
 
   end if
