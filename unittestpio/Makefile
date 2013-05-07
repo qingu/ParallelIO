@@ -42,7 +42,7 @@ $(EXE): $(OBJS)
 	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@
 
 %.o: %.F90
-	$(MPIFC) -c $< -I../pio $(FFLAGS)
+	$(MPIFC) $(FFLAGS) -c $< -I../pio $(CPPDEFS)
 
 clean:
 	$(RM) $(EXE) $(OBJS) $(MODFILES) $(DEPENDS) $(OUTFILES)

@@ -36,6 +36,19 @@ Program pio_unit_test_driver
       print*, "ERROR reading input.nl, exiting!"
     end if
     close(615)
+
+! Ignore namelist values if PIO not built with correct options
+! (i.e. don't test pnetcdf if not built with pnetcdf)
+#ifndef USEMPIIO
+    ltest_bin_direct = .false.
+#endif
+#ifndef _NETCDF
+    ltest_netcdf     = .false.
+#endif
+#ifndef _PNETCDF
+    ltest_pnetcdf    = .false.
+#endif
+
   end if
 
   call MPI_Bcast(ios,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
@@ -59,6 +72,8 @@ Program pio_unit_test_driver
                 stride,         & ! Stride
                 PIO_rearr_box,  & ! rearr
                 pio_iosystem)     ! iosystem
+
+  call PIO_seterrorhandling(pio_iosystem, PIO_BCAST_ERROR)
 
   fail_cnt = 0
   test_cnt = 0
