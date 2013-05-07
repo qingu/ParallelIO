@@ -1,6 +1,6 @@
 Program pio_unit_test_driver
 
-  Use netcdf_test
+  use netcdf_test
 
   Implicit None
 
@@ -11,16 +11,22 @@ Program pio_unit_test_driver
 
   integer, parameter :: BINARY=1, NETCDF=2, PNETCDF=3
      
-  integer nfail, ntest
+  integer nfail, ntest, ios
   logical :: ltest_bin, ltest_netcdf, ltest_pnetcdf
 
   namelist/piotest_nml/ltest_bin, ltest_netcdf, ltest_pnetcdf
 
-  ltest_bin = .false.
-  ltest_netcdf = .false.
+  ltest_bin     = .false.
+  ltest_netcdf  = .false.
   ltest_pnetcdf = .false.
 
-  read(*, nml=piotest_nml)
+  open(615, file="input.nl")
+  read(615, nml=piotest_nml, iostat=ios)
+  if (ios.ne.0) then
+    print*, "ERROR reading input.nl, exiting!"
+    stop 1
+  end if
+  close(615)
 
   nfail = 0
   ntest = 0

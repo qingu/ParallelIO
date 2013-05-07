@@ -1,6 +1,6 @@
 module netcdf_test
 
-  Use pio_types
+  use pio_types
 
   Implicit None
   private

@@ -2,4 +2,4 @@
 
 2) Determine what tests to run by setting namelist values in input.nl
 
-3) Run "piotest < input.nl"
+3) Run "./piotest"
