@@ -2,8 +2,14 @@
 
 include ../pio/Makefile.conf
 
-SRCS_FC = driver.F90 \
+SRCS_FC = driver.F90      \
+          global_vars.F90 \
           basic_tests.F90
+
+OUTFILES = piotest_bin.ieee   \
+           piotest_bin2.ieee  \
+           piotest_netcdf.nc  \
+           piotest_pnetcdf.nc
 
 # Dependencies
 DEPSUF = .d
@@ -27,7 +33,7 @@ depends: $(DEPENDS)
 	@echo "Done updating dependencies"
 
 $(EXE): $(OBJS)
-	$(MPIFC) -o $(EXE) $(OBJS) -L../pio -lpio
+	$(MPIFC) -o $(EXE) $(OBJS) -L../pio -lpio $(LDLIBS)
 
 .SUFFIXES: .o .F90 $(DEPSUF)
 
@@ -36,7 +42,7 @@ $(EXE): $(OBJS)
 	@$(AWK) -f $(FDEPENDS) -v NAME=$(basename $<) -v SUF=$(suffix $<) $< > $@
 
 %.o: %.F90
-	$(MPIFC) -c $< -I../pio
+	$(MPIFC) -c $< -I../pio $(FFLAGS)
 
 clean:
-	$(RM) $(EXE) $(OBJS) $(MODFILES) $(DEPENDS)
+	$(RM) $(EXE) $(OBJS) $(MODFILES) $(DEPENDS) $(OUTFILES)

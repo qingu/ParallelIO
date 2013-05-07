@@ -1,48 +1,106 @@
 Program pio_unit_test_driver
 
+  use global_vars
   use basic_tests
+  use piolib_mod
 
   Implicit None
 
-  integer, parameter :: str_len = 255
-  character(len=str_len), dimension(3) :: test_file_name = (/"piotest_bin.ieee  ", &
-                                                             "piotest_netcdf.nc ",  &
-                                                             "piotest_pnetcdf.nc"/)
+  ! local variables   
+  integer :: fail_cnt, test_cnt, ios, test_id, ierr, test_val 
+  logical :: ltest_bin, ltest_bin_direct, ltest_netcdf, ltest_pnetcdf
+  namelist/piotest_nml/ltest_bin,        &
+                       ltest_bin_direct, &
+                       ltest_netcdf,     &
+                       ltest_pnetcdf,    &
+                       stride
 
-  integer, parameter :: BINARY=1, NETCDF=2, PNETCDF=3
-     
-  integer nfail, ntest, ios
-  logical :: ltest_bin, ltest_netcdf, ltest_pnetcdf
+  ! Set up MPI
+  call MPI_Init(ierr)
+  call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
+  call MPI_Comm_size(MPI_COMM_WORLD, ntasks , ierr)
+  master_task = my_rank.eq.0
 
-  namelist/piotest_nml/ltest_bin, ltest_netcdf, ltest_pnetcdf
+  if (master_task) then
+    write(*,"(A,I0,A)") "Running unit tests with ", ntasks, " MPI tasks."
+    write(*,"(A)") "------"
+    ltest_bin        = .false.
+    ltest_bin_direct = .false.
+    ltest_netcdf     = .false.
+    ltest_pnetcdf    = .false.
+    stride           = 1
 
-  ltest_bin     = .false.
-  ltest_netcdf  = .false.
-  ltest_pnetcdf = .false.
+    open(615, file="input.nl")
+    read(615, nml=piotest_nml, iostat=ios)
+    if (ios.ne.0) then
+      print*, "ERROR reading input.nl, exiting!"
+    end if
+    close(615)
+  end if
 
-  open(615, file="input.nl")
-  read(615, nml=piotest_nml, iostat=ios)
+  call MPI_Bcast(ios,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if (ios.ne.0) then
-    print*, "ERROR reading input.nl, exiting!"
-    stop 1
-  end if
-  close(615)
-
-  nfail = 0
-  ntest = 0
-
-  if (ltest_bin) then
-    write(*,"(A)") "Testing PIO's ability to create / read / write a binary file."
+    call MPI_Abort(MPI_COMM_WORLD)
   end if
 
-  if (ltest_netcdf) then
-    write(*,"(A)") "Testing PIO's ability to create / read / write a netcdf file."
-    nfail = test_create(trim(test_file_name(NETCDF)))
-  end if
+  ltest(BINARY)  = ltest_bin
+  ltest(BINDIR)  = ltest_bin_direct
+  ltest(NETCDF)  = ltest_netcdf
+  ltest(PNETCDF) = ltest_pnetcdf
+  call MPI_Bcast(ltest,ntest,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(stride,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  niotasks = ntasks/stride
 
-  if (ltest_netcdf) then
-    write(*,"(A,x,A)") "Testing PIO's ability to create / read / write a", &
-                       "netcdf file using the pnetcdf library."
-  end if
+  ! Set up PIO
+  call PIO_init(my_rank,        & ! MPI rank
+                MPI_COMM_WORLD, & ! MPI communicator
+                niotasks,       & ! Number of iotasks (ntasks/stride)
+                0,              & ! num_aggregator (?)
+                stride,         & ! Stride
+                PIO_rearr_box,  & ! rearr
+                pio_iosystem)     ! iosystem
+
+  fail_cnt = 0
+  test_cnt = 0
+
+  do test_id=1,ntest
+    if (ltest(test_id)) then
+      ! Make sure i is a valid test number
+      select case (test_id)
+        case (BINARY)
+          if (master_task) &
+            write(*,"(A)") "Testing PIO's binary input / output..."
+        case (BINDIR)
+          if (master_task) &
+            write(*,"(A)") "Testing PIO's direct binary input / output..."
+        case (NETCDF)
+          if (master_task) &
+            write(*,"(A)") "Testing PIO's netcdf input / output..."
+        case (PNETCDF)
+          if (master_task) &
+            write(*,"(A)") "Testing PIO's pnetcdf input / output..."
+        case DEFAULT
+          if (master_task) &
+            write(*,"(A,I0)") "Error, not configured for test #", test_id
+          call MPI_Abort(MPI_COMM_WORLD)
+      end select
+
+      test_val = test_create(test_id)
+      if (master_task) then
+        if (test_val.eq.0) then
+          write(*,"(A)") "... File creation test completed successfully"
+        else
+          write(*,"(A)") "... File creation test FAILED"
+        end if
+      end if
+      fail_cnt = fail_cnt + test_val
+    end if
+  end do
+
+  if (master_task) &
+    write(*,"(A,I0)") "Total failure count: ", fail_cnt
+
+  call PIO_finalize(pio_iosystem, ierr)
+  call MPI_Finalize(ierr)
 
 End Program pio_unit_test_driver

@@ -1,25 +1,45 @@
 module basic_tests
 
   use pio_types
+  use piolib_mod
+  use nf_mod
+  use global_vars
 
   Implicit None
   private
   save
 
-  public :: test_create 
+  public :: test_create
 
   Contains
 
-    Function test_create(filename)
+    Function test_create(test_id)
+    ! test_create():
+    ! * Create an empty file, close it, test that it can be opened
+    ! * Do it again with PIO_CLOBBER mode
+    ! * Do it again with PIO_NOCLOBBER mode, check for error
 
-      character(len=*), intent(in) :: filename
-      integer test_create
+      ! Input / Output Vars
+      integer, intent(in) :: test_id
+      integer             :: test_create
 
-      write(*,"(x,A,x,a)") "This test will create ", filename
-      ! Just checking to make sure using pio_types is working properly
-      print*, "PIO_CLOBBER = ", PIO_CLOBBER
-      print*, "PIO_NOCLOBBER = ", PIO_NOCLOBBER
-      test_create = 0
+      ! Local Vars
+      character(len=str_len) :: filename
+      integer                :: iotype, fails, ret_val
+
+      fails = 0
+
+      filename = fnames(test_id)
+      iotype   = iotypes(test_id)
+
+      ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename)
+      if (ret_val.ne.0) fails = fails+1
+      if ((iotype.eq.PIO_iotype_netcdf).or.(iotype.eq.PIO_iotype_pnetcdf)) then
+        ret_val = PIO_enddef(pio_file)
+        if (ret_val.ne.0) fails = fails+1
+      end if
+      call PIO_closefile(pio_file)
+      test_create = fails
 
     End Function test_create
 
