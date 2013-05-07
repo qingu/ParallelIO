@@ -1,4 +1,4 @@
-module netcdf_test
+module basic_tests
 
   use pio_types
 
@@ -6,21 +6,21 @@ module netcdf_test
   private
   save
 
-  public :: test_nccreate 
+  public :: test_create 
 
   Contains
 
-    Function test_nccreate(filename)
+    Function test_create(filename)
 
       character(len=*), intent(in) :: filename
-      integer test_nccreate
+      integer test_create
 
       write(*,"(x,A,x,a)") "This test will create ", filename
       ! Just checking to make sure using pio_types is working properly
       print*, "PIO_CLOBBER = ", PIO_CLOBBER
       print*, "PIO_NOCLOBBER = ", PIO_NOCLOBBER
-      test_nccreate = 0
+      test_create = 0
 
-    End Function test_nccreate
+    End Function test_create
 
-end module netcdf_test
+end module basic_tests

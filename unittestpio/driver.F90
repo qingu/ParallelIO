@@ -1,6 +1,6 @@
 Program pio_unit_test_driver
 
-  use netcdf_test
+  use basic_tests
 
   Implicit None
 
@@ -37,7 +37,7 @@ Program pio_unit_test_driver
 
   if (ltest_netcdf) then
     write(*,"(A)") "Testing PIO's ability to create / read / write a netcdf file."
-    nfail = test_nccreate(trim(test_file_name(NETCDF)))
+    nfail = test_create(trim(test_file_name(NETCDF)))
   end if
 
   if (ltest_netcdf) then

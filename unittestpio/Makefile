@@ -3,7 +3,7 @@
 include ../pio/Makefile.conf
 
 SRCS_FC = driver.F90 \
-          netcdf_test.F90
+          basic_tests.F90
 
 # Dependencies
 DEPSUF = .d
