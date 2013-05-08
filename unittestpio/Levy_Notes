@@ -2,19 +2,27 @@ This file should be deleted before copying the unittestpio directory onto the tr
 
 Issues to deal with:
 
-1) Can not suppress MPI-IO warning message if file does not exist.
+1) First example of pio_initdecomp from webpage is not supported.
+   pio_initdecomp(iosystem,PIO_int,dims,start,count,iodesc)
+
+"pio_support::pio_die:: myrank=          -1 : ERROR: piolib_mod.f90:         441 : subroutine not yet implemented"
+
+2) Can not suppress MPI-IO warning message if file does not exist.
 
 "open_mpiio: after call to MPI_file_open:MPI_ERR_NO_SUCH_FILE: no such file or directory"
 
-2) Can not open a binary file with PIO_write and put data in it.
+3) Can not open a binary file with PIO_write and put data in it.
 
 "write_mpiio_int: after call to file_write_all:MPI_ERR_READ_ONLY: file is read only
 pio_support::pio_die:: myrank=          -1 : ERROR: iompi_mod.F90:         230 : (no message)"
 
-3) When "creating" a binary file that already exists with PIO_CLOBBER
+4) When "creating" a binary file that already exists with PIO_CLOBBER
    (which is ignored), file is not emptied.
 
 "warning, the mode argument is currently ignored for binary file operations"
 
-4) When creating a binary file to write data using PIO_iotype_direct_pbinary,
+5) When creating a binary file to write data using PIO_iotype_direct_pbinary,
    file is 32767 times larger than same file written with PIO_iotype_pbinary
+
+   Note: this is on my laptop... on Frankfurt, PIO_iotype_direct_pbinary
+   leads to MPI crashing.
