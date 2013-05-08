@@ -120,24 +120,25 @@ Program pio_unit_test_driver
       end select
 
       ! test_create()
-      if (master_task) write(*,"(A)") "  testing PIO_createfile..."
+      if (master_task) write(*,"(3x,A,x)",advance="no") "testing PIO_createfile..."
       call parse(test_create(test_id), fail_cnt)
 
       ! test_open()
-      if (master_task) write(*,"(A)") "  testing PIO_openfile..."
+      if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_openfile..."
       call parse(test_open(test_id), fail_cnt)
+
+      if (master_task) write(*,*) ""
 
     end if ! ltest(test_id)
 
-    if (master_task) write(*,*) ""
   end do
 
   if (master_task) then
     write(*,"(A,I0)") "Total failure count: ", fail_cnt
     if (fail_cnt.eq.0) then
-      write(*,"(A)") "PASSED unit test"
+      write(*,"(A)") "PASSED unit testing."
     else
-      write(*,"(A)") "FAILED unit test"
+      write(*,"(A)") "FAILED unit testing."
     end if
   end if
 
@@ -153,9 +154,9 @@ Program pio_unit_test_driver
 
       if (master_task) then
         if (test_result.eq.0) then
-          write(*,"(A)") "  ... success"
+          write(*,"(A)") "success!"
         else
-          write(*,"(A)") "  ... FAILED"
+          write(*,"(A)") "FAILURE!"
           fail_counter = fail_counter+1
         end if
       end if
