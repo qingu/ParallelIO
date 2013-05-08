@@ -26,3 +26,7 @@ pio_support::pio_die:: myrank=          -1 : ERROR: iompi_mod.F90:         230 :
 
    Note: this is on my laptop... on Frankfurt, PIO_iotype_direct_pbinary
    leads to MPI crashing.
+
+6) Test netcdf file (3*ntasks integers) is always 4096 bytes, while pnetcdf
+   file is (80 + 12*ntasks) bytes
+
