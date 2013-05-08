@@ -6,12 +6,12 @@
  type (io_desc_t)           :: iodesc
  ...
  !---------------------------------------
- ! Initializing the decomposition on PE 0
+ ! Initializing the decomposition on PE 2
  !---------------------------------------
  dims(1) = 8
- compstart(1) = 3
+ compstart(1) = 6
  compcount(1) = 3
- iostart(1) = 1
+ iostart(1) = 5
  iocount(1) = 4
  call PIO_initdecomp(iosystem,PIO_double,dims,compstart,compcount,iodesc,iostart=iostart,iocount=iocount)
 

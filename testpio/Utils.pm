@@ -78,7 +78,7 @@ sub projectInfo{
        $projectInfo = "#BSUB -R \"span[ptile=16]\"\n#BSUB -P $project\n";
        $projectInfo .= "#BSUB -R \"select[scratch_ok > 0]\"\n" if ($host=="yellowstone");
    }elsif($host =~ "titan"){
-     $project = `/sw/xt5/bin/showproj -s $host | tail -1`;
+     $project = `showproj -s $host | tail -1`;
      $projectInfo ="#PBS -A $project\n";
    }elsif($host =~ "athena" or $host =~ "kraken"){
 #    $project = `showproj -s athena | tail -1`;
@@ -165,6 +165,7 @@ sub loadmodules{
 		   erebus => "/usr/share/Modules/",
 		   yellowstone => "/glade/apps/opt/modulefiles",
 		   yellowstone_pgi => "/glade/apps/opt/modulefiles",
+		   yellowstone_gnu => "/glade/apps/opt/modulefiles",
 		   titan  => "/opt/modules/default/",
 		   athena => "/opt/modules/default/",
 		   kraken => "/opt/modules/default/",
@@ -187,12 +188,12 @@ sub loadmodules{
 #        module(" load xt-mpt/4.0.0");
 #	module(" load PrgEnv-pgi");
 #	module(" load xtpe-interlagos");
-        module("switch cray-mpich2    cray-mpich2/5.5.5");
-        module(" switch xt-libsci xt-libsci/11.1.01");
+        module("switch cray-mpich2    cray-mpich2/5.6.3");
+        module(" switch xt-libsci xt-libsci/12.0.00");
         module(" swap xt-asyncpe xt-asyncpe/5.16");
         module("load szip/2.1");
 #        module("load hdf5-parallel/1.8.8");
-	module(" switch pgi pgi/12.5.0");
+	module(" switch pgi pgi/12.10.0");
 	module(" load netcdf-hdf5parallel/4.2.0");      
 	module(" load parallel-netcdf/1.3.1");
 #	module(" load para");
@@ -282,6 +283,20 @@ sub loadmodules{
         module("rm netcdf");
         module("rm intel");
         module("load pgi/12.5");
+	module("load ncarcompilers/1.0");
+        module("unload netcdf");
+        module("load netcdf/4.2");
+        module("load pnetcdf/1.3.0");
+        module("load ncarenv/1.0");
+	module("load ncarbinlibs/0.0");
+	module("list");
+    }elsif($host eq "yellowstone_gnu"){
+	print "Loading modules for $host\n";
+	require "/glade/apps/opt/lmod/lmod/init/perl";    
+	module_check($modpath,"yellowstone");
+        module("rm netcdf");
+        module("rm intel");
+        module("load gnu");
 	module("load ncarcompilers/1.0");
         module("unload netcdf");
         module("load netcdf/4.2");

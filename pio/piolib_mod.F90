@@ -6,7 +6,13 @@
 #ifdef BGL
 #define BGx
 #endif
-
+!>
+!! @file 
+!! @brief Initialization Routines for PIO
+!! 
+!! $Revision$
+!! $LastChangedDate$
+!<
 module piolib_mod
   !--------------
   use pio_kinds
@@ -261,7 +267,13 @@ module piolib_mod
 #endif
 
 contains
-
+!> 
+!! @public 
+!! @ingroup PIO_file_is_open
+!! @brief This logical function indicates if a file is open.
+!! @details
+!! @param File @copydoc file_desc_t
+!<
   logical function PIO_FILE_IS_OPEN(File)
     type(file_desc_t), intent(in) :: file
     pio_file_is_open = file%file_is_open
@@ -273,7 +285,8 @@ contains
 !! @ingroup PIO_get_local_array_size
 !! @brief This function returns the expected local size of an array associated with iodesc
 !! @details
-!! @param iodesc @copydoc io_desc_t
+!! @param iodesc 
+!! @copydoc io_desc_t
 !<
   integer function PIO_get_local_array_size(iodesc)
     type(io_desc_t), intent(in) :: iodesc   
@@ -286,7 +299,7 @@ contains
 !! @brief advances the record dimension of a variable in a netcdf format file 
 !!  or the block address in a binary file
 !! @details
-!! @param vardesc @copydoc var_desc_t
+!! @param[in,out] vardesc @copybrief var_desc_t 
 !<
   subroutine advanceframe(vardesc)
     type(var_desc_t), intent(inout) :: vardesc
@@ -2178,10 +2191,12 @@ contains
 #ifndef _MPISERIAL
      if(iosystem%info .ne. mpi_info_null) then 
         call mpi_info_free(iosystem%info,ierr) 
+        iosystem%info=mpi_info_null
         !print *,'IAM: ',iosystem%comp_rank, ' finalize (1) error = ', ierr
      endif
      if(iosystem%io_comm .ne. mpi_comm_null) then 
         call mpi_comm_free(iosystem%io_comm,ierr)
+        iosystem%io_comm=mpi_comm_null
         !print *,'IAM: ',iosystem%comp_rank, ' finalize (2) error = ', ierr
      endif
 #endif
@@ -2538,7 +2553,7 @@ contains
 !! @details  Input parameters are read on comp task 0 and ignored elsewhere.
 !! @param iosystem : a defined pio system descriptor created by a call to @ref PIO_init (see PIO_types)
 !! @param file	:  the returned file descriptor
-!! @param iotype : @copydoc PIO_iotype
+!! @param iotype : @copybrief PIO_iotype
 !! @param fname : the name of the file to open
 !! @param mode : a zero value (or PIO_nowrite) specifies the default
 !! behavior: open the dataset with read-only access, buffering and
@@ -2668,6 +2683,7 @@ contains
 !! @param file @copydoc file_desc_t
 !<
   subroutine syncfile(file)
+    use piodarray, only : darray_write_complete
     implicit none
     type (file_desc_t), target :: file
     integer :: ierr, msg
@@ -2686,6 +2702,7 @@ contains
 
     select case(file%iotype)
     case( pio_iotype_pnetcdf, pio_iotype_netcdf)
+       call darray_write_complete(file)
        ierr = sync_nf(file)
     case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
     case(pio_iotype_binary) 
@@ -2710,8 +2727,11 @@ contains
        if(ios%comp_rank==0) then
           call mpi_send(msg, 1, mpi_integer, ios%ioroot, 1, ios%union_comm, ierr)
        end if
+       call MPI_Barrier(ios%comp_comm,ierr)
        call mpi_bcast(iodesc%async_id,1, mpi_integer, ios%compmaster,ios%intercomm, ierr)
     end if
+    call MPI_Barrier(ios%union_comm,ierr)
+
     iodesc%async_id=-1
     call rearrange_free(ios,iodesc)
 
