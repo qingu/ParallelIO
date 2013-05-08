@@ -23,7 +23,6 @@ Program pio_unit_test_driver
 
   if (master_task) then
     write(*,"(A,I0,A)") "Running unit tests with ", ntasks, " MPI tasks."
-    write(*,"(A)") "------"
     ltest_bin        = .false.
     ltest_bin_direct = .false.
     ltest_netcdf     = .false.
@@ -67,6 +66,7 @@ Program pio_unit_test_driver
       ltest_pnetcdf    = .false.
     end if
 #endif
+    write(*,"(A)") "------"
 
   end if
 
@@ -119,6 +119,7 @@ Program pio_unit_test_driver
           call MPI_Abort(MPI_COMM_WORLD)
       end select
 
+      ! test_create()
       test_val = test_create(test_id)
       if (master_task) then
         if (test_val.eq.0) then
@@ -128,7 +129,19 @@ Program pio_unit_test_driver
         end if
       end if
       fail_cnt = fail_cnt + test_val
+
+      ! test_open()
+      test_val = test_open(test_id)
+      if (master_task) then
+        if (test_val.eq.0) then
+          write(*,"(A)") "... File open test completed successfully"
+        else
+          write(*,"(A)") "... File open test FAILED"
+        end if
+      end if
+      fail_cnt = fail_cnt + test_val
     end if
+    if (master_task.and.(test_id.ne.ntest)) write(*,*) ""
   end do
 
   if (master_task) &
