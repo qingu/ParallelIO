@@ -21,8 +21,8 @@ module basic_tests
     ! * For netcdf / pnetcdf:
     !   - Create same file with PIO_CLOBBER mode
     !   - Try to create same file with PIO_NOCLOBBER mode, check for error
-    ! Routines tested: PIO_createfile, PIO_openfile, PIO_closefile
-    ! Also checks PIO_enddef if netcdf or pnetcdf tests are enabled
+    ! Routines used in test: PIO_createfile, PIO_openfile, PIO_closefile
+    ! Also uses PIO_enddef for [p]netcdf tests
 
       ! Input / Output Vars
       integer, intent(in) :: test_id
@@ -94,12 +94,14 @@ module basic_tests
     Function test_open(test_id)
     ! test_open():
     ! * Try to open file that doesn't exist, check for error
-    ! * Open a file with PIO_WRITE, write something, close
+    ! * Open a file with PIO_write, write something, close
     ! * Open a file with PIO_nowrite, try to write, check for error
     ! * For netcdf / pnetcdf:
     !   - Try to open non-netcdf file, check for error
-    ! Routines tested:
-    ! Also checks  if netcdf or pnetcdf tests are enabled
+    ! Routines used in test: PIO_initdecomp, PIO_openfile, PIO_write_darray,
+    !                        PIO_closefile, PIO_freedecomp
+    ! Also uses PIO_createfile for binary tests
+    !           PIO_redef, PIO_def_dim, PIO_def_var, PIO_enddef for [p]netcdf tests
 
       ! Input / Output Vars
       integer, intent(in) :: test_id
@@ -176,8 +178,19 @@ module basic_tests
         call PIO_closefile(pio_file)
       end if
 
+      ! Try to open standard binary file as netcdf (if iotype = netcdf)
+      if (is_netcdf(iotype)) then
+        ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, &
+                               "not_netcdf.ieee", PIO_nowrite)
+        if (ret_val.eq.0) then
+          if (master_task) write(*,"(A,x,A)") "ERROR: Successfully opened", &
+                                              "non-netcdf file as netcdf"
+          fails = fails+1
+        end if
+      end if
+
+      call PIO_freedecomp(pio_iosystem, iodesc_nCells)
       test_open = fails
-      call MPI_Barrier(MPI_COMM_WORLD, ret_val)
 
     End Function test_open
 

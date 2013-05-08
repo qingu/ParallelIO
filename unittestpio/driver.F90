@@ -103,16 +103,16 @@ Program pio_unit_test_driver
       select case (test_id)
         case (BINARY)
           if (master_task) &
-            write(*,"(A)") "Testing PIO's binary input / output..."
+            write(*,"(A)") "Testing PIO's binary input / output:"
         case (BINDIR)
           if (master_task) &
-            write(*,"(A)") "Testing PIO's direct binary input / output..."
+            write(*,"(A)") "Testing PIO's direct binary input / output:"
         case (NETCDF)
           if (master_task) &
-            write(*,"(A)") "Testing PIO's netcdf input / output..."
+            write(*,"(A)") "Testing PIO's netcdf input / output:"
         case (PNETCDF)
           if (master_task) &
-            write(*,"(A)") "Testing PIO's pnetcdf input / output..."
+            write(*,"(A)") "Testing PIO's pnetcdf input / output:"
         case DEFAULT
           if (master_task) &
             write(*,"(A,I0)") "Error, not configured for test #", test_id
@@ -120,34 +120,46 @@ Program pio_unit_test_driver
       end select
 
       ! test_create()
-      test_val = test_create(test_id)
-      if (master_task) then
-        if (test_val.eq.0) then
-          write(*,"(A)") "... File creation test completed successfully"
-        else
-          write(*,"(A)") "... File creation test FAILED"
-        end if
-      end if
-      fail_cnt = fail_cnt + test_val
+      if (master_task) write(*,"(A)") "  testing PIO_createfile..."
+      call parse(test_create(test_id), fail_cnt)
 
       ! test_open()
-      test_val = test_open(test_id)
-      if (master_task) then
-        if (test_val.eq.0) then
-          write(*,"(A)") "... File open test completed successfully"
-        else
-          write(*,"(A)") "... File open test FAILED"
-        end if
-      end if
-      fail_cnt = fail_cnt + test_val
-    end if
-    if (master_task.and.(test_id.ne.ntest)) write(*,*) ""
+      if (master_task) write(*,"(A)") "  testing PIO_openfile..."
+      call parse(test_open(test_id), fail_cnt)
+
+    end if ! ltest(test_id)
+
+    if (master_task) write(*,*) ""
   end do
 
-  if (master_task) &
+  if (master_task) then
     write(*,"(A,I0)") "Total failure count: ", fail_cnt
+    if (fail_cnt.eq.0) then
+      write(*,"(A)") "PASSED unit test"
+    else
+      write(*,"(A)") "FAILED unit test"
+    end if
+  end if
 
   call PIO_finalize(pio_iosystem, ierr)
   call MPI_Finalize(ierr)
+
+  Contains
+
+    Subroutine parse(test_result, fail_counter)
+
+      integer, intent(in)    :: test_result
+      integer, intent(inout) :: fail_counter
+
+      if (master_task) then
+        if (test_result.eq.0) then
+          write(*,"(A)") "  ... success"
+        else
+          write(*,"(A)") "  ... FAILED"
+          fail_counter = fail_counter+1
+        end if
+      end if
+
+    End Subroutine parse
 
 End Program pio_unit_test_driver
