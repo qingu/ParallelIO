@@ -147,13 +147,13 @@ Program pio_unit_test_driver
 
   Contains
 
-    Subroutine parse(test_result, fail_counter)
+    Subroutine parse(test_passed, fail_counter)
 
-      integer, intent(in)    :: test_result
+      logical, intent(in)    :: test_passed
       integer, intent(inout) :: fail_counter
 
       if (master_task) then
-        if (test_result.eq.0) then
+        if (test_passed) then
           write(*,"(A)") "success!"
         else
           write(*,"(A)") "FAILURE!"

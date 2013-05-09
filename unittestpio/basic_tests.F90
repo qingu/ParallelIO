@@ -26,13 +26,14 @@ module basic_tests
 
       ! Input / Output Vars
       integer, intent(in) :: test_id
-      integer             :: test_create
+      logical             :: test_create ! True => success
 
       ! Local Vars
       character(len=str_len) :: filename
-      integer                :: iotype, fails, ret_val
+      integer                :: iotype, ret_val
+      logical                :: passed
 
-      fails = 0
+      passed = .true.
 
       filename = fnames(test_id)
       iotype   = iotypes(test_id)
@@ -41,12 +42,12 @@ module basic_tests
       ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename)
       if (ret_val.ne.0) then
         ! File not created successfully 
-        fails = fails+1
+        passed = .false.
       else
         ! File created
         if (is_netcdf(iotype)) then
           ret_val = PIO_enddef(pio_file)
-          if (ret_val.ne.0) fails = fails+1
+          if (ret_val.ne.0) passed = .false.
         end if
         call PIO_closefile(pio_file)
 
@@ -54,7 +55,7 @@ module basic_tests
         ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, filename, PIO_nowrite)
         if (ret_val.ne.0) then
           ! Error opening file
-          fails = fails+1
+          passed = .false.
         else
           ! File opened
           call PIO_closefile(pio_file)
@@ -66,11 +67,11 @@ module basic_tests
         ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename, PIO_CLOBBER)
         if (ret_val.ne.0) then
           ! File not created successfully
-          fails = fails+1
+          passed = .false.
         else
           ! File created 
           ret_val = PIO_enddef(pio_file)
-          if (ret_val.ne.0) fails = fails+1
+          if (ret_val.ne.0) passed = .false.
           call PIO_closefile(pio_file)
         end if
       end if
@@ -80,14 +81,14 @@ module basic_tests
         ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename, PIO_NOCLOBBER)
         if (ret_val.eq.0) then
           ! File created (bad, expect an error because of NOCLOBBER)
-          fails = fails+1
+          passed = .false.
           ret_val = PIO_enddef(pio_file)
-          if (ret_val.ne.0) fails = fails+1
+          if (ret_val.ne.0) passed = .false.
           call PIO_closefile(pio_file)
         end if
       end if
 
-      test_create = fails
+      test_create = passed
 
     End Function test_create
 
@@ -105,11 +106,12 @@ module basic_tests
 
       ! Input / Output Vars
       integer, intent(in) :: test_id
-      integer             :: test_open
+      logical             :: test_open
 
       ! Local Vars
       character(len=str_len) :: filename
-      integer                :: iotype, fails, ret_val
+      integer                :: iotype, ret_val
+      logical                :: passed
 
       ! Data used to test writing
       integer,          dimension(3) :: data_to_write, compdof
@@ -118,7 +120,7 @@ module basic_tests
       integer                        :: pio_dim
       type(var_desc_t)               :: pio_var
 
-      fails = 0
+      passed = .true.
       dims(1) = 3*ntasks
       compdof = 3*my_rank+(/1,2,3/)  ! Where in the global array each task writes
       data_to_write = my_rank
@@ -132,7 +134,7 @@ module basic_tests
       ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, "FAKE.FILE", PIO_nowrite)
       if (ret_val.eq.0) then
         if (master_task) write(*,"(A)") "ERROR: Successfully opened file that doesn't exist"
-        fails = fails+1
+        passed = .false.
       end if
 
       ! Open existing file, write data to it (for binary file, need to create new file)
@@ -143,39 +145,57 @@ module basic_tests
       end if
       if (ret_val.ne.0) then
         ! Error opening file
-        if (master_task) write(*,"(A)") "Error opening file to write"
-        fails = fails+1
+        if (master_task) write(*,"(A)") "Error opening file with PIO_write"
+        passed = .false.
       else
         ! File opened
         if (is_netcdf(iotype)) then
           ret_val = PIO_redef(pio_file)
           if (ret_val.ne.0) then
             if (master_task) write(*,"(A)") "ERROR entering definition mode"
-            fails = fails+1
+            passed = .false.
           end if
           ret_val = PIO_def_dim(pio_file, 'N', 3*ntasks, pio_dim)
           if (ret_val.ne.0) then
             if (master_task) write(*,"(A)") "ERROR defining pio_dim"
-            fails = fails+1
+            passed = .false.
           end if
           ret_val = PIO_def_var(pio_file, 'foo', PIO_int, &
                                 (/pio_dim/), pio_var)
           if (ret_val.ne.0) then
             if (master_task) write(*,"(A)") "ERROR defining pio_var"
-            fails = fails+1
+            passed = .false.
           end if
           ret_val = PIO_enddef(pio_file)
           if (ret_val.ne.0) then
             if (master_task) write(*,"(A)") "ERROR in PIO_enddef"
-            fails = fails+1
+            passed = .false.
           end if
         end if
         call PIO_write_darray(pio_file, pio_var, iodesc_nCells, data_to_write, ret_val)
         if (ret_val.ne.0) then
           if (master_task) write(*,"(A)") "ERROR writing data"
-          fails = fails+1
+          passed = .false.
         end if
         call PIO_closefile(pio_file)
+      end if
+
+      ! Open existing file with PIO_nowrite, try to write (netcdf only)
+      if (is_netcdf(iotype)) then
+        ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, filename, PIO_nowrite)
+        if (ret_val.ne.0) then
+          ! Error opening file
+          if (master_task) write(*,"(A)") "Error opening file with PIO_write"
+          passed = .false.
+        else
+          call PIO_write_darray(pio_file, pio_var, iodesc_nCells, 1+data_to_write, ret_val)
+          if (ret_val.eq.0) then
+            if (master_task) write(*,"(A,x,A)") "ERROR wrote data to file opened", &
+                                                "with PIO_nowrite"
+            passed = .false.
+          end if
+          call PIO_closefile(pio_file)
+        end if
       end if
 
       ! Try to open standard binary file as netcdf (if iotype = netcdf)
@@ -185,12 +205,12 @@ module basic_tests
         if (ret_val.eq.0) then
           if (master_task) write(*,"(A,x,A)") "ERROR: Successfully opened", &
                                               "non-netcdf file as netcdf"
-          fails = fails+1
+          passed = .false.
         end if
       end if
 
       call PIO_freedecomp(pio_iosystem, iodesc_nCells)
-      test_open = fails
+      test_open = passed
 
     End Function test_open
 
