@@ -1,3 +1,9 @@
+!>
+!! @file
+!! @brief Module containing basic unit tests that are run for both
+!!        binary and netcdf file types.
+!<
+
 module basic_tests
 
   use pio         ! _EXTERNAL

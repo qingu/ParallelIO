@@ -1,3 +1,8 @@
+!>
+!! @file
+!! @brief Module containing netcdf-specific PIO unit tests
+!<
+
 module ncdf_tests
 
   use pio         ! _EXTERNAL

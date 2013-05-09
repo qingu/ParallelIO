@@ -1,3 +1,8 @@
+!>
+!! @file
+!! @brief Module containing variables used across all unit test files
+!<
+
 module global_vars
 
   use pio_types   ! _EXTERNAL
