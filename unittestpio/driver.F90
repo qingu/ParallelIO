@@ -24,7 +24,6 @@ Program pio_unit_test_driver
   master_task = my_rank.eq.0
 
   if (master_task) then
-    write(*,"(A,I0,A)") "Running unit tests with ", ntasks, " MPI tasks."
     ltest_bin        = .false.
     ltest_bin_direct = .false.
     ltest_netcdf     = .false.
@@ -38,10 +37,13 @@ Program pio_unit_test_driver
     end if
     close(615)
 
+    write(*,"(A,x,I0,x,A,x,I0)") "Running unit tests with", ntasks, &
+                                 "MPI tasks and stride of", stride
+
     if (stride.gt.ntasks) then
       stride = ntasks
       write(*,"(A,x,A,I0)") "WARNING: stride value in namelist is larger than", &
-                         "than number of MPI tasks, reducing stride to ", stride
+                            "number of MPI tasks, reducing stride to ", stride
     end if
 
 ! Ignore namelist values if PIO not built with correct options
