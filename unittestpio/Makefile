@@ -4,6 +4,7 @@ include ../pio/Makefile.conf
 
 SRCS_FC = driver.F90      \
           global_vars.F90 \
+          ncdf_tests.F90  \
           basic_tests.F90
 
 OUTFILES = piotest_bin.ieee   \

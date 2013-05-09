@@ -2,6 +2,7 @@ Program pio_unit_test_driver
 
   use global_vars
   use basic_tests
+  use ncdf_tests
   use piolib_mod
 
   Implicit None
@@ -122,11 +123,20 @@ Program pio_unit_test_driver
 
       ! test_create()
       if (master_task) write(*,"(3x,A,x)",advance="no") "testing PIO_createfile..."
-      call parse(test_create(test_id, err_msg), fail_cnt, err_msg)
+      call test_create(test_id, err_msg)
+      call parse(err_msg, fail_cnt)
 
       ! test_open()
       if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_openfile..."
-      call parse(test_open(test_id, err_msg), fail_cnt, err_msg)
+      call test_open(test_id, err_msg)
+      call parse(err_msg, fail_cnt)
+
+      ! netcdf-specific tests
+      if (is_netcdf(iotypes(test_id))) then
+        if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_redef..."
+        call test_redef(test_id, err_msg)
+        call parse(err_msg, fail_cnt)
+      end if
 
       if (master_task) write(*,*) ""
 
@@ -148,12 +158,13 @@ Program pio_unit_test_driver
 
   Contains
 
-    Subroutine parse(test_passed, fail_counter, err_msg)
+    Subroutine parse(err_msg, fail_counter)
 
-      logical,          intent(in)    :: test_passed
-      integer,          intent(inout) :: fail_counter
       character(len=*), intent(in)    :: err_msg
+      integer,          intent(inout) :: fail_counter
+      logical                         :: test_passed
 
+      test_passed = (trim(err_msg).eq."no_error")
       if (master_task) then
         if (test_passed) then
           write(*,"(A)") "success!"

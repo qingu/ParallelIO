@@ -1,0 +1,109 @@
+module ncdf_tests
+
+  use pio
+  use pio_types
+  use piolib_mod
+  use nf_mod
+  use global_vars
+
+  Implicit None
+  private
+  save
+
+  public :: test_redef
+
+  Contains
+
+    Subroutine test_redef(test_id, err_msg)
+    ! test_redef():
+    ! * Open file, enter define mode, add dimension / variable / attribute
+    !   * Try to run PIO_redef from define mode, check for error
+    ! * Leave define mode, close file
+    !   * Try to run PIO_redef with closed file
+    ! Routines used in test: PIO_initdecomp, PIO_openfile, PIO_write_darray,
+    !                        PIO_closefile, PIO_freedecomp, PIO_redef,
+    !                        PIO_def_dim, PIO_def_var, PIO_enddef
+
+      ! Input / Output Vars
+      integer,                intent(in)  :: test_id
+      character(len=str_len), intent(out) :: err_msg
+
+      ! Local Vars
+      character(len=str_len) :: filename
+      integer                :: iotype, ret_val
+
+      ! Data used to test writing
+      integer,          dimension(2) :: data_to_write, compdof
+      integer,          dimension(1) :: dims
+      type(io_desc_t)                :: iodesc_nCells
+      integer                        :: pio_dim
+      type(var_desc_t)               :: pio_var
+
+      err_msg = "no_error"
+
+      dims(1) = 2*ntasks
+      compdof = 2*my_rank+(/1,2/)  ! Where in the global array each task writes
+      data_to_write = 1+my_rank
+
+      call PIO_initdecomp(pio_iosystem, PIO_int, dims, compdof, iodesc_nCells)
+
+      filename = fnames(test_id)
+      iotype   = iotypes(test_id)
+
+      ! Open existing file, write data to it
+      ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, filename, PIO_write)
+      if (ret_val.ne.0) then
+        ! Error in PIO_openfile
+        err_msg = "Could not open " // trim(filename) // " in write mode"
+        return
+      end if
+
+      ! Enter define mode
+      ret_val = PIO_redef(pio_file)
+      if (ret_val.ne.0) then
+        ! Error in PIO_redef
+        err_msg = "Could not enter redef mode"
+        return
+      end if
+
+      ! Define a new dimension M (already has 'N' from previous tests)
+      ret_val = PIO_def_dim(pio_file, 'M', 2*ntasks, pio_dim)
+      if (ret_val.ne.0) then
+        err_msg = "Could not define dimension N"
+        return
+      end if
+
+      ! Define a new variable foo2 (already has 'foo' from previous tests)
+      ret_val = PIO_def_var(pio_file, 'foo2', PIO_int, &
+                            (/pio_dim/), pio_var)
+      if (ret_val.ne.0) then
+        ! Error in PIO_def_var
+        err_msg = "Could not define variable foo"
+        return
+      end if
+
+      ! Leave define mode
+      ret_val = PIO_enddef(pio_file)
+      if (ret_val.ne.0) then
+        ! Error in PIO_enddef
+        err_msg = "Could not end define mode"
+        return
+      end if
+
+      ! Write foo2
+      call PIO_write_darray(pio_file, pio_var, iodesc_nCells, data_to_write, ret_val)
+      if (ret_val.ne.0) then
+        ! Error in PIO_write_darray
+        err_msg = "Could not write data"
+        return
+      end if
+
+      ! Close file
+      call PIO_closefile(pio_file)
+
+      ! Free decomp
+      call PIO_freedecomp(pio_iosystem, iodesc_nCells)
+
+    End Subroutine test_redef
+
+end module ncdf_tests

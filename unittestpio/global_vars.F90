@@ -34,4 +34,16 @@ module global_vars
                                            PIO_iotype_pnetcdf/)
   logical, dimension(ntest) :: ltest
 
+  Contains
+
+    Function is_netcdf(iotype)
+
+      integer, intent(in) :: iotype
+      logical             :: is_netcdf
+
+      is_netcdf =  (iotype.eq.PIO_iotype_netcdf) .or. &
+                   (iotype.eq.PIO_iotype_pnetcdf)
+
+    End Function is_netcdf
+
 end module global_vars

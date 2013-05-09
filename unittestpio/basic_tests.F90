@@ -15,7 +15,7 @@ module basic_tests
 
   Contains
 
-    Function test_create(test_id, err_msg)
+    Subroutine test_create(test_id, err_msg)
     ! test_create():
     ! * Create an empty file, close it, test that it can be opened
     ! * For netcdf / pnetcdf:
@@ -27,32 +27,33 @@ module basic_tests
       ! Input / Output Vars
       integer,                intent(in)  :: test_id
       character(len=str_len), intent(out) :: err_msg
-      logical                             :: test_create ! True => success
 
       ! Local Vars
       character(len=str_len) :: filename
       integer                :: iotype, ret_val
 
-      err_msg = "no error"
+      err_msg = "no_error"
 
       filename = fnames(test_id)
       iotype   = iotypes(test_id)
 
-      ! Original create file
+      ! Delete file before initial create
+      if (master_task) call system("rm -f " // trim(filename))
+
+      ! Original file creation
       ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename)
       if (ret_val.ne.0) then
-        ! File not created successfully 
-        test_create = .false.
+        ! Error in PIO_createfile
         err_msg = "Could not create " // trim(filename)
         return
       end if
 
-      ! File created
+      ! netcdf files need to end define mode before closing
       if (is_netcdf(iotype)) then
         ret_val = PIO_enddef(pio_file)
         if (ret_val.ne.0) then
-          test_create = .false.
-          err_msg = "Could not end definition mode"
+          ! Error in PIO_enddef
+          err_msg = "Could not end define mode"
           return
         end if
       end if
@@ -61,32 +62,32 @@ module basic_tests
       ! Test opening of file
       ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, filename, PIO_nowrite)
       if (ret_val.ne.0) then
-        ! Error opening file
-        test_create = .false.
+        ! Error in PIO_openfile
         err_msg = "Could not open " // trim(filename)
         return
       end if
 
-      ! File opened
+      ! Close file
       call PIO_closefile(pio_file)
 
       ! Recreate file with CLOBBER (netcdf / pnetcdf only)
       if (is_netcdf(iotype)) then
         ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename, PIO_CLOBBER)
         if (ret_val.ne.0) then
-          ! File not created successfully
-          test_create = .false.
+          ! Error in PIO_createfile
           err_msg = "Could not clobber " // trim(filename)
           return
         end if
 
-        ! File created 
+        ! Leave define mode
         ret_val = PIO_enddef(pio_file)
         if (ret_val.ne.0) then
-          test_create = .false.
-          err_msg = "Could not end definition mode in clobbered file"
+          ! Error in PIO_enddef
+          err_msg = "Could not end define mode in clobbered file"
           return
         end if
+
+        ! Close file
         call PIO_closefile(pio_file)
       end if
 
@@ -94,20 +95,17 @@ module basic_tests
       if (is_netcdf(iotype)) then
         ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename, PIO_NOCLOBBER)
         if (ret_val.eq.0) then
-          ! File created (bad, expect an error because of NOCLOBBER)
-          test_create = .false.
-          err_msg = "Was able to successfully create file with PIO_NOCLOBBER"
+          ! Error in PIO_createfile
+          err_msg = "Was able to clobber file despite PIO_NOCLOBBER"
           ret_val = PIO_enddef(pio_file)
           call PIO_closefile(pio_file)
           return
         end if
       end if
 
-      test_create = .true.
+    End Subroutine test_create
 
-    End Function test_create
-
-    Function test_open(test_id, err_msg)
+    Subroutine test_open(test_id, err_msg)
     ! test_open():
     ! * Try to open file that doesn't exist, check for error
     ! * Open a file with PIO_write, write something, close
@@ -122,7 +120,6 @@ module basic_tests
       ! Input / Output Vars
       integer,                intent(in)  :: test_id
       character(len=str_len), intent(out) :: err_msg
-      logical                             :: test_open ! True => success
 
       ! Local Vars
       character(len=str_len) :: filename
@@ -135,7 +132,7 @@ module basic_tests
       integer                        :: pio_dim
       type(var_desc_t)               :: pio_var
 
-      err_msg = "no error"
+      err_msg = "no_error"
       dims(1) = 3*ntasks
       compdof = 3*my_rank+(/1,2,3/)  ! Where in the global array each task writes
       data_to_write = my_rank
@@ -149,8 +146,9 @@ module basic_tests
       ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, "FAKE.FILE", &
                              PIO_nowrite, CheckMPI=.false.)
       if (ret_val.eq.0) then
-        test_open = .false.
+        ! Error in PIO_openfile
         err_msg = "Successfully opened file that doesn't exist"
+        call PIO_closefile(pio_file)
         return
       end if
 
@@ -161,48 +159,55 @@ module basic_tests
         ret_val = PIO_createfile(pio_iosystem, pio_file, iotype, filename)
       end if
       if (ret_val.ne.0) then
-        ! Error opening file
-        test_open = .false.
+        ! Error in PIO_openfile (or PIO_createfile)
         err_msg = "Could not open " // trim(filename) // " in write mode"
         return
       end if
 
-      ! File opened
+      ! Enter define mode for netcdf files
       if (is_netcdf(iotype)) then
         ret_val = PIO_redef(pio_file)
         if (ret_val.ne.0) then
-          test_open = .false.
+          ! Error in PIO_redef
           err_msg = "Could not enter redef mode"
           return
         end if
+
+        ! Define a new dimension N
         ret_val = PIO_def_dim(pio_file, 'N', 3*ntasks, pio_dim)
         if (ret_val.ne.0) then
-          test_open = .false.
+          ! Error in PIO_def_dim
           err_msg = "Could not define dimension N"
           return
         end if
+
+        ! Define a new variable foo
         ret_val = PIO_def_var(pio_file, 'foo', PIO_int, &
                               (/pio_dim/), pio_var)
         if (ret_val.ne.0) then
-          test_open = .false.
+          ! Error in PIO_def_var
           err_msg = "Could not define variable foo"
           return
         end if
+
+        ! Leave define mode
         ret_val = PIO_enddef(pio_file)
         if (ret_val.ne.0) then
-          test_open = .false.
-          err_msg = "Could not end definition mode"
+          ! Error in PIO_enddef
+          err_msg = "Could not end define mode"
           return
         end if
       end if
 
-      ! Write something
+      ! Write foo
       call PIO_write_darray(pio_file, pio_var, iodesc_nCells, data_to_write, ret_val)
       if (ret_val.ne.0) then
-        test_open = .false.
+        ! Error in PIO_write_darray
         err_msg = "Could not write data"
         return
       end if
+
+      ! Close file
       call PIO_closefile(pio_file)
 
       ! Open existing file with PIO_nowrite, try to write (netcdf only)
@@ -210,17 +215,19 @@ module basic_tests
         ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, filename, PIO_nowrite)
         if (ret_val.ne.0) then
           ! Error opening file
-          test_open = .false.
           err_msg = "Could not open file in NoWrite mode"
           return
         end if
 
+        ! Try to write (should fail)
         call PIO_write_darray(pio_file, pio_var, iodesc_nCells, 1+data_to_write, ret_val)
         if (ret_val.eq.0) then
-          test_open = .false.
+          ! Error in PIO_write_darray
           err_msg = "Wrote to file opened in NoWrite mode"
+          call PIO_closefile(pio_file)
           return
         end if
+        ! Close file
         call PIO_closefile(pio_file)
       end if
 
@@ -229,26 +236,16 @@ module basic_tests
         ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, &
                                "not_netcdf.ieee", PIO_nowrite)
         if (ret_val.eq.0) then
-          test_open = .false.
+          ! Error in PIO_openfile
           err_msg = "Opened a non-netcdf file as netcdf"
           call PIO_closefile(pio_file)
           return
         end if
       end if
 
+      ! Free decomp
       call PIO_freedecomp(pio_iosystem, iodesc_nCells)
-      test_open = .true.
 
-    End Function test_open
-
-    Function is_netcdf(iotype)
-
-      integer, intent(in) :: iotype
-      logical             :: is_netcdf
-
-      is_netcdf =  (iotype.eq.PIO_iotype_netcdf) .or. &
-                   (iotype.eq.PIO_iotype_pnetcdf)
-
-    End Function is_netcdf
+    End Subroutine test_open
 
 end module basic_tests
