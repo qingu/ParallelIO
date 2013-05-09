@@ -21,8 +21,8 @@ module ncdf_tests
     ! * Leave define mode, close file
     !   * Try to run PIO_redef with closed file
     ! Routines used in test: PIO_initdecomp, PIO_openfile, PIO_write_darray,
-    !                        PIO_closefile, PIO_freedecomp, PIO_redef,
-    !                        PIO_def_dim, PIO_def_var, PIO_enddef
+    !                        PIO_closefile, PIO_redef, PIO_def_dim,
+    !                        PIO_def_var, PIO_enddef, PIO_freedecomp
 
       ! Input / Output Vars
       integer,                intent(in)  :: test_id
@@ -62,7 +62,8 @@ module ncdf_tests
       ret_val = PIO_redef(pio_file)
       if (ret_val.ne.0) then
         ! Error in PIO_redef
-        err_msg = "Could not enter redef mode"
+        err_msg = "Could not enter define mode"
+        call PIO_closefile(pio_file)
         return
       end if
 
@@ -70,6 +71,7 @@ module ncdf_tests
       ret_val = PIO_def_dim(pio_file, 'M', 2*ntasks, pio_dim)
       if (ret_val.ne.0) then
         err_msg = "Could not define dimension N"
+        call PIO_closefile(pio_file)
         return
       end if
 
@@ -78,7 +80,33 @@ module ncdf_tests
                             (/pio_dim/), pio_var)
       if (ret_val.ne.0) then
         ! Error in PIO_def_var
-        err_msg = "Could not define variable foo"
+        err_msg = "Could not define variable foo2"
+        call PIO_closefile(pio_file)
+        return
+      end if
+
+      ret_val = PIO_put_att(pio_file, pio_var, "max_val", ntasks)
+      if (ret_val.ne.0) then
+        ! Error in PIO_put_att
+        err_msg = "Could not define max_val attribute for foo2"
+        call PIO_closefile(pio_file)
+        return
+      end if
+
+      ret_val = PIO_put_att(pio_file, PIO_global, "created_by", "PIO unit tests")
+      if (ret_val.ne.0) then
+        ! Error in PIO_put_att
+        err_msg = "Could not define global attribute"
+        call PIO_closefile(pio_file)
+        return
+      end if
+
+      ! Try to enter define mode again
+      ret_val = PIO_redef(pio_file)
+      if (ret_val.eq.0) then
+        ! Error in PIO_redef
+        err_msg = "Entered define mode from define mode"
+        call PIO_closefile(pio_file)
         return
       end if
 
@@ -100,6 +128,14 @@ module ncdf_tests
 
       ! Close file
       call PIO_closefile(pio_file)
+
+      ! Try to enter define mode again
+      ret_val = PIO_redef(pio_file)
+      if (ret_val.eq.0) then
+        ! Error in PIO_redef
+        err_msg = "Entered define mode from a closed file"
+        return
+      end if
 
       ! Free decomp
       call PIO_freedecomp(pio_iosystem, iodesc_nCells)

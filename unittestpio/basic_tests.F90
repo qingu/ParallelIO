@@ -54,6 +54,7 @@ module basic_tests
         if (ret_val.ne.0) then
           ! Error in PIO_enddef
           err_msg = "Could not end define mode"
+          call PIO_closefile(pio_file)
           return
         end if
       end if
@@ -84,6 +85,7 @@ module basic_tests
         if (ret_val.ne.0) then
           ! Error in PIO_enddef
           err_msg = "Could not end define mode in clobbered file"
+          call PIO_closefile(pio_file)
           return
         end if
 
@@ -170,6 +172,7 @@ module basic_tests
         if (ret_val.ne.0) then
           ! Error in PIO_redef
           err_msg = "Could not enter redef mode"
+          call PIO_closefile(pio_file)
           return
         end if
 
@@ -178,6 +181,7 @@ module basic_tests
         if (ret_val.ne.0) then
           ! Error in PIO_def_dim
           err_msg = "Could not define dimension N"
+          call PIO_closefile(pio_file)
           return
         end if
 
@@ -187,6 +191,7 @@ module basic_tests
         if (ret_val.ne.0) then
           ! Error in PIO_def_var
           err_msg = "Could not define variable foo"
+          call PIO_closefile(pio_file)
           return
         end if
 
@@ -195,6 +200,7 @@ module basic_tests
         if (ret_val.ne.0) then
           ! Error in PIO_enddef
           err_msg = "Could not end define mode"
+          call PIO_closefile(pio_file)
           return
         end if
       end if
@@ -204,6 +210,7 @@ module basic_tests
       if (ret_val.ne.0) then
         ! Error in PIO_write_darray
         err_msg = "Could not write data"
+        call PIO_closefile(pio_file)
         return
       end if
 
