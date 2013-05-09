@@ -9,7 +9,7 @@ module basic_tests
   use pio         ! _EXTERNAL
   use pio_types   ! _EXTERNAL
   use piolib_mod  ! _EXTERNAL
-  use nf_mod
+  use nf_mod      ! _EXTERNAL
   use global_vars
 
   Implicit None
