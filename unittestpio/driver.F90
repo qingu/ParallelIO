@@ -6,7 +6,8 @@ Program pio_unit_test_driver
 
   Implicit None
 
-  ! local variables   
+  ! local variables
+  character(len=str_len) :: err_msg
   integer :: fail_cnt, test_cnt, ios, test_id, ierr, test_val 
   logical :: ltest_bin, ltest_bin_direct, ltest_netcdf, ltest_pnetcdf
   namelist/piotest_nml/ltest_bin,        &
@@ -121,11 +122,11 @@ Program pio_unit_test_driver
 
       ! test_create()
       if (master_task) write(*,"(3x,A,x)",advance="no") "testing PIO_createfile..."
-      call parse(test_create(test_id), fail_cnt)
+      call parse(test_create(test_id, err_msg), fail_cnt, err_msg)
 
       ! test_open()
       if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_openfile..."
-      call parse(test_open(test_id), fail_cnt)
+      call parse(test_open(test_id, err_msg), fail_cnt, err_msg)
 
       if (master_task) write(*,*) ""
 
@@ -147,16 +148,17 @@ Program pio_unit_test_driver
 
   Contains
 
-    Subroutine parse(test_passed, fail_counter)
+    Subroutine parse(test_passed, fail_counter, err_msg)
 
-      logical, intent(in)    :: test_passed
-      integer, intent(inout) :: fail_counter
+      logical,          intent(in)    :: test_passed
+      integer,          intent(inout) :: fail_counter
+      character(len=*), intent(in)    :: err_msg
 
       if (master_task) then
         if (test_passed) then
           write(*,"(A)") "success!"
         else
-          write(*,"(A)") "FAILURE!"
+          write(*,"(A)") "FAILURE: " // trim(err_msg)
           fail_counter = fail_counter+1
         end if
       end if
