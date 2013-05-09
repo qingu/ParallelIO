@@ -20,9 +20,23 @@ pio_support::pio_die:: myrank=          -1 : ERROR: iompi_mod.F90:         230 :
 4) When creating a binary file to write data using PIO_iotype_direct_pbinary,
    file is 32767 times larger than same file written with PIO_iotype_pbinary
 
-   Note: this is on my laptop... on Frankfurt, PIO_iotype_direct_pbinary
-   leads to MPI crashing.
+   Note: this is on my laptop... on Frankfurt and Yellowstone, using
+   PIO_iotype_direct_pbinary leads to MPI crashing:
 
+Frankfurt
+---------
+"write_mpiio_int after call to file_set_view:MPI_ERR_ARG: invalid argument of so
+ me other kind
+ pio_support::pio_die:: myrank=          -1 : ERROR: iompi_mod.F90:         223 
+ : (no message)"
+
+Yellowstone
+-----------
+"write_mpiio_int after call to file_set_view:Invalid argument, error stack:
+MPI_
+ FILE_SET_VIEW(57): Invalid displacement argument
+ pio_support::pio_die:: myrank=          -1 : ERROR: iompi_mod.F90:         223 
+ : (no message)"
 
 FIXED
 -----
