@@ -41,6 +41,14 @@ MPI_
 5) For tests where we expect failure (e.g. writing a file that was opened nowrite)
    I am just checking for ret_val.ne.0 - should I compare to an exact error val?
 
+6) PIO_openfile hangs in netcdf input / output tests when stride < ntasks:
+   stride = 1 with 2 tasks on my laptop
+   stride = 2 with 4 tasks on frankfurt
+   stride = 4 with 8 tasks on caldera
+
+   (all 3 cases run fine with stride = ntasks)
+
+
 FIXED
 -----
 
