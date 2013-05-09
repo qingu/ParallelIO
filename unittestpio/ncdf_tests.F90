@@ -1,8 +1,8 @@
 module ncdf_tests
 
-  use pio
-  use pio_types
-  use piolib_mod
+  use pio         ! _EXTERNAL
+  use pio_types   ! _EXTERNAL
+  use piolib_mod  ! _EXTERNAL
   use nf_mod
   use global_vars
 
@@ -11,6 +11,7 @@ module ncdf_tests
   save
 
   public :: test_redef
+  public :: test_enddef
 
   Contains
 
@@ -20,9 +21,9 @@ module ncdf_tests
     !   * Try to run PIO_redef from define mode, check for error
     ! * Leave define mode, close file
     !   * Try to run PIO_redef with closed file
-    ! Routines used in test: PIO_initdecomp, PIO_openfile, PIO_write_darray,
-    !                        PIO_closefile, PIO_redef, PIO_def_dim,
-    !                        PIO_def_var, PIO_enddef, PIO_freedecomp
+    ! Routines used in test: PIO_initdecomp, PIO_openfile, PIO_redef, PIO_def_dim,
+    !                        PIO_def_var, PIO_put_att, PIO_enddef,
+    !                        PIO_write_darray, PIO_closefile, PIO_freedecomp
 
       ! Input / Output Vars
       integer,                intent(in)  :: test_id
@@ -141,5 +142,94 @@ module ncdf_tests
       call PIO_freedecomp(pio_iosystem, iodesc_nCells)
 
     End Subroutine test_redef
+
+    Subroutine test_enddef(test_id, err_msg)
+    ! test_enddef():
+    ! * Open file with PIO_nowrite, try to enter define mode, check for error
+    ! * Open file with PIO_write, enter define mode, leave define mode
+    ! * Try calling PIO_enddef from data mode, check for error
+    ! * Close file
+    !   * Try to run PIO_enddef with closed file
+    ! Routines used in test: PIO_openfile, PIO_redef, PIO_enddef, PIO_closefile
+
+      ! Input / Output Vars
+      integer,                intent(in)  :: test_id
+      character(len=str_len), intent(out) :: err_msg
+
+      ! Local Vars
+      character(len=str_len) :: filename
+      integer                :: iotype, ret_val
+
+      err_msg = "no_error"
+      filename = fnames(test_id)
+      iotype   = iotypes(test_id)
+
+      ! Open existing file (read-only)
+      ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, filename, PIO_nowrite)
+      if (ret_val.ne.0) then
+        ! Error in PIO_openfile
+        err_msg = "Could not open " // trim(filename) // " in write mode"
+        return
+      end if
+
+      ! Enter define mode
+      ret_val = PIO_redef(pio_file)
+      if (ret_val.eq.0) then
+        ! Error in PIO_redef
+        err_msg = "Entered define mode in read-only file"
+        call PIO_closefile(pio_file)
+        return
+      end if
+
+      ! Close file
+      call PIO_closefile(pio_file)
+
+      ! Open existing file
+      ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, filename, PIO_write)
+      if (ret_val.ne.0) then
+        ! Error in PIO_openfile
+        err_msg = "Could not open " // trim(filename) // " in write mode"
+        return
+      end if
+
+      ! Enter define mode
+      ret_val = PIO_redef(pio_file)
+      if (ret_val.ne.0) then
+        ! Error in PIO_redef
+        err_msg = "Could not enter define mode"
+        call PIO_closefile(pio_file)
+        return
+      end if
+
+      ! End define mode
+      ret_val = PIO_enddef(pio_file)
+      if (ret_val.ne.0) then
+        ! Error in PIO_enddef
+        err_msg = "Could not end define mode"
+        call PIO_closefile(pio_file)
+        return
+      end if
+
+      ! Try to end define mode from data mode
+      ret_val = PIO_enddef(pio_file)
+      if (ret_val.eq.0) then
+        ! Error in PIO_enddef
+        err_msg = "Ended define mode while in data mode"
+        call PIO_closefile(pio_file)
+        return
+      end if
+
+      ! Close file
+      call PIO_closefile(pio_file)
+
+      ! Try to end define mode in un-opened file
+      ret_val = PIO_enddef(pio_file)
+      if (ret_val.eq.0) then
+        ! Error in PIO_enddef
+        err_msg = "Ended define mode in a file that was already closed"
+        return
+      end if
+
+    End Subroutine test_enddef
 
 end module ncdf_tests

@@ -38,6 +38,9 @@ MPI_
  pio_support::pio_die:: myrank=          -1 : ERROR: iompi_mod.F90:         223 
  : (no message)"
 
+5) For tests where we expect failure (e.g. writing a file that was opened nowrite)
+   I am just checking for ret_val.ne.0 - should I compare to an exact error val?
+
 FIXED
 -----
 

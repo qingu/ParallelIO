@@ -1,9 +1,9 @@
 Program pio_unit_test_driver
 
+  use piolib_mod ! _EXTERNAL
   use global_vars
   use basic_tests
   use ncdf_tests
-  use piolib_mod
 
   Implicit None
 
@@ -135,6 +135,10 @@ Program pio_unit_test_driver
       if (is_netcdf(iotypes(test_id))) then
         if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_redef..."
         call test_redef(test_id, err_msg)
+        call parse(err_msg, fail_cnt)
+
+        if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_enddef..."
+        call test_enddef(test_id, err_msg)
         call parse(err_msg, fail_cnt)
       end if
 

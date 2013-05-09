@@ -1,8 +1,8 @@
 module basic_tests
 
-  use pio
-  use pio_types
-  use piolib_mod
+  use pio         ! _EXTERNAL
+  use pio_types   ! _EXTERNAL
+  use piolib_mod  ! _EXTERNAL
   use nf_mod
   use global_vars
 

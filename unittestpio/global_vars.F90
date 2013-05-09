@@ -1,6 +1,6 @@
 module global_vars
 
-  use pio_types
+  use pio_types   ! _EXTERNAL
 
   Implicit None
   public
