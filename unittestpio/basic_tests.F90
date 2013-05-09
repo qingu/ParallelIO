@@ -131,7 +131,8 @@ module basic_tests
       iotype   = iotypes(test_id)
 
       ! Open file that doesn't exist
-      ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, "FAKE.FILE", PIO_nowrite)
+      ret_val = PIO_openfile(pio_iosystem, pio_file, iotype, "FAKE.FILE", &
+                             PIO_nowrite, CheckMPI=.false.)
       if (ret_val.eq.0) then
         if (master_task) write(*,"(A)") "ERROR: Successfully opened file that doesn't exist"
         passed = .false.

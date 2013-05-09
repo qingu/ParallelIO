@@ -5,8 +5,8 @@
 #define __PIO_FILE__ "pionfread_mod.F90.in"
 !>
 !! @file 
-!! $Revision: 751 $
-!! $LastChangedDate: 2013-04-02 10:01:13 -0600 (Tue, 02 Apr 2013) $
+!! $Revision: 787 $
+!! $LastChangedDate: 2013-05-08 12:00:13 -0600 (Wed, 08 May 2013) $
 !! @brief Decomposed Read interface to NetCDF
 !<
 module pionfread_mod
