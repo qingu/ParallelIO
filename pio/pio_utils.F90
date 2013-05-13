@@ -3,7 +3,7 @@ module pio_utils
   use pio_types, only : pio_int, pio_real, pio_double, pio_char
   use pio_types, only : iotype_netcdf, iotype_pnetcdf, PIO_internal_error
   use pio_types, only : PIO_iotype_netcdf4p, pio_iotype_netcdf4c
-  use pio_types, only : PIO_bcast_error 
+  use pio_types, only : PIO_bcast_error , PIO_RETURN_ERROR
   use pio_kinds, only : i4, r4, r8
   use pio_support, only : checkmpireturn, piodie, Debug
 
@@ -29,13 +29,13 @@ module pio_utils
 
 contains
 
-  subroutine check_netcdf(File, status, filestr, line)
+  subroutine check_netcdf(File, status, filestr, line, errhandling)
     type(file_desc_t), intent(in) :: file
     integer, intent(inout) :: status
     character(len=*), intent(in) :: filestr
     integer, intent(in) :: line
-
-    integer :: mpierr, iotype
+    integer, intent(in), optional :: errhandling
+    integer :: mpierr, iotype, lerrhandle
 
 !  Three choices for error handling:
 !  1: abort on error from any task           PIO_INTERNAL_ERROR
@@ -43,17 +43,23 @@ contains
 !  3: do nothing - allow the user to handle it PIO_RETURN_ERROR
 !
     iotype = file%iotype
-    
+
+    if(present(errhandling)) then
+       lerrhandle = errhandling
+    else
+       lerrhandle = File%iosystem%error_handling
+    endif
+
     if(Debug) call mpi_barrier(file%iosystem%union_comm, mpierr)
 
     select case(iotype)
     case(iotype_pnetcdf)
 #ifdef _PNETCDF
-       if(file%iosystem%error_handling==PIO_INTERNAL_ERROR) then
+       if(lerrhandle==PIO_INTERNAL_ERROR) then
           if(status /= nf_noerr) then
              call piodie(filestr,line,trim(nfmpi_strerror(status)))
           end if
-       else if(file%iosystem%error_handling==PIO_BCAST_ERROR) then
+       else if(lerrhandle==PIO_BCAST_ERROR) then
           call MPI_BCAST(status,1,MPI_INTEGER,file%iosystem%iomaster,File%iosystem%my_comm, mpierr)
           call CheckMPIReturn('nf_mod',mpierr)
        end if
@@ -61,13 +67,17 @@ contains
 #endif
     case(iotype_netcdf,pio_iotype_netcdf4p,pio_iotype_netcdf4c)
 #ifdef _NETCDF
-       if(File%iosystem%error_handling==PIO_INTERNAL_ERROR) then
+       if(Lerrhandle==PIO_INTERNAL_ERROR) then
           if(status /= nf90_noerr) then
              call piodie(filestr,line,trim(nf90_strerror(status)))
           end if
-       else if(file%iosystem%error_handling==PIO_BCAST_ERROR) then
+       else if(lerrhandle==PIO_BCAST_ERROR) then
           call MPI_BCAST(status,1,MPI_INTEGER,file%iosystem%iomaster,File%iosystem%my_comm, mpierr)
           call CheckMPIReturn('nf_mod',mpierr)
+       else if(lerrhandle==PIO_RETURN_ERROR) then
+          if(status /= nf90_noerr) then
+             print *, trim(nf90_strerror(status))
+          endif
        end if
 #endif
     end select
