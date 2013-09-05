@@ -35,7 +35,7 @@ contains
   ! create_nf
   !
 
-  integer function create_nf(File,fname, amode) result(ierr)
+  integer function create_nf(File,fname, amode, create_as_timeseries) result(ierr)
 #ifndef NO_MPIMOD
     use mpi ! _EXTERNAL
 #else
@@ -44,6 +44,7 @@ contains
     type (File_desc_t), intent(inout) :: File
     character(len=*), intent(in)      :: fname
     integer(i4),  intent(in) :: amode
+    logical, optional :: create_as_timeseries
     integer(i4) :: iotype, mpierr
     integer :: nmode, tmpfh
 
@@ -51,6 +52,13 @@ contains
     
     ierr=PIO_noerr
     File%fh=-1
+
+    if(present(create_as_timeseries) .and. create_as_timeseries==.true.) then
+       File%time_series = .true.
+       file%filepath = fname
+    else
+       File%time_series = .false.
+    end if
 
     if(File%iosystem%ioproc) then
        iotype = File%iotype 

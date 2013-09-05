@@ -14,9 +14,10 @@ module nf_mod
 #endif
   use alloc_mod
 
-  use pio_kinds, only: i4,r4,r8,pio_offset
+  use pio_kinds, only: i4,r4,r8,pio_offset, char_len
   use pio_types, only: file_desc_t, iosystem_desc_t, var_desc_t, pio_noerr, pio_iotype_netcdf, &
-	pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, pio_max_name
+	pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, pio_max_name, pio_unlimited, &
+        tsvar_desc_t
 
   use pio_support, only : Debug, DebugIO, DebugAsync, piodie   
   use pio_utils, only : bad_iotype, check_netcdf
@@ -1449,7 +1450,50 @@ contains
        end select
     endif
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
+    if(File%time_series) then
+       call create_time_series_files(File)         
+    end if
+
+
   end function PIO_enddef
+
+
+  subroutine create_time_series_files(HFile)
+    use pio_types, only : pio_write
+    use ionf_mod, only : create_nf
+    type(file_desc_t), target :: HFile
+    type(tsvar_desc_t), pointer :: inst
+    integer :: flen, nlen, ierr, dlen, i
+    character(len=char_len) :: fpath
+    character(len=PIO_MAX_NAME) :: dname
+    integer, allocatable :: dimid(:)
+    
+
+    inst => HFile%tsvar_ll
+    do while(associated(inst))
+       fpath = Hfile%filepath
+       flen = len_trim(fpath)
+       nlen = len_trim(inst%vardesc%name)
+       fpath(flen-3:flen+nlen+1) = '_'//trim(inst%vardesc%name)//'.nc'
+       allocate(inst%vardesc%tsvarfile)
+       print *,__FILE__,__LINE__,trim(fpath)
+       ierr = create_nf(inst%vardesc%tsvarfile,fpath,PIO_WRITE)
+       allocate(dimid(size(inst%dimids)))
+       do i=1,size(inst%dimids)
+          ierr = pio_inquire_dimension(Hfile, inst%dimids(i), name=dname, len=dlen)
+          ierr = pio_def_dim(inst%vardesc%tsvarfile, dname, dlen, dimid(i))
+       end do
+       ierr = pio_def_var(inst%vardesc%tsvarfile, inst%vardesc%name, inst%vardesc%type, dimid, inst%vardesc)
+       ierr = pio_enddef(inst%vardesc%tsvarfile)
+       inst=>inst%next
+    end do
+
+    
+
+
+  end subroutine create_time_series_files
+
+
 
 !> 
 !! @public
@@ -1520,7 +1564,6 @@ contains
 !! @param dimid : The dimension identifier
 !<
   integer function PIO_def_dim(File,name,len,dimid) result(ierr)
-
     type (File_desc_t), intent(in)  :: File
     character(len=*), intent(in)    :: name
     integer(i4), intent(in)         :: len
@@ -1576,7 +1619,8 @@ contains
           call bad_iotype(iotype,__PIO_FILE__,__LINE__)
 
        end select
-    endif
+
+     endif
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
 
     if(ios%async_interface .or. ios%num_tasks > ios%num_iotasks) then
@@ -1637,6 +1681,7 @@ contains
     !------------------
     integer :: iotype, mpierr, nlen
     integer :: msg = PIO_MSG_DEF_VAR
+    integer :: unlim_dimid=-1
 
 
     iotype = File%iotype
@@ -1663,6 +1708,17 @@ contains
        call mpi_bcast(dimids, vardesc%ndims, mpi_integer, ios%compmaster, ios%intercomm, ierr)
     endif
     if(ios%IOproc) then
+       if(file%time_series) then
+          ierr = pio_inquire(File, unlimiteddimid=unlim_dimid)
+       endif
+       if (file%time_series .and. any(dimids == unlim_dimid)) then
+          vardesc%name = name
+          vardesc%type = type
+          vardesc%varid = -1
+          print *,__FILE__,__LINE__,name
+          call tsvar_ll_add_var(file%tsvar_ll, vardesc, dimids)
+       else
+
        select case(iotype)
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
@@ -1711,27 +1767,52 @@ contains
 #endif
 #ifdef _COMPRESSION
        case(pio_iotype_vdc2)
-	  vardesc%name = name(1:nlen)//char(0)
-
-	  if(ios%io_rank .eq. 0) then
+          vardesc%name = name(1:nlen)//char(0)
+          
+          if(ios%io_rank .eq. 0) then
              call defvdfvar( F_C_String_dup(name) )
-	  endif
+          endif
 #endif
        case default
           call bad_iotype(iotype,__PIO_FILE__,__LINE__)
-
+          
        end select
+       endif
     endif
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
     if(ios%async_interface  .or. ios%num_tasks> ios%num_iotasks) then  
        call MPI_BCAST(vardesc%varid, 1, MPI_INTEGER, ios%Iomaster, ios%my_Comm, ierr)
     end if
+    
   end function def_var_md
+
+  subroutine tsvar_ll_add_var(tsvarlist, vardesc, dimids)
+    type(tsvar_desc_t), target :: tsvarlist
+    type(var_desc_t), target :: vardesc
+    integer, intent(in) :: dimids(:)
+    
+    type(tsvar_desc_t), pointer :: inst
+
+    inst => tsvarlist
+    if(associated(inst%vardesc)) then
+       do while(associated(inst%next))
+          inst => inst%next
+       enddo
+       allocate(inst%next)
+       inst=>inst%next
+    endif
+    inst%vardesc => vardesc
+    allocate(inst%dimids(vardesc%ndims))
+    inst%dimids=dimids
+
+  end subroutine tsvar_ll_add_var
+
+
 
 !>
 !! @public
 !! @ingroup PIO_copy_att
-!! @brief No idea what this function does
+!! @brief Copy a netcdf attribute from infile to outfile
 !! @details 
 !! @param infile @copydoc file_desc_t
 !! @param invarid :

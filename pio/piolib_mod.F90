@@ -2392,7 +2392,7 @@ contains
 !! @param amode_in : the creation mode flag. the following flags are available: PIO_clobber, PIO_noclobber. 
 !! @retval ierr @copydoc error_return
 !<
-  integer function createfile(iosystem, file,iotype, fname, amode_in) result(ierr)
+  integer function createfile(iosystem, file,iotype, fname, amode_in, create_time_series) result(ierr)
 #ifdef _COMPRESSION
     use pio_types, only : pio_clobber, pio_noclobber, pio_iotype_vdc2
 #endif
@@ -2401,7 +2401,7 @@ contains
     integer, intent(in) :: iotype
     character(len=*), intent(in)  :: fname
     integer, optional, intent(in) :: amode_in
-    
+    logical, optional, intent(in) :: create_time_series    
     ! ===================
     !  local variables
     ! ===================
@@ -2441,12 +2441,12 @@ contains
        call mpi_bcast(amode, 1, MPI_INTEGER, 0, iosystem%comp_comm, ierr)
        call mpi_bcast(file%iotype, 1, MPI_INTEGER, 0, iosystem%comp_comm, ierr)
 
-       if(len(fname) > char_len) then
+       if(len_trim(fname) > char_len) then
           print *,'Length of filename exceeds compile time max, increase char_len in pio_kinds and recompile', len(fname), char_len
           call piodie( __PIO_FILE__,__LINE__)
        end if
 
-       call mpi_bcast(myfname, len(fname), mpi_character, 0, iosystem%comp_comm, ierr)
+       call mpi_bcast(myfname, len_trim(fname), mpi_character, 0, iosystem%comp_comm, ierr)
     end if
 
     file%iosystem => iosystem
@@ -2494,7 +2494,7 @@ contains
        ierr = create_mpiio(file,myfname)
     case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
        if(debug) print *,__PIO_FILE__,__LINE__,' open: ', trim(myfname), amode
-       ierr = create_nf(file,trim(myfname), amode)	
+       ierr = create_nf(file,trim(myfname), amode, create_time_series)	
        if(debug .and. iosystem%io_rank==0)print *,__PIO_FILE__,__LINE__,' open: ', myfname, file%fh, ierr
     case(pio_iotype_binary)
        print *,'createfile: io type not supported'
