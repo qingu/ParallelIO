@@ -22,6 +22,9 @@ module nf_mod
   use pio_support, only : Debug, DebugIO, DebugAsync, piodie   
   use pio_utils, only : bad_iotype, check_netcdf
 
+  use pio_timeseries
+
+
 #ifdef _NETCDF
   use netcdf            ! _EXTERNAL
 #endif
@@ -1463,11 +1466,9 @@ contains
     use ionf_mod, only : create_nf
     type(file_desc_t), target :: HFile
     type(tsvar_desc_t), pointer :: inst
-    integer :: flen, nlen, ierr, dlen, i
+    integer :: flen, nlen, ierr, dlen, i, ndims, dimid
     character(len=char_len) :: fpath
     character(len=PIO_MAX_NAME) :: dname
-    integer, allocatable :: dimid(:)
-    
 
     inst => HFile%tsvar_ll
     do while(associated(inst))
@@ -1478,12 +1479,12 @@ contains
        allocate(inst%vardesc%tsvarfile)
        print *,__FILE__,__LINE__,trim(fpath)
        ierr = create_nf(inst%vardesc%tsvarfile,fpath,PIO_WRITE)
-       allocate(dimid(size(inst%dimids)))
-       do i=1,size(inst%dimids)
-          ierr = pio_inquire_dimension(Hfile, inst%dimids(i), name=dname, len=dlen)
-          ierr = pio_def_dim(inst%vardesc%tsvarfile, dname, dlen, dimid(i))
+       ierr = pio_inquire(Hfile, ndimensions=ndims)
+       do i=1,ndims
+          ierr = pio_inquire_dimension(Hfile, i, name=dname, len=dlen)
+          ierr = pio_def_dim(inst%vardesc%tsvarfile, dname, dlen, dimid)
        end do
-       ierr = pio_def_var(inst%vardesc%tsvarfile, inst%vardesc%name, inst%vardesc%type, dimid, inst%vardesc)
+       ierr = pio_def_var(inst%vardesc%tsvarfile, inst%vardesc%name, inst%vardesc%type, inst%dimids, inst%vardesc)
        ierr = pio_enddef(inst%vardesc%tsvarfile)
        inst=>inst%next
     end do
@@ -1711,7 +1712,7 @@ contains
        if(file%time_series) then
           ierr = pio_inquire(File, unlimiteddimid=unlim_dimid)
        endif
-       if (file%time_series .and. any(dimids == unlim_dimid)) then
+       if (file%time_series .and. name .eq. 'T') then
           vardesc%name = name
           vardesc%type = type
           vardesc%varid = -1

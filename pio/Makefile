@@ -32,6 +32,7 @@ else
 endif
 
 SRCS_FC =  pio.F90 \
+	    pio_timeseries.F90 \
             pio_kinds.F90  \
             nf_mod.F90     \
             ionf_mod.F90 \
@@ -168,7 +169,7 @@ pionfread_mod.o : pionfread_mod.F90
 pionfwrite_mod.o : pionfwrite_mod.F90
 pio_support.o : pio_support.F90
 rearrange.o : rearrange.F90
-
+pio_timeseries.o: pio_timeseries.F90
 alloc_mod.F90 : alloc_mod.F90.in
 box_rearrange.F90 : box_rearrange.F90.in
 iompi_mod.F90 : iompi_mod.F90.in

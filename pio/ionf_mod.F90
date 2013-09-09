@@ -53,6 +53,8 @@ contains
     ierr=PIO_noerr
     File%fh=-1
 
+!    call check_if_timeseries(File, fname)
+
     if(present(create_as_timeseries) .and. create_as_timeseries==.true.) then
        File%time_series = .true.
        file%filepath = fname

@@ -1581,8 +1581,9 @@ contains
 !! @param iosystem a derived type which can be used in subsequent pio operations (defined in PIO_types).
 !! @param base @em optional argument can be used to offset the first io task - default base is task 1.
 !<
-  subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base)
+  subroutine init_intracom(comp_rank, comp_comm, num_iotasks, num_aggregator, stride,  rearr, iosystem,base, nlfilename)
     use pio_types, only : pio_internal_error, pio_rearr_none
+    use pio_timeseries, only : pio_timeseries_init
     integer(i4), intent(in) :: comp_rank
     integer(i4), intent(in) :: comp_comm
     integer(i4), intent(in) :: num_iotasks 
@@ -1590,9 +1591,10 @@ contains
     integer(i4), intent(in) :: stride
     integer(i4), intent(in) :: rearr
     type (iosystem_desc_t), intent(out)  :: iosystem  ! io descriptor to initalize
-
-    integer(i4), intent(in),optional :: base
     
+    integer(i4), intent(in),optional :: base
+    character(len=*), intent(in), optional :: nlfilename
+
     integer(i4) :: n_iotasks
     integer(i4) :: length
     integer(i4) :: ngseg,io_rank,i,lbase, io_comm,ierr 
@@ -1842,6 +1844,9 @@ contains
     if(debug) print *,__LINE__,'init: iam: ',comp_rank,'io processor: ',iosystem%ioproc, 'io rank ',&
          iosystem%io_rank, iosystem%iomaster, iosystem%comp_comm, iosystem%io_comm
 
+    call pio_timeseries_init(iosystem, nlfilename)
+
+
 #ifdef TIMING
     call t_stopf("PIO_init")
 #endif
@@ -1862,14 +1867,17 @@ contains
 !! @param io_comm    The io communicator 
 !! @param iosystem a derived type which can be used in subsequent pio operations (defined in PIO_types).
 !<
-  subroutine init_intercom(component_count, peer_comm, comp_comms, io_comm, iosystem)
+  subroutine init_intercom(component_count, peer_comm, comp_comms, io_comm, iosystem, nlfilename)
     use pio_types, only : pio_internal_error, pio_rearr_box
+    use pio_timeseries, only : pio_timeseries_init
+
     integer, intent(in) :: component_count
     integer, intent(in) :: peer_comm
     integer, intent(in) :: comp_comms(component_count)   !  The compute communicator
     integer, intent(in) :: io_comm     !  The io communicator
 
     type (iosystem_desc_t), intent(out)  :: iosystem(component_count)  ! io descriptor to initalize
+    character(len=*), intent(in), optional :: nlfilename(:)
 
     integer :: ierr
     logical :: is_inter
@@ -2060,6 +2068,7 @@ contains
 #endif
 #endif
 #endif
+       call pio_timeseries_init(iosystem(i), nlfilename(i))
     end do
 
     if(DebugAsync) print*,__PIO_FILE__,__LINE__, iosystem(1)%ioranks
@@ -2631,12 +2640,12 @@ contains
     if(.not. (iosystem%ioproc .and. iosystem%async_interface)) then
        call mpi_bcast(amode, 1, MPI_INTEGER, 0, iosystem%comp_comm, ierr)
        call mpi_bcast(file%iotype, 1, MPI_INTEGER, 0, iosystem%comp_comm, ierr)
-       if(len(fname) > char_len) then
+       if(len_trim(fname) > char_len) then
           print *,'Length of filename exceeds compile time max, increase char_len in pio_kinds and recompile'
           call piodie( __PIO_FILE__,__LINE__)
        end if
 
-       call mpi_bcast(myfname, len(fname), mpi_character, 0, iosystem%comp_comm, ierr)
+       call mpi_bcast(myfname, len_trim(fname), mpi_character, 0, iosystem%comp_comm, ierr)
     end if
 
     if(iosystem%async_interface .and. .not. iosystem%ioproc) then
