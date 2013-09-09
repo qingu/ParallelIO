@@ -243,7 +243,7 @@ foreach \$suite (qw(@testsuites)){
 	  
         }
 	if("$host" eq "yellowstone_pgi") {
-	    $ENV{LD_PRELOAD}="/opt/ibmhpc/pe1304/ppe.pami/gnu/lib64/pami64/libpami.so";
+	    \$ENV{LD_PRELOAD}="/opt/ibmhpc/pe1304/ppe.pami/gnu/lib64/pami64/libpami.so";
 	}
 	system("perl ./testpio_build.pl --conopts=\\"\$confopts\\" --host=$host");
         if("$host" eq "erebus" or "$host" =~ /^yellowstone/){

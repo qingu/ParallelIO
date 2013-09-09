@@ -107,6 +107,7 @@ module pio_types
    integer, public, parameter :: PIO_64BIT_OFFSET = nf90_64bit_offset
 #else
    integer, public, parameter :: PIO_global = 0
+   integer, public,parameter :: PIO_unlimited=-1
    integer, public, parameter :: PIO_double = 6
    integer, public, parameter :: PIO_real   = 5
    integer, public, parameter :: PIO_int    = 4

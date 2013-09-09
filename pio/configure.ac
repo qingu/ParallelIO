@@ -425,7 +425,11 @@ if test "$USE_NETCDF4" = "yes"
    if test -e "$NETCDF_PATH/lib/pkgconfig/"
      then
      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$NETCDF_PATH/lib/pkgconfig/"
-     PKG_CHECK_MODULES([NETCDF4], netcdf netcdff netcdff_parallel)
+     PKG_CHECK_MODULES([NETCDF4], [netcdf-fortran], 
+       [AC_DEFINE([HAVE_NETCDFFORT],[1] [Use netcdf-fortran])],
+       [PKG_CHECK_MODULES([NETCDF4], [netcdff],
+       [AC_DEFINE([HAVE_NETCDFF],[1] [Use netcdff])],
+       [PKG_CHECK_MODULES([NETCDF4], [netcdff_parallel])])])
      LDLIBS=" $LDLIBS $NETCDF4_LIBS"
    else
      # Did the user specify a location for the HDF5 library?
