@@ -28,7 +28,7 @@ contains
 !>
 !! @private
 !<
-  integer function write_nfdarray_{TYPE} (HFile,IOBUF,varDesc,iodesc,start,count, request) result(ierr)
+  integer function write_nfdarray_{TYPE} (File,IOBUF,varDesc,iodesc,start,count, request) result(ierr)
     use nf_mod
     use pio_types, only : io_desc_t, var_desc_t, file_desc_t, iosystem_desc_t, pio_noerr, &
 	pio_iotype_netcdf, pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, pio_max_var_dims
@@ -37,7 +37,8 @@ contains
     use pio_support, only : Debug, DebugIO, piodie, checkmpireturn 
 
 #ifdef _NETCDF
-    use netcdf, only : nf90_put_var, nf90_inquire_variable  !_EXTERNAL
+    use netcdf, only : nf90_put_var, nf90_inquire_variable, nf90_collective, &  !_EXTERNAL
+         nf90_var_par_access 
 #endif
 #ifdef TIMING
     use perf_mod, only : t_startf, t_stopf  !_EXTERNAL
@@ -53,12 +54,10 @@ contains
 #   include <pnetcdf.inc>   /* _EXTERNAL */
 #endif
 
-    type (File_desc_t), intent(inout), target :: HFile
+    type (File_desc_t), intent(inout) :: File
     {VTYPE} , intent(in), target      :: IOBUF(:)
-    type (var_desc_t), intent(in), target     :: varDesc
+    type (var_desc_t), intent(in)     :: varDesc
     type (IO_desc_t), intent(in)      :: IODesc
-
-    type (File_desc_t), pointer :: File
 
     integer(pio_offset), intent(in) :: start(:), count(:)
     integer, intent(out) :: request
@@ -80,12 +79,7 @@ contains
     call t_startf("pio_write_nfdarray_{TYPE}")
 #endif
     ierr = PIO_NOERR
-              File=>Hfile
-    if(Hfile%iosystem%ioproc) then
-       if(allocated(vardesc%tsvarfile)) then
-          File=> vardesc%tsvarfile
-       endif
-
+    if(file%iosystem%ioproc) then
        iotype = File%iotype
 
        select case (iotype) 
@@ -111,6 +105,7 @@ contains
 
 #ifdef _NETCDF
        case(PIO_iotype_netcdf4p)	
+          ierr=nf90_var_par_access(File%fh, vardesc%varid, NF90_COLLECTIVE)
           ierr=nf90_put_var(File%fh, vardesc%varid, iobuf,start=int(start),count=int(count))
        case(pio_iotype_netcdf,pio_iotype_netcdf4c)
           ! allocate space on root for copy of iobuf etc.

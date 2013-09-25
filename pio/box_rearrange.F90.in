@@ -997,7 +997,7 @@ end subroutine box_rearrange_io2comp_{TYPE}
     ! compute io dest and indices
 
     call compute_dest(compdof, start, count, gsize, ndim,              &
-         Iosystem%num_aiotasks, ioDesc%dest_ioproc, ioDesc%dest_ioindex )
+         IoDesc%num_aiotasks, ioDesc%dest_ioproc, ioDesc%dest_ioindex )
 
 #ifdef _MPISERIAL
 ! Version for use with mpi-serial. 

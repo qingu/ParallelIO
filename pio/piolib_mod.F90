@@ -1099,7 +1099,7 @@ contains
                'both optional parameters start and count must be provided')
        else	       
           call calcstartandcount(basepiotype, ndims, dims, iosystem%num_iotasks, iosystem%io_rank,&
-               iodesc%start, iodesc%count,iosystem%num_aiotasks)
+               iodesc%start, iodesc%count,iodesc%num_aiotasks)
        endif
        iosize=1
        do i=1,ndims
@@ -1128,7 +1128,7 @@ contains
        if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount: count is: ',iodesc%count,&
             ' lenblocks =',lenblocks,' ndisp=',ndisp
 
-       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, num_aiotasks is: ', iosystem%num_aiotasks       
+       if(debug) print *,'IAM: ',iosystem%comp_rank,' after getiostartandcount, num_aiotasks is: ', iodesc%num_aiotasks       
        !--------------------------------------------
        ! calculate mpi data structure displacements 
        !--------------------------------------------
@@ -1161,7 +1161,7 @@ contains
          'initdecomp: userearranger: ',userearranger, glength
 
     if(userearranger) then 
-       call MPI_BCAST(iosystem%num_aiotasks,1,mpi_integer,iosystem%iomaster,&
+       call MPI_BCAST(iodesc%num_aiotasks,1,mpi_integer,iosystem%iomaster,&
             iosystem%my_comm,ierr)
        call rearrange_create( iosystem,compdof,dims,ndims,iodesc)
     endif
@@ -1345,9 +1345,9 @@ contains
        endif
        vdc_ts = num_ts
        
-       iosystem%num_aiotasks = iosystem%num_iotasks
+       iodesc%num_aiotasks = iosystem%num_iotasks
 
-       call init_vdc2(iosystem%io_rank, dims, vdc_bsize, vdc_iostart, vdc_iocount, iosystem%num_aiotasks)
+       call init_vdc2(iosystem%io_rank, dims, vdc_bsize, vdc_iostart, vdc_iocount, iodesc%num_aiotasks)
           
        if(debug) then
           print *, 'rank: ', iosystem%comp_rank, ' pio_init iostart: ' , vdc_iostart, ' iocount: ', vdc_iocount
@@ -1373,7 +1373,7 @@ contains
     if(DebugAsync) print*,__PIO_FILE__,__LINE__
 
     if(userearranger) then 
-       call MPI_BCAST(iosystem%num_aiotasks,1,mpi_integer,iosystem%iomaster,&
+       call MPI_BCAST(iodesc%num_aiotasks,1,mpi_integer,iosystem%iomaster,&
             iosystem%my_comm,ierr)
        call rearrange_create( iosystem,compdof,dims,ndims,iodesc)
     endif
@@ -1839,7 +1839,7 @@ contains
     call PIO_set_hint(iosystem, 'romio_ds_read','disable') 
     call PIO_set_hint(iosystem,'romio_ds_write','disable') 
 #endif
-    iosystem%num_aiotasks = iosystem%num_iotasks
+!    iosystem%num_aiotasks = iosystem%num_iotasks
     iosystem%numost = PIO_NUM_OST
     if(debug) print *,__LINE__,'init: iam: ',comp_rank,'io processor: ',iosystem%ioproc, 'io rank ',&
          iosystem%io_rank, iosystem%iomaster, iosystem%comp_comm, iosystem%io_comm
@@ -2074,7 +2074,7 @@ contains
     if(DebugAsync) print*,__PIO_FILE__,__LINE__, iosystem(1)%ioranks
 
 
-    iosystem%num_aiotasks = iosystem%num_iotasks
+!    iosystem%num_aiotasks = iosystem%num_iotasks
     iosystem%numost = PIO_NUM_OST
 
     ! This routine does not return
@@ -2401,7 +2401,7 @@ contains
 !! @param amode_in : the creation mode flag. the following flags are available: PIO_clobber, PIO_noclobber. 
 !! @retval ierr @copydoc error_return
 !<
-  integer function createfile(iosystem, file,iotype, fname, amode_in, create_time_series) result(ierr)
+  integer function createfile(iosystem, file,iotype, fname, amode_in) result(ierr)
 #ifdef _COMPRESSION
     use pio_types, only : pio_clobber, pio_noclobber, pio_iotype_vdc2
 #endif
@@ -2410,7 +2410,7 @@ contains
     integer, intent(in) :: iotype
     character(len=*), intent(in)  :: fname
     integer, optional, intent(in) :: amode_in
-    logical, optional, intent(in) :: create_time_series    
+
     ! ===================
     !  local variables
     ! ===================
@@ -2503,7 +2503,7 @@ contains
        ierr = create_mpiio(file,myfname)
     case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
        if(debug) print *,__PIO_FILE__,__LINE__,' open: ', trim(myfname), amode
-       ierr = create_nf(file,trim(myfname), amode, create_time_series)	
+       ierr = create_nf(file,trim(myfname), amode)	
        if(debug .and. iosystem%io_rank==0)print *,__PIO_FILE__,__LINE__,' open: ', myfname, file%fh, ierr
     case(pio_iotype_binary)
        print *,'createfile: io type not supported'
@@ -2805,13 +2805,20 @@ contains
 !! @details
 !! @param file @copydoc file_desc_t
 !< 
-  subroutine closefile(file)
+  subroutine closefile(Hfile)
+    use pio_timeseries, only : timeseries_var_t
     use piodarray, only : darray_write_complete
-    type (file_desc_t),intent(inout)   :: file
+    type (file_desc_t),intent(inout), target   :: Hfile
 
+
+    type (file_desc_t),pointer  :: file
     integer :: ierr, msg
     integer :: iotype 
     logical, parameter :: check = .true.
+    type(timeseries_var_t), pointer :: varlist(:)
+    integer :: i
+
+    file=>Hfile
 
 #ifdef TIMING
     call t_startf("PIO_closefile")
@@ -2824,15 +2831,28 @@ contains
        call mpi_bcast(file%fh, 1, mpi_integer, file%iosystem%compmaster, file%iosystem%intercomm, ierr)
     end if
 
-    if(debug .and. file%iosystem%io_rank==0) &
-      print *,__PIO_FILE__,__LINE__,'close: ',file%fh
+    if(debug .and. file%iosystem%io_rank==0)       print *,__PIO_FILE__,__LINE__,'close: ',loc(file%iosystem)
     iotype = file%iotype 
     select case(iotype)
     case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
        ierr = close_mpiio(file)
     case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
-       call darray_write_complete(file)
-       ierr = close_nf(file)
+       if(associated(file%tsfile)) then
+          varlist => file%tsfile%varlist
+          do i=1,size(varlist)
+
+             if(allocated(varlist(i)%vardesc%tsvarfile)) then
+                file => varlist(i)%vardesc%tsvarfile
+                call darray_write_complete(file)
+                ierr = close_nf(file)
+                deallocate(varlist(i)%vardesc%tsvarfile)
+             endif
+             if(ierr==0) file%file_is_open=.false.
+          enddo
+
+       endif
+       call darray_write_complete(hfile)
+       ierr = close_nf(hfile)
     case(pio_iotype_binary)
        print *,'closefile: io type not supported'
     end select
@@ -2841,7 +2861,6 @@ contains
 #ifdef TIMING
     call t_stopf("PIO_closefile")
 #endif
-
 
   end subroutine closefile
 

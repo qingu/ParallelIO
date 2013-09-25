@@ -16,8 +16,8 @@ module nf_mod
 
   use pio_kinds, only: i4,r4,r8,pio_offset, char_len
   use pio_types, only: file_desc_t, iosystem_desc_t, var_desc_t, pio_noerr, pio_iotype_netcdf, &
-	pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, pio_max_name, pio_unlimited, &
-        tsvar_desc_t
+	pio_iotype_pnetcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c, pio_max_name, pio_unlimited
+
 
   use pio_support, only : Debug, DebugIO, DebugAsync, piodie   
   use pio_utils, only : bad_iotype, check_netcdf
@@ -1398,14 +1398,15 @@ contains
 !! @param File @copydoc file_desc_t
 !! @retval ierr @copydoc error_return
 !<
-  integer function PIO_enddef(File) result(ierr)
-    type (File_desc_t), intent(inout) :: File
+  integer function PIO_enddef(HFile) result(ierr)
+    type (File_desc_t), target, intent(inout) :: HFile
     type (iosystem_desc_t), pointer :: ios
 
     !------------------
     ! Local variables
     !------------------
-    integer :: iotype, mpierr
+    type(file_desc_t), pointer :: File
+    integer :: iotype, mpierr, nf, nfsize
     logical, parameter :: Check = .TRUE.
     integer :: msg = PIO_MSG_ENDDEF
 #ifdef _COMPRESSION
@@ -1414,10 +1415,10 @@ contains
        end subroutine endvdfdef
     end interface
 #endif
+    File=>Hfile
+    nf=0
     iotype = File%iotype
-
     ierr=PIO_noerr
-
     ios => file%iosystem
 
     if(ios%async_interface .and. .not. ios%ioproc) then
@@ -1425,74 +1426,63 @@ contains
        call mpi_bcast(file%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
     end if
     if(ios%IOproc) then
-       select case(iotype)
+       do while(associated(File))
+          select case(iotype)
 #ifdef _PNETCDF
-       case(pio_iotype_pnetcdf)
-          ierr=nfmpi_enddef(File%fh)
+          case(pio_iotype_pnetcdf)
+             ierr=nfmpi_enddef(File%fh)
 #endif
 
 #ifdef _NETCDF
-       case(pio_iotype_netcdf, pio_iotype_netcdf4c)
-          if (ios%io_rank==0) then
+          case(pio_iotype_netcdf, pio_iotype_netcdf4c)
+             if (ios%io_rank==0) then
+                ierr=nf90_enddef(File%fh)
+             endif
+          case(PIO_iotype_netcdf4p)
              ierr=nf90_enddef(File%fh)
-          endif
-       case(PIO_iotype_netcdf4p)
-          ierr=nf90_enddef(File%fh)
 #endif
 
 #ifdef _COMPRESSION
-       case(pio_iotype_vdc2)
-	  if(ios%io_rank .eq. 0) then
-             call endvdfdef
-	  endif
+          case(pio_iotype_vdc2)
+             if(ios%io_rank .eq. 0) then
+                call endvdfdef
+             endif
 
 #endif
-       case default
-          call bad_iotype(iotype,__PIO_FILE__,__LINE__)
+          case default
+             call bad_iotype(iotype,__PIO_FILE__,__LINE__)
 
-       end select
+          end select
+          
+          if(associated(File,Hfile)) then
+             if(associated(Hfile%tsfile)) then
+                nf=1
+                nfsize = size(hfile%tsfile%varlist)
+                file => hfile%tsfile%varlist(nf)%vardesc%tsvarfile
+             else
+                nullify(file)
+             endif
+          else
+             nf=nf+1
+             do while(nf <= nfsize) 
+                if(allocated(hfile%tsfile%varlist(nf)%vardesc%tsvarfile)) exit
+                nf=nf+1
+             end do
+             if(nf<=nfsize) then
+                file => hfile%tsfile%varlist(nf)%vardesc%tsvarfile
+             else
+                nullify(file)
+             endif
+          endif
+       end do
     endif
-    call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
-    if(File%time_series) then
-       call create_time_series_files(File)         
-    end if
+    file => hfile
+
+   call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
 
 
   end function PIO_enddef
 
-
-  subroutine create_time_series_files(HFile)
-    use pio_types, only : pio_write
-    use ionf_mod, only : create_nf
-    type(file_desc_t), target :: HFile
-    type(tsvar_desc_t), pointer :: inst
-    integer :: flen, nlen, ierr, dlen, i, ndims, dimid
-    character(len=char_len) :: fpath
-    character(len=PIO_MAX_NAME) :: dname
-
-    inst => HFile%tsvar_ll
-    do while(associated(inst))
-       fpath = Hfile%filepath
-       flen = len_trim(fpath)
-       nlen = len_trim(inst%vardesc%name)
-       fpath(flen-3:flen+nlen+1) = '_'//trim(inst%vardesc%name)//'.nc'
-       allocate(inst%vardesc%tsvarfile)
-       print *,__FILE__,__LINE__,trim(fpath)
-       ierr = create_nf(inst%vardesc%tsvarfile,fpath,PIO_WRITE)
-       ierr = pio_inquire(Hfile, ndimensions=ndims)
-       do i=1,ndims
-          ierr = pio_inquire_dimension(Hfile, i, name=dname, len=dlen)
-          ierr = pio_def_dim(inst%vardesc%tsvarfile, dname, dlen, dimid)
-       end do
-       ierr = pio_def_var(inst%vardesc%tsvarfile, inst%vardesc%name, inst%vardesc%type, inst%dimids, inst%vardesc)
-       ierr = pio_enddef(inst%vardesc%tsvarfile)
-       inst=>inst%next
-    end do
-
-    
-
-
-  end subroutine create_time_series_files
 
 
 
@@ -1624,6 +1614,7 @@ contains
      endif
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
 
+
     if(ios%async_interface .or. ios%num_tasks > ios%num_iotasks) then
        call MPI_BCAST(dimid, 1, MPI_INTEGER, ios%IOMaster, ios%my_Comm, ierr)
     end if
@@ -1644,7 +1635,7 @@ contains
 !<
   integer function def_var_0d(File,name,type,vardesc) result(ierr)
 
-    type (File_desc_t), intent(in)  :: File
+    type (File_desc_t), intent(inout)  :: File
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
     type (Var_desc_t), intent(inout) :: vardesc
@@ -1666,17 +1657,18 @@ contains
 !! @param vardesc @copydoc var_desc_t
 !! @retval ierr @copydoc error_return
 !<
-  integer function def_var_md(File,name,type,dimids,vardesc) result(ierr)
+  integer function def_var_md(HFile,name,type,dimids,vardesc) result(ierr)
 #ifdef _COMPRESSION
     use C_interface_mod, only : F_C_String_dup
 #endif
-    type (File_desc_t), intent(in)  :: File
+    type (File_desc_t), target, intent(inout)  :: HFile
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
     integer, intent(in)             :: dimids(:)
 
-    type (Var_desc_t), intent(inout) :: vardesc
+    type (Var_desc_t), target,intent(inout) :: vardesc
     type(iosystem_desc_t), pointer :: ios
+    type (File_desc_t), pointer  :: File
     !------------------
     ! Local variables
     !------------------
@@ -1685,7 +1677,7 @@ contains
     integer :: unlim_dimid=-1
 
 
-    iotype = File%iotype
+    iotype = HFile%iotype
 
     ierr=PIO_noerr
     vardesc%rec=-1
@@ -1693,13 +1685,13 @@ contains
 
     vardesc%type = type
 
-    ios => file%iosystem
+    ios => Hfile%iosystem
     nlen = len_trim(name)
 
     if(ios%async_interface) then
        if( .not. ios%ioproc) then
           if(ios%comp_rank==0) call mpi_send(msg, 1, mpi_integer, ios%ioroot, 1, ios%union_comm, ierr)
-          call mpi_bcast(file%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
+          call mpi_bcast(Hfile%fh, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        end if
        call mpi_bcast(type, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        
@@ -1708,18 +1700,20 @@ contains
        call mpi_bcast(vardesc%ndims, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(dimids, vardesc%ndims, mpi_integer, ios%compmaster, ios%intercomm, ierr)
     endif
-    if(ios%IOproc) then
-       if(file%time_series) then
-          ierr = pio_inquire(File, unlimiteddimid=unlim_dimid)
-       endif
-       if (file%time_series .and. name .eq. 'T') then
-          vardesc%name = name
-          vardesc%type = type
-          vardesc%varid = -1
-          print *,__FILE__,__LINE__,name
-          call tsvar_ll_add_var(file%tsvar_ll, vardesc, dimids)
-       else
+    vardesc%name = name
+    vardesc%varid = -1
+    file=>hfile
+    if(file%unlim_dimid<0) then
+       ierr= pio_inquire(File,unlimitedDimID=file%unlim_dimid)
+    endif
 
+    if (check_if_timeseries(Hfile,vardesc,dimids)) then
+       call create_time_series_file(HFile,vardesc,name)
+       file=>vardesc%tsvarfile
+       file%iosystem=>Hfile%iosystem
+    endif
+
+    if(ios%IOproc) then
        select case(iotype)
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
@@ -1778,7 +1772,6 @@ contains
           call bad_iotype(iotype,__PIO_FILE__,__LINE__)
           
        end select
-       endif
     endif
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
     if(ios%async_interface  .or. ios%num_tasks> ios%num_iotasks) then  
@@ -1786,29 +1779,33 @@ contains
     end if
     
   end function def_var_md
+  subroutine create_time_series_file(HFile, vardesc, vname)
+    use pio_types, only : var_desc_t, pio_write, file_desc_t
+    use ionf_mod, only : create_nf
+    type(file_desc_t), intent(in)  :: HFile
+    type(var_desc_t), intent(inout) :: vardesc
+    character(len=*), intent(in) :: vname
 
-  subroutine tsvar_ll_add_var(tsvarlist, vardesc, dimids)
-    type(tsvar_desc_t), target :: tsvarlist
-    type(var_desc_t), target :: vardesc
-    integer, intent(in) :: dimids(:)
-    
-    type(tsvar_desc_t), pointer :: inst
+    integer :: flen, nlen, ierr, dlen, i, ndims, dimid
+    character(len=char_len) :: fpath
+    character(len=PIO_MAX_NAME) :: dname
 
-    inst => tsvarlist
-    if(associated(inst%vardesc)) then
-       do while(associated(inst%next))
-          inst => inst%next
-       enddo
-       allocate(inst%next)
-       inst=>inst%next
-    endif
-    inst%vardesc => vardesc
-    allocate(inst%dimids(vardesc%ndims))
-    inst%dimids=dimids
-
-  end subroutine tsvar_ll_add_var
+    fpath = Hfile%filepath
+    flen = len_trim(fpath)
+    nlen = len_trim(vname)
+    fpath(flen-3:flen+nlen+1) = '_'//trim(vname)//'.nc'
+    allocate(vardesc%tsvarfile)
+    vardesc%tsvarfile%iotype=Hfile%iotype
+    vardesc%tsvarfile%iosystem=>Hfile%iosystem
+    ierr = create_nf(vardesc%tsvarfile,fpath,PIO_WRITE)
+    ierr = pio_inquire(Hfile, ndimensions=ndims)
+    do i=1,ndims
+       ierr = pio_inquire_dimension(Hfile, i, name=dname, len=dlen)
+       ierr = pio_def_dim(vardesc%tsvarfile, dname, dlen, dimid)
+    end do
 
 
+  end subroutine create_time_series_file
 
 !>
 !! @public

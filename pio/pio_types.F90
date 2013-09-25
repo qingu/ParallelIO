@@ -159,7 +159,6 @@ module pio_types
         integer(i4)              :: my_comm=MPI_COMM_NULL            ! either comp_comm or intercomm
         integer(i4)              :: num_tasks          !  number of tasks
         integer(i4)              :: num_iotasks        ! total number of IO tasks
-        integer(i4)              :: num_aiotasks       ! number of actual IO tasks
         integer(i4)              :: num_comptasks
 
         integer(i4)              :: union_rank
@@ -210,11 +209,19 @@ module pio_types
     end type io_data_list
 
 
-    type, public :: tsvar_desc_t
-       integer, allocatable :: dimids(:)
+    type, public :: timeseries_var_t
+       character(len=char_len) :: name
        type(var_desc_t), pointer :: vardesc => NULL()
-       type(tsvar_desc_t), pointer :: next => NULL()
-    end type tsvar_desc_t
+       integer :: action
+       type(timeseries_var_t), pointer :: next =>NULL()
+    end type timeseries_var_t
+
+    type, public :: timeseries_file_t
+       character(len=char_len) :: filename
+       type(timeseries_var_t), allocatable :: varlist(:)
+       type(timeseries_file_t), pointer :: next => NULL()
+    end type timeseries_file_t
+
      
 !> 
 !! @defgroup file_desc_t
@@ -228,11 +235,11 @@ module pio_types
        integer :: request_cnt=0
        integer(i4) :: fh
        integer(kind=PIO_OFFSET) :: offset             ! offset into file
-       integer(i4)              :: iotype             ! Type of IO to perform see parameter statement below     
+       integer(i4)              :: iotype              ! Type of IO to perform see parameter statement below     
+       integer(i4) :: unlim_dimid = -1
        logical                  :: file_is_open = .false.
-       logical                  :: time_series = .false.
        character(len=char_len)       :: filepath
-       type(tsvar_desc_t)       :: tsvar_ll 
+       type(timeseries_file_t), pointer :: tsfile=>null() 
     end type File_desc_t
 
 
@@ -303,6 +310,7 @@ module pio_types
         integer(i4)         :: maxiobuflen   ! size of largest iobuffer
         integer(i4)         :: ndof
         integer(i4)         :: padding
+        integer(i4)         :: num_aiotasks       ! number of actual IO tasks
     end type
 
 
@@ -320,8 +328,8 @@ module pio_types
                                  ! netcdf file
 	integer(i4)     :: type
         integer(i4)     :: ndims ! number of dimensions as defined on the netcdf file.
-	character(len=PIO_MAX_NAME) :: name ! vdc needed variable
         type(file_desc_t), allocatable :: tsvarfile
+	character(len=PIO_MAX_NAME) :: name ! vdc needed variable
     end type 
 
        

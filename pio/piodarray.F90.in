@@ -401,7 +401,7 @@ contains
 !! @param iostat : The status returned from this routine (see \ref PIO_seterrorhandling for details)
 !! @param fillval : An optional fill value to fill holes in the data written
 !<
-  subroutine write_darray_nf_{TYPE} (File,varDesc,ioDesc,array, iostat, fillval)
+  subroutine write_darray_nf_{TYPE} (HFile,varDesc,ioDesc,array, iostat, fillval)
 
     ! !DESCRIPTION:
     !  Writes a 2-d slab of TYPE to a netcdf file.
@@ -411,10 +411,10 @@ contains
 
     ! !INPUT PARAMETERS:
 
-    type (File_desc_t), intent(inout) :: &
-         File                   ! file information
+    type (File_desc_t), intent(inout), target  :: &
+         HFile                   ! file information
 
-    type (var_desc_t), intent(inout) :: &
+    type (var_desc_t), intent(inout), target :: &
          varDesc                      ! variable descriptor
     type (io_desc_t), intent(inout) :: &
          ioDesc                      ! io decomp descriptor
@@ -435,6 +435,7 @@ contains
     !  local variables
     !
     !-----------------------------------------------------------------------
+    type(file_desc_t), pointer :: file
 
     character(len=*), parameter :: subName=modName//'::write_darray_nf_{TYPE}'
     {VTYPE}, dimension(:), pointer ::  &
@@ -462,6 +463,12 @@ contains
     ! -----------------------------------------------------
     ! pull information from file_desc_t data structure
     ! -----------------------------------------------------
+    file => Hfile
+    if(allocated(vardesc%tsvarfile)) then
+       File=> vardesc%tsvarfile
+    endif
+
+
     IOproc     = File%iosystem%IOproc
     iotype     = File%iotype
     UseRearranger  = File%iosystem%UseRearranger
@@ -1181,7 +1188,6 @@ contains
     integer, intent(in) :: request
     integer :: cnt, mpierr, maxbuffsize, this_buffsize
     type(io_data_list), pointer :: ptr
-
     if(.not. associated(File%data_list_top)) then
        allocate(file%data_list_top)
        ptr => file%data_list_top
@@ -1220,13 +1226,12 @@ contains
 #   include <pnetcdf.inc>   /* _EXTERNAL */    
 #endif
 
-    type(file_desc_t) :: File
+    type(file_desc_t), target :: File
     type(io_data_list), pointer :: ptr, prevptr
     integer :: cnt, ierr
     integer, pointer :: array_of_requests(:), status(:)
 
-    if(associated(file%data_list_top)) then
-       if(debug) print *,__FILE__,__LINE__, file%request_cnt
+    if(associated(file%data_list_top) .and. file%request_cnt>0) then
 #ifdef MEMCHK	
     call GPTLget_memusage(msize, rss, mshare, mtext, mstack)
     if(rss>lastrss) then

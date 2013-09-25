@@ -1,8 +1,8 @@
 module pio_timeseries
   use pio_kinds, only : char_len
-  use pio_types, only : iosystem_desc_t, file_desc_t
+  use pio_types, only : iosystem_desc_t, file_desc_t, timeseries_var_t, timeseries_file_t, var_desc_t
   implicit none
-  integer, parameter :: MAX_FILES=10, MAX_VARS=100
+  integer, parameter :: MAX_FILES=10, MAX_VARS=500
   
 !
 ! action values are
@@ -13,16 +13,6 @@ module pio_timeseries
   integer, parameter :: action_global =3
   
 
-  type timeseries_var_t
-     character(len=char_len) :: name
-     integer :: action
-  end type timeseries_var_t
-
-  type timeseries_file_t
-     character(len=char_len) :: filename
-     type(timeseries_var_t), allocatable :: varlist(:)
-     type(timeseries_file_t), pointer :: next
-  end type timeseries_file_t
 
   type(timeseries_file_t), target :: timeseries_list
 
@@ -42,34 +32,35 @@ contains
     integer, parameter :: stderr=6
 
     type(timeseries_file_t), pointer :: timeseries
-    
+    logical, save :: initialized=.false.
 
     namelist /pio_timeseries/ filename, include_vars, exclude_vars, global_vars
-
+!    if(initialized) return
+!    initialized=.true.
     filename = ' '
     include_vars = ' '
     exclude_vars = ' '
     global_vars = ' '
 
-    if(iosys%ioproc) then
-       if(iosys%io_rank==0) then
-!          if(present(nlfilename)) then
-!             nlfile=nlfilename
-!          else	
-             nlfile='timeseries.nl'
-!          end if
-          inquire(file=nlfile, exist=exists)
-          if(exists) then
-             open(27, file=nlfile, status='old')
-             read(27, pio_timeseries)
-             close(27)
-          end if
+    if(iosys%io_rank==0) then
+       if(present(nlfilename)) then
+          print *,' Reading pio_timeseries namelist from', trim(nlfilename)
+          nlfile=nlfilename
+       else	
+          nlfile='timeseries.nl'
        end if
-       call mpi_bcast(filename,char_len, mpi_character, 0, iosys%io_comm, ierr)
-       call mpi_bcast(include_vars,MAX_VARS*char_len, mpi_character, 0, iosys%io_comm, ierr)
-       call mpi_bcast(exclude_vars,MAX_VARS*char_len, mpi_character, 0, iosys%io_comm, ierr)
-       call mpi_bcast(global_vars,MAX_VARS*char_len, mpi_character, 0, iosys%io_comm, ierr)
+       inquire(file=nlfile, exist=exists)
+       if(exists) then
+          print *,' Reading pio_timeseries namelist from', trim(nlfile)
+          open(27, file=nlfile, status='old')
+          read(27, pio_timeseries)
+          close(27)
+       end if
     end if
+    call mpi_bcast(filename,char_len, mpi_character, iosys%ioroot, iosys%union_comm, ierr)
+    call mpi_bcast(include_vars,MAX_VARS*char_len, mpi_character, iosys%ioroot, iosys%union_comm, ierr)
+    call mpi_bcast(exclude_vars,MAX_VARS*char_len, mpi_character, iosys%ioroot, iosys%union_comm, ierr)
+    call mpi_bcast(global_vars,MAX_VARS*char_len, mpi_character, iosys%ioroot, iosys%union_comm, ierr)
 
     allocate(timeseries)
     timeseries%filename = filename
@@ -154,24 +145,46 @@ contains
 
   end subroutine add_timeseries_to_list
 
-
-  logical function check_if_timeseries(File, fname) result(match)
+  logical function check_if_timeseries(File, vardesc,dimids) result(match)
     type(file_desc_t) :: file
-    character(len=*) :: fname
+    type(var_desc_t), target :: vardesc
+    integer, intent(in) :: dimids(:)
+
     type(timeseries_file_t), pointer :: tptr
-    
+    integer :: i
+    type(timeseries_var_t), pointer :: varlist(:)
+    logical :: fmatch
+
     match=.false.
-    tptr => timeseries_list
-
-    do while(associated(tptr%next))
-       if(index(fname,tptr%filename) > 0) then
-          match=.true.
-          exit
+    if(any(dimids==file%unlim_dimid)) then
+       if( associated(file%tsfile)) then
+          tptr => file%tsfile
+          fmatch=.true.
+       else
+          tptr => timeseries_list
+          do while(associated(tptr%next))
+             i=index(trim(file%filepath),trim(tptr%filename)) 
+             if(i > 0) then
+                file%tsfile=>tptr
+                fmatch=.true.
+                exit
+             endif
+             tptr=>tptr%next
+          end do
        endif
-       tptr=>tptr%next
-    end do
-
-
+       
+       if(fmatch) then
+          varlist => tptr%varlist
+          do i=1,size(varlist)
+             if(varlist(i)%name .eq. vardesc%name .and. (varlist(i)%action==action_include &
+                  .or. varlist(i)%action==action_global)) then
+                match=.true.
+                varlist(i)%vardesc=>vardesc
+                exit
+             endif
+          end do
+       endif
+    endif
   end function check_if_timeseries
 
 

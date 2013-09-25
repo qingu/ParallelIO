@@ -120,6 +120,9 @@ contains
     if(ios%async_interface) then
        call MPI_BCAST(value, clen, {MPITYPE}, ios%compmaster, ios%my_comm, mpierr)
     end if
+
+
+
 	
     if(Ios%IOproc) then
        select case(iotype)
@@ -266,11 +269,18 @@ contains
   integer function put_att_desc_{TYPE} (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
-    type (VAR_desc_t), intent(in)     :: varDesc
+    type (VAR_desc_t), intent(in), target     :: varDesc
     character(len=*), intent(in)      :: name
     {VTYPE}, intent(in)      :: value
 
-    ierr = put_att_{TYPE} (File,varDesc%varid,name,value)
+    type (File_desc_t), pointer :: LFile
+
+    if(allocated(vardesc%tsvarfile)) then
+       LFile => vardesc%tsvarfile
+    else
+       LFile => File
+    endif
+    ierr = put_att_{TYPE} (LFile,varDesc%varid,name,value)
 
   end function put_att_desc_{TYPE}
 
@@ -289,13 +299,20 @@ contains
   integer function put_att_desc_1d_{TYPE} (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
-    type (VAR_desc_t), intent(in)     :: varDesc
+    type (VAR_desc_t), intent(in), target     :: varDesc
     character(len=*), intent(in)      :: name
     {VTYPE}, intent(in)      :: value(:)
 
     character(len=*), parameter :: subName=modName//'::put_att_desc_1d_{TYPE}'
 
-    ierr = put_att_1d_{TYPE} (File,varDesc%varid,name,value)
+    type (File_desc_t), pointer :: LFile
+
+    if(allocated(vardesc%tsvarfile)) then
+       LFile => vardesc%tsvarfile
+    else
+       LFile => File
+    endif
+    ierr = put_att_1d_{TYPE} (LFile,varDesc%varid,name,value)
 
   end function put_att_desc_1d_{TYPE}
 
