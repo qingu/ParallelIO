@@ -127,6 +127,9 @@ contains
     
     if(.not. file%iosystem%ioproc) file%fh=-tmpfh
 
+    file%openmode = nmode
+
+
     if(Debug.or.DebugAsync) print *,__PIO_FILE__,__LINE__,file%fh,ierr
     
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
@@ -154,55 +157,52 @@ contains
 
     ierr=PIO_noerr
     File%fh=-1
-    if(file%iosystem%ioproc) then
+    if(Debug) print *,__FILE__,__LINE__
 !       This subroutine seems to break pgi compiler for large files.
 !       call check_file_type(File, fname)
-       iotype = File%iotype 
+    iotype = File%iotype 
 #ifdef _NETCDF
-       if(present(mode)) then
-          if(mode == 1) then
-             amode = NF90_WRITE
-          else
-             amode = mode
-          end if
+    if(present(mode)) then
+       if(mode == 1) then
+          amode = NF90_WRITE
        else
-          amode = NF90_NOWRITE
+          amode = mode
        end if
+    else
+       amode = NF90_NOWRITE
+    end if
 #endif
-#ifdef _PNETCDF
+    if(iotype==PIO_iotype_pnetcdf) then
+       if(present(mode)) then
+          amode = mode
+       else
+          amode = NF_NOWRITE
+       end if
+    endif
+    if(file%iosystem%ioproc) then
        if(iotype==PIO_iotype_pnetcdf) then
-          if(present(mode)) then
-             amode = mode
-          else
-             amode = NF_NOWRITE
-          end if
+#ifdef _PNETCDF
           ierr  = nfmpi_open(File%iosystem%IO_comm,fname,amode,File%iosystem%info,File%fh)
-
+#endif
+       endif
 #ifdef _NETCDF
 #ifdef _NETCDF4
-          if(ierr /= PIO_NOERR) then    ! try hdf5 format
-             if(Debug) print *, 'try netcdf4 format'
-             File%iotype = pio_iotype_netcdf4p
-             iotype = pio_iotype_netcdf4p
+       if(ierr /= PIO_NOERR) then    ! try hdf5 format
+          if(Debug) print *, 'try netcdf4 format'
+          File%iotype = pio_iotype_netcdf4p
+          iotype = pio_iotype_netcdf4p
+       end if
+       if(iotype==PIO_iotype_netcdf4p .or. iotype ==pio_iotype_netcdf4c) then
+#ifdef _MPISERIAL
+          ierr = nf90_open(fname,amode,File%fh)           
+#else
+          ierr = nf90_open(fname,  ior(amode,ior(NF90_NETCDF4,NF90_MPIIO)), File%fh, &
+               comm=File%iosystem%io_comm, info=File%iosystem%info)
+          if(ierr==nf90_enotnc4 .or. ierr==nf90_einval) then
+             ierr = nf90_open(fname, amode, File%fh,info=File%iosystem%info)
           end if
-#endif
 #endif
        end if
-#endif
-
-#ifdef _NETCDF
-#ifdef _NETCDF4
-        if(iotype==PIO_iotype_netcdf4p .or. iotype ==pio_iotype_netcdf4c) then
-#ifdef _MPISERIAL
-           ierr = nf90_open(fname,amode,File%fh)           
-#else
-           ierr = nf90_open(fname,  ior(amode,ior(NF90_NETCDF4,NF90_MPIIO)), File%fh, &
-                comm=File%iosystem%io_comm, info=File%iosystem%info)
-           if(ierr==nf90_enotnc4 .or. ierr==nf90_einval) then
-              ierr = nf90_open(fname, amode, File%fh,info=File%iosystem%info)
-           end if
-#endif
-        end if
 #endif
 
        if(iotype==PIO_iotype_netcdf) then
@@ -223,10 +223,12 @@ contains
 
     tmpfh = file%fh
     call mpi_bcast(tmpfh,1,mpi_integer, file%iosystem%iomaster, file%iosystem%my_comm, mpierr)
-
+    
     if(.not. file%iosystem%ioproc) file%fh=-tmpfh
+    file%openmode = - amode
       
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
+    if(Debug) print *,__FILE__,__LINE__
 
   end function open_nf
 

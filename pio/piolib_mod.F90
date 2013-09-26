@@ -2815,7 +2815,7 @@ contains
     integer :: ierr, msg
     integer :: iotype 
     logical, parameter :: check = .true.
-    type(timeseries_var_t), pointer :: varlist(:)
+    type(timeseries_var_t), pointer :: varlist, nvar
     integer :: i
 
     file=>Hfile
@@ -2839,17 +2839,20 @@ contains
     case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
        if(associated(file%tsfile)) then
           varlist => file%tsfile%varlist
-          do i=1,size(varlist)
+          do while(associated(varlist))
 
-             if(allocated(varlist(i)%vardesc%tsvarfile)) then
-                file => varlist(i)%vardesc%tsvarfile
+             if(allocated(varlist%vardesc%tsvarfile)) then
+                file => varlist%vardesc%tsvarfile
                 call darray_write_complete(file)
                 ierr = close_nf(file)
-                deallocate(varlist(i)%vardesc%tsvarfile)
+                deallocate(varlist%vardesc%tsvarfile)
              endif
-             if(ierr==0) file%file_is_open=.false.
+             nvar => varlist%next
+             deallocate(varlist)
+             varlist=>nvar
           enddo
-
+!          deallocate(Hfile%tsfile)
+!          nullify(Hfile%tsfile)
        endif
        call darray_write_complete(hfile)
        ierr = close_nf(hfile)

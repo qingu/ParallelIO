@@ -1406,6 +1406,7 @@ contains
     ! Local variables
     !------------------
     type(file_desc_t), pointer :: File
+    type(timeseries_var_t), pointer :: varlist
     integer :: iotype, mpierr, nf, nfsize
     logical, parameter :: Check = .TRUE.
     integer :: msg = PIO_MSG_ENDDEF
@@ -1456,30 +1457,22 @@ contains
           
           if(associated(File,Hfile)) then
              if(associated(Hfile%tsfile)) then
-                nf=1
-                nfsize = size(hfile%tsfile%varlist)
-                file => hfile%tsfile%varlist(nf)%vardesc%tsvarfile
+                varlist =>hfile%tsfile%varlist
+                file => varlist%vardesc%tsvarfile
              else
                 nullify(file)
              endif
+          else if(associated(varlist%next)) then
+             varlist=>varlist%next
+             file => varlist%vardesc%tsvarfile
           else
-             nf=nf+1
-             do while(nf <= nfsize) 
-                if(allocated(hfile%tsfile%varlist(nf)%vardesc%tsvarfile)) exit
-                nf=nf+1
-             end do
-             if(nf<=nfsize) then
-                file => hfile%tsfile%varlist(nf)%vardesc%tsvarfile
-             else
-                nullify(file)
-             endif
+             nullify(file)
           endif
        end do
     endif
+    if(Debug) print *,__FILE__,__LINE__
     file => hfile
-
-   call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
-
+    call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
 
   end function PIO_enddef
 
@@ -1569,7 +1562,7 @@ contains
     integer :: msg = PIO_MSG_DEF_DIM
 
     iotype = File%iotype
-
+    if(Debug) print *,__PIO_FILE__,__LINE__
     ierr=PIO_noerr
     ios => file%iosystem
     nlen = len_trim(name)
@@ -1635,7 +1628,7 @@ contains
 !<
   integer function def_var_0d(File,name,type,vardesc) result(ierr)
 
-    type (File_desc_t), intent(inout)  :: File
+    type (File_desc_t), intent(in)  :: File
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
     type (Var_desc_t), intent(inout) :: vardesc
@@ -1661,7 +1654,7 @@ contains
 #ifdef _COMPRESSION
     use C_interface_mod, only : F_C_String_dup
 #endif
-    type (File_desc_t), target, intent(inout)  :: HFile
+    type (File_desc_t), target, intent(in)  :: HFile
     character(len=*), intent(in)    :: name
     integer, intent(in)             :: type
     integer, intent(in)             :: dimids(:)
@@ -1674,8 +1667,6 @@ contains
     !------------------
     integer :: iotype, mpierr, nlen
     integer :: msg = PIO_MSG_DEF_VAR
-    integer :: unlim_dimid=-1
-
 
     iotype = HFile%iotype
 
@@ -1687,6 +1678,7 @@ contains
 
     ios => Hfile%iosystem
     nlen = len_trim(name)
+    if(Debug) print *,__PIO_FILE__,__LINE__
 
     if(ios%async_interface) then
        if( .not. ios%ioproc) then
@@ -1703,16 +1695,19 @@ contains
     vardesc%name = name
     vardesc%varid = -1
     file=>hfile
-    if(file%unlim_dimid<0) then
-       ierr= pio_inquire(File,unlimitedDimID=file%unlim_dimid)
-    endif
 
-    if (check_if_timeseries(Hfile,vardesc,dimids)) then
-       call create_time_series_file(HFile,vardesc,name)
-       file=>vardesc%tsvarfile
-       file%iosystem=>Hfile%iosystem
+    if(check_if_timeseries_file(Hfile)) then
+    if(Debug) print *,__PIO_FILE__,__LINE__
+       if(Hfile%tsfile%unlim_dimid<0) then
+          ierr= pio_inquire(HFile,unlimitedDimID=Hfile%tsfile%unlim_dimid)
+       endif
+       if(check_if_timeseries_var(Hfile%tsfile,vardesc,dimids)) then
+          call create_time_series_file(HFile,vardesc,name)
+          file=>vardesc%tsvarfile
+          file%iosystem=>Hfile%iosystem
+       endif
     endif
-
+    if(Debug) print *,__PIO_FILE__,__LINE__
     if(ios%IOproc) then
        select case(iotype)
 #ifdef _PNETCDF
@@ -1777,11 +1772,12 @@ contains
     if(ios%async_interface  .or. ios%num_tasks> ios%num_iotasks) then  
        call MPI_BCAST(vardesc%varid, 1, MPI_INTEGER, ios%Iomaster, ios%my_Comm, ierr)
     end if
+    if(Debug) print *,__PIO_FILE__,__LINE__
     
   end function def_var_md
   subroutine create_time_series_file(HFile, vardesc, vname)
     use pio_types, only : var_desc_t, pio_write, file_desc_t
-    use ionf_mod, only : create_nf
+    use ionf_mod, only : create_nf, open_nf
     type(file_desc_t), intent(in)  :: HFile
     type(var_desc_t), intent(inout) :: vardesc
     character(len=*), intent(in) :: vname
@@ -1797,12 +1793,16 @@ contains
     allocate(vardesc%tsvarfile)
     vardesc%tsvarfile%iotype=Hfile%iotype
     vardesc%tsvarfile%iosystem=>Hfile%iosystem
-    ierr = create_nf(vardesc%tsvarfile,fpath,PIO_WRITE)
-    ierr = pio_inquire(Hfile, ndimensions=ndims)
-    do i=1,ndims
-       ierr = pio_inquire_dimension(Hfile, i, name=dname, len=dlen)
-       ierr = pio_def_dim(vardesc%tsvarfile, dname, dlen, dimid)
-    end do
+    if(Hfile%openmode <0) then
+       ierr = open_nf(vardesc%tsvarfile,fpath,-(Hfile%openmode))
+    else
+       ierr = create_nf(vardesc%tsvarfile,fpath,Hfile%openmode)
+       ierr = pio_inquire(Hfile, ndimensions=ndims)
+       do i=1,ndims
+          ierr = pio_inquire_dimension(Hfile, i, name=dname, len=dlen)
+          ierr = pio_def_dim(vardesc%tsvarfile, dname, dlen, dimid)
+       end do
+    endif
 
 
   end subroutine create_time_series_file

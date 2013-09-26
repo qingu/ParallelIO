@@ -183,7 +183,7 @@ module pio_types
                                                   ! e.g. rearr_{none,box}
 	integer(i4)              :: error_handling ! how pio handles errors
         integer(i4),pointer      :: ioranks(:) => null()         ! the computational ranks for the IO tasks
-
+        type(timeseries_file_t), pointer :: timeseries_list => null()
 	! This holds the IODESC
     end type
 
@@ -212,13 +212,14 @@ module pio_types
     type, public :: timeseries_var_t
        character(len=char_len) :: name
        type(var_desc_t), pointer :: vardesc => NULL()
-       integer :: action
        type(timeseries_var_t), pointer :: next =>NULL()
     end type timeseries_var_t
 
     type, public :: timeseries_file_t
+       integer(i4) :: unlim_dimid = -1
        character(len=char_len) :: filename
-       type(timeseries_var_t), allocatable :: varlist(:)
+       character(len=char_len), allocatable :: exclude_vars(:)
+       type(timeseries_var_t), allocatable :: varlist
        type(timeseries_file_t), pointer :: next => NULL()
     end type timeseries_file_t
 
@@ -236,8 +237,8 @@ module pio_types
        integer(i4) :: fh
        integer(kind=PIO_OFFSET) :: offset             ! offset into file
        integer(i4)              :: iotype              ! Type of IO to perform see parameter statement below     
-       integer(i4) :: unlim_dimid = -1
        logical                  :: file_is_open = .false.
+       integer :: openmode                         ! Mode used in opening file with sign(+ for create - for open)
        character(len=char_len)       :: filepath
        type(timeseries_file_t), pointer :: tsfile=>null() 
     end type File_desc_t

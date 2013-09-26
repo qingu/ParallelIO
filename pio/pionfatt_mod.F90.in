@@ -252,6 +252,7 @@ contains
 
        end select
     endif
+    if(Debug) print *,__FILE__,__LINE__
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
   end function put_att_1d_{TYPE}
 
