@@ -24,8 +24,6 @@ contains
     logical, save :: initialized=.false.
 
     namelist /pio_timeseries/ filename, include_vars, exclude_vars
-!    if(initialized) return
-!    initialized=.true.
     filename = ' '
     include_vars = ' '
     exclude_vars = ' '
@@ -107,11 +105,6 @@ contains
 
   end subroutine add_var_to_timeseries
         
-
-
-
-
-
   subroutine add_timeseries_to_list(timeseries_list,timeseries)
     type(timeseries_file_t), target :: timeseries_list
     type(timeseries_file_t), pointer :: timeseries
@@ -135,6 +128,7 @@ contains
     type(timeseries_var_t), pointer :: varlist
 
     match=.false.
+
     if( associated(file%tsfile)) then
        tptr => file%tsfile
        match=.true.

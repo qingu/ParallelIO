@@ -36,6 +36,7 @@ contains
   !
 
   integer function create_nf(File,fname, amode) result(ierr)
+
 #ifndef NO_MPIMOD
     use mpi ! _EXTERNAL
 #else
@@ -130,7 +131,7 @@ contains
     file%openmode = nmode
 
 
-    if(Debug.or.DebugAsync) print *,__PIO_FILE__,__LINE__,file%fh,ierr
+    if(Debug.or.DebugAsync) print *,__PIO_FILE__,__LINE__,file%fh,trim(fname)
     
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
 
@@ -161,6 +162,7 @@ contains
 !       This subroutine seems to break pgi compiler for large files.
 !       call check_file_type(File, fname)
     iotype = File%iotype 
+    file%filepath=fname
 #ifdef _NETCDF
     if(present(mode)) then
        if(mode == 1) then
@@ -172,6 +174,7 @@ contains
        amode = NF90_NOWRITE
     end if
 #endif
+#ifdef _PNETCDF
     if(iotype==PIO_iotype_pnetcdf) then
        if(present(mode)) then
           amode = mode
@@ -179,6 +182,7 @@ contains
           amode = NF_NOWRITE
        end if
     endif
+#endif
     if(file%iosystem%ioproc) then
        if(iotype==PIO_iotype_pnetcdf) then
 #ifdef _PNETCDF
@@ -243,9 +247,8 @@ contains
     type (File_desc_t), intent(inout) :: File
 
     ierr=PIO_noerr
-
-    if(File%iosystem%IOproc) then
-       if(Debug) print *,__PIO_FILE__,__LINE__,'CFILE closing : ',file%fh
+    if(Debug)        print *,__PIO_FILE__,__LINE__,'CFILE closing : ',file%fh, trim(file%filepath)
+    if(File%fh>0) then
        select case (File%iotype) 
 #ifdef _PNETCDF
        case(PIO_iotype_pnetcdf)
@@ -253,14 +256,12 @@ contains
 #endif
 #ifdef _NETCDF
        case(PIO_iotype_netcdf, pio_iotype_netcdf4c, pio_iotype_netcdf4p)
-          if (File%fh>0) then
              ierr= nf90_sync(File%fh)
              if(ierr==PIO_NOERR) then
                 ierr= nf90_close(File%fh)
              else
                 if(Debug) print *,__PIO_FILE__,__LINE__,ierr
              end if
-          endif
 #endif
        case default
           call bad_iotype(File%iotype,__PIO_FILE__,__LINE__)

@@ -13,6 +13,7 @@ module pionfatt_mod
   use pio_kinds, only : pio_offset
   use pio_support, only : piodie, checkmpireturn, debug, debugasync
   use pio_utils, only : check_netcdf, bad_iotype
+  use pio_timeseries, only : check_if_timeseries_file
 
 #ifdef _NETCDF
     use netcdf      ! _EXTERNAL
@@ -160,6 +161,7 @@ contains
 
        end select
     endif
+    if(Debug .or. ierr /= PIO_NOERR) print *,__FILE__,__LINE__,varid,trim(name)
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
   end function put_att_{TYPE}
 
@@ -252,7 +254,8 @@ contains
 
        end select
     endif
-    if(Debug) print *,__FILE__,__LINE__
+    if(Debug .or. ierr /= PIO_NOERR) print *,__FILE__,__LINE__,varid,trim(name)
+
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
   end function put_att_1d_{TYPE}
 
@@ -268,7 +271,6 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_att_desc_{TYPE} (File,varDesc,name,value) result(ierr)
-
     type (File_desc_t), intent(inout) , target :: File
     type (VAR_desc_t), intent(in), target     :: varDesc
     character(len=*), intent(in)      :: name
@@ -276,10 +278,13 @@ contains
 
     type (File_desc_t), pointer :: LFile
 
-    if(allocated(vardesc%tsvarfile)) then
-       LFile => vardesc%tsvarfile
-    else
-       LFile => File
+
+    LFile => File
+
+    if(check_if_timeseries_file(File)) then
+       if(allocated(vardesc%tsvarfile)) then
+          LFile => vardesc%tsvarfile
+       endif
     endif
     ierr = put_att_{TYPE} (LFile,varDesc%varid,name,value)
 
@@ -298,6 +303,7 @@ contains
 !! @retval ierr @copydoc error_return
 !<
   integer function put_att_desc_1d_{TYPE} (File,varDesc,name,value) result(ierr)
+    use pio_timeseries, only : check_if_timeseries_file
 
     type (File_desc_t), intent(inout) , target :: File
     type (VAR_desc_t), intent(in), target     :: varDesc
@@ -308,10 +314,11 @@ contains
 
     type (File_desc_t), pointer :: LFile
 
-    if(allocated(vardesc%tsvarfile)) then
-       LFile => vardesc%tsvarfile
-    else
-       LFile => File
+    LFile => File
+    if(check_if_timeseries_file(File)) then
+       if(allocated(vardesc%tsvarfile)) then
+          LFile => vardesc%tsvarfile
+       endif
     endif
     ierr = put_att_1d_{TYPE} (LFile,varDesc%varid,name,value)
 
@@ -356,14 +363,20 @@ contains
 !<
   integer function get_att_desc_1d_{TYPE} (File,varDesc,name,value) result(ierr)
 
-    type (File_desc_t), intent(inout) , target :: File
-    type (VAR_desc_t), intent(in)     :: varDesc
+    type (File_desc_t), target, intent(inout) :: File
+    type (VAR_desc_t), target, intent(in)     :: varDesc
     character(len=*), intent(in)      :: name
     {VTYPE}, intent(out)      :: value(:)
 
     character(len=*), parameter :: subName=modName//'::get_att_desc_1d_{TYPE}'
+    type (File_desc_t), pointer :: LFile
 
-    ierr = get_att_1d_{TYPE} (File,varDesc%varid,name,value)
+    if(check_if_timeseries_file(File)) then
+       if(allocated(vardesc%tsvarfile)) then
+          LFile => vardesc%tsvarfile
+       endif
+    endif
+    ierr = get_att_1d_{TYPE} (LFile,varDesc%varid,name,value)
 
   end function get_att_desc_1d_{TYPE}
 

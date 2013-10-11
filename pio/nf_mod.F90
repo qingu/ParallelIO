@@ -481,6 +481,7 @@ contains
 
        end select
     endif
+
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
     if(ios%async_interface.or.ios%num_tasks>ios%num_iotasks) then
        call MPI_BCAST(len,1,MPI_INTEGER,ios%IOMaster,ios%my_comm, mpierr)
@@ -500,14 +501,24 @@ contains
 !! @param len : Length of attribute
 !! @retval ierr @copydoc error_return
 !>
-  integer function inq_attlen_vardesc(File,vardesc,name,len) result(ierr)
+  integer function inq_attlen_vardesc(HFile,vardesc,name,len) result(ierr)
 
-    type (File_desc_t), intent(inout) :: File
-    type (Var_desc_t), intent(in)            :: vardesc
+    type (File_desc_t), target, intent(inout) :: HFile
+    type (Var_desc_t),target, intent(in)            :: vardesc
     character(len=*), intent(in)      :: name
     integer, intent(out),optional     :: len !Attribute length
+    type (File_desc_t), pointer :: File
+
+    File=>Hfile
+
+    if(check_if_timeseries_file(File))  then
+       if(allocated(vardesc%tsvarfile)) then
+          File => vardesc%tsvarfile
+       end if
+    end if
 
     ierr = pio_inq_attlen(file, vardesc%varid, name, len)
+
 
   end function inq_attlen_vardesc
 
@@ -692,17 +703,39 @@ contains
 !! @param vardesc @copydoc var_desc_t
 !! @retval ierr @copydoc error_return
 !<
-  integer function inq_varid_vardesc(File,name,vardesc) result(ierr)
+  integer function inq_varid_vardesc(HFile,name,vardesc) result(ierr)
 
-    type (File_desc_t), intent(in)   :: File
+    type (File_desc_t), intent(in), target   :: HFile
     character(len=*), intent(in)     :: name
-    type (Var_desc_t), intent(inout) :: vardesc
+    type (Var_desc_t), intent(inout), target :: vardesc
 
-    ierr = pio_inq_varid(File, name, vardesc%varid)
+    type(file_desc_t), pointer :: File
+
+
+
+
+    File => Hfile
     vardesc%rec=-1
+
+    if(check_if_timeseries_file(File)) then
+       if(file%tsfile%unlim_dimid<0) then
+          ierr= pio_inquire(File,unlimitedDimID=file%tsfile%unlim_dimid)
+       endif
+       if(hfile%openmode<0) then
+          call create_time_series_file(HFile,vardesc,name)
+          if(allocated(vardesc%tsvarfile)) then
+             file=>vardesc%tsvarfile
+             file%iosystem=>Hfile%iosystem
+          else
+             file=>Hfile
+          endif
+       endif
+    endif
+    ierr = pio_inq_varid(File, name, vardesc%varid)
+
     if(ierr==PIO_NOERR) then
        ierr = pio_inq_varndims(File, vardesc%varid, vardesc%ndims) ! needed for nfwrite
-    end if
+    endif
   end function inq_varid_vardesc
 
 !>
@@ -1692,12 +1725,13 @@ contains
        call mpi_bcast(vardesc%ndims, 1, mpi_integer, ios%compmaster, ios%intercomm, ierr)
        call mpi_bcast(dimids, vardesc%ndims, mpi_integer, ios%compmaster, ios%intercomm, ierr)
     endif
+
     vardesc%name = name
     vardesc%varid = -1
     file=>hfile
 
     if(check_if_timeseries_file(Hfile)) then
-    if(Debug) print *,__PIO_FILE__,__LINE__
+       if(Debug) print *,__PIO_FILE__,__LINE__
        if(Hfile%tsfile%unlim_dimid<0) then
           ierr= pio_inquire(HFile,unlimitedDimID=Hfile%tsfile%unlim_dimid)
        endif
@@ -1708,6 +1742,7 @@ contains
        endif
     endif
     if(Debug) print *,__PIO_FILE__,__LINE__
+
     if(ios%IOproc) then
        select case(iotype)
 #ifdef _PNETCDF
@@ -1781,7 +1816,7 @@ contains
     type(file_desc_t), intent(in)  :: HFile
     type(var_desc_t), intent(inout) :: vardesc
     character(len=*), intent(in) :: vname
-
+    logical :: exists=.false.
     integer :: flen, nlen, ierr, dlen, i, ndims, dimid
     character(len=char_len) :: fpath
     character(len=PIO_MAX_NAME) :: dname
@@ -1789,13 +1824,21 @@ contains
     fpath = Hfile%filepath
     flen = len_trim(fpath)
     nlen = len_trim(vname)
-    fpath(flen-3:flen+nlen+1) = '_'//trim(vname)//'.nc'
-    allocate(vardesc%tsvarfile)
-    vardesc%tsvarfile%iotype=Hfile%iotype
-    vardesc%tsvarfile%iosystem=>Hfile%iosystem
+    fpath(flen-2:flen+nlen+1) = '_'//trim(vname)//'.nc'
     if(Hfile%openmode <0) then
-       ierr = open_nf(vardesc%tsvarfile,fpath,-(Hfile%openmode))
+       inquire(File=fpath, exist=exists)
+       if(exists) then
+          if(.not. allocated(vardesc%tsvarfile)) then
+             allocate(vardesc%tsvarfile)		 
+          endif
+          vardesc%tsvarfile%iotype=Hfile%iotype
+          vardesc%tsvarfile%iosystem=>Hfile%iosystem
+          ierr = open_nf(vardesc%tsvarfile,fpath,-(Hfile%openmode))
+       end if
     else
+       allocate(vardesc%tsvarfile)
+       vardesc%tsvarfile%iotype=Hfile%iotype
+       vardesc%tsvarfile%iosystem=>Hfile%iosystem
        ierr = create_nf(vardesc%tsvarfile,fpath,Hfile%openmode)
        ierr = pio_inquire(Hfile, ndimensions=ndims)
        do i=1,ndims

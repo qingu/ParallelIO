@@ -402,7 +402,7 @@ contains
 !! @param fillval : An optional fill value to fill holes in the data written
 !<
   subroutine write_darray_nf_{TYPE} (HFile,varDesc,ioDesc,array, iostat, fillval)
-
+    use pio_timeseries, only : check_if_timeseries_file
     ! !DESCRIPTION:
     !  Writes a 2-d slab of TYPE to a netcdf file.
     !
@@ -464,10 +464,11 @@ contains
     ! pull information from file_desc_t data structure
     ! -----------------------------------------------------
     file => Hfile
-    if(allocated(vardesc%tsvarfile)) then
-       File=> vardesc%tsvarfile
+    if(check_if_timeseries_file(File)) then
+       if(allocated(vardesc%tsvarfile)) then
+          File=> vardesc%tsvarfile
+       endif
     endif
-
 
     IOproc     = File%iosystem%IOproc
     iotype     = File%iotype
@@ -1230,6 +1231,8 @@ contains
     type(io_data_list), pointer :: ptr, prevptr
     integer :: cnt, ierr
     integer, pointer :: array_of_requests(:), status(:)
+
+    if(file%iotype /= PIO_IOTYPE_PNETCDF) return
 
     if(associated(file%data_list_top) .and. file%request_cnt>0) then
 #ifdef MEMCHK	

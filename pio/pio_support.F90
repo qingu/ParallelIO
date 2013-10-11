@@ -57,6 +57,9 @@ module pio_support
 contains
 
   subroutine piodie (file,line, msg, ival1, msg2, ival2, msg3, ival3, mpirank)
+#if defined(CPRINTEL)
+    use ifcore, only : tracebackqq   !_EXTERNAL
+#endif
     !-----------------------------------------------------------------------
     ! Purpose:
     !
@@ -107,6 +110,9 @@ contains
 #if defined(CPRXLF) && !defined(BGx)
   close(5)    ! needed to prevent batch jobs from hanging in xl__trbk
   call xl__trbk()
+#endif
+#if defined(CPRINTEL)
+    call tracebackqq(string=msg,user_exit_code=-1)
 #endif
 
     ! passing an argument of 1 to mpi_abort will lead to a STOPALL output 

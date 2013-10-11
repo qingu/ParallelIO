@@ -2806,7 +2806,7 @@ contains
 !! @param file @copydoc file_desc_t
 !< 
   subroutine closefile(Hfile)
-    use pio_timeseries, only : timeseries_var_t
+    use pio_timeseries, only : timeseries_var_t, check_if_timeseries_file
     use piodarray, only : darray_write_complete
     type (file_desc_t),intent(inout), target   :: Hfile
 
@@ -2831,24 +2831,26 @@ contains
        call mpi_bcast(file%fh, 1, mpi_integer, file%iosystem%compmaster, file%iosystem%intercomm, ierr)
     end if
 
-    if(debug .and. file%iosystem%io_rank==0)       print *,__PIO_FILE__,__LINE__,'close: ',loc(file%iosystem)
+    if(debug .and. file%iosystem%io_rank==0)       print *,__PIO_FILE__,__LINE__
     iotype = file%iotype 
     select case(iotype)
     case(pio_iotype_pbinary, pio_iotype_direct_pbinary)
        ierr = close_mpiio(file)
     case( pio_iotype_pnetcdf, pio_iotype_netcdf, pio_iotype_netcdf4p, pio_iotype_netcdf4c)
-       if(associated(file%tsfile)) then
-          varlist => file%tsfile%varlist
+       if(check_if_timeseries_file(Hfile)) then
+          varlist => Hfile%tsfile%varlist
           do while(associated(varlist))
-
-             if(allocated(varlist%vardesc%tsvarfile)) then
-                file => varlist%vardesc%tsvarfile
-                call darray_write_complete(file)
-                ierr = close_nf(file)
-                deallocate(varlist%vardesc%tsvarfile)
-             endif
+             if(associated(varlist%vardesc)) then
+                if(allocated(varlist%vardesc%tsvarfile)) then
+                   file => varlist%vardesc%tsvarfile
+                   call darray_write_complete(File)
+                   ierr = close_nf(file)
+!                   nullify(file)
+!                   deallocate(varlist%vardesc%tsvarfile)
+                end if
+             end if
              nvar => varlist%next
-             deallocate(varlist)
+!             deallocate(varlist)
              varlist=>nvar
           enddo
 !          deallocate(Hfile%tsfile)
@@ -2859,7 +2861,7 @@ contains
     case(pio_iotype_binary)
        print *,'closefile: io type not supported'
     end select
-    if(ierr==0) file%file_is_open=.false.
+    if(ierr==0) hfile%file_is_open=.false.
 
 #ifdef TIMING
     call t_stopf("PIO_closefile")
