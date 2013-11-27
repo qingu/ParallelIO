@@ -1,4 +1,34 @@
+PROJECT(PIO C Fortran)
+ENABLE_LANGUAGE(Fortran)
+INCLUDE(FortranCInterface)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5)
+SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 SET(pio_include_dirs_  ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+SET(PIO_LIB_DIR  ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+
+#SET(bld_PIO_DEFINITIONS)
+
+# Netcdf is required
+
+SET (NETCDF_FIND_COMPONENTS F90)
+FIND_PACKAGE(Netcdf REQUIRED)
+IF (${NETCDF_FOUND})
+  MESSAGE("Building PIO with netcdf support ") 
+  SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -D_NETCDF)
+  IF (${NETCDF_IS_PARALLEL})
+    MESSAGE("Building PIO with netcdf4 parallel support") 
+    SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -D_NETCDF4)
+  ENDIF ()
+ENDIF ()
+# PNetcdf is optional but used by default
+OPTION(WITH_PNETCDF "Whether to build with PNetcdf" TRUE)
+IF (${WITH_PNETCDF})
+  FIND_PACKAGE(Pnetcdf REQUIRED)
+ELSE ()
+  MESSAGE(WARNING "Warning: Not building with PNetcdf - cannot run all regression tests.")
+ENDIF ()
+
 
 OPTION(PIO_BIG_ENDIAN "Specify that the machine is big endian" "test")
 IF ("${PIO_BIG_ENDIAN}" STREQUAL "test") 
@@ -13,7 +43,6 @@ ELSE()
   SET(PIO_BIG_ENDIAN ${PIO_BIG_ENDIAN} CACHE BOOL "")
 ENDIF()                                            
 
-SET(bld_PIO_DEFINITIONS)
 
 IF (PIO_FILESYSTEM_HINTS STREQUAL "lustre")
   MESSAGE(STATUS "PIO using lustre filesystem hints")
@@ -25,13 +54,13 @@ ELSEIF(NOT "${PIO_FILESYSTEM_HINTS}" STREQUAL "")
   MESSAGE(WARNING "${PIO_FILESYSTEM_HINTS} not valid option for PIO_FILESYSTEM_HINTS; use gpfs or lustre.")
 ENDIF()
 
-IF(Netcdf_FOUND) 
-  SET(pio_include_dirs_ ${pio_include_dirs_} ${Netcdf_INCLUDE_DIR})
+IF(NETCDF_FOUND) 
+  SET(pio_include_dirs_ ${pio_include_dirs_} ${NETCDF_INCLUDE_DIR})
   SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -D_NETCDF)
 ELSE()
   SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -D_NONETCDF)
 ENDIF()
-IF(Pnetcdf_FOUND)
+IF(PNETCDF_FOUND)
   SET(pio_include_dirs_ ${pio_include_dirs_} ${Pnetcdf_INCLUDE_DIR})
   SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -D_PNETCDF)
 ELSE()
@@ -88,7 +117,8 @@ SET(SRCS_C topology.c)
 
 SET(SRCS_F90 pio.F90 pio_kinds.F90 nf_mod.F90  ionf_mod.F90 pio_types.F90
              piolib_mod.F90 pio_mpi_utils.F90 pio_nf_utils.F90 pio_utils.F90
-             pio_quicksort.F90 pio_msg_mod.F90 pio_msg_callbacks.F90)
+             pio_support.F90                                calcdisplace_mod.F90
+	     calcdecomp.F90 pio_msg_mod.F90 pio_msg_callbacks.F90)
 
 SET(TEMPSRCF90    pionfatt_mod.F90
          	                pionfread_mod.F90
@@ -98,15 +128,22 @@ SET(TEMPSRCF90    pionfatt_mod.F90
 	                        alloc_mod.F90
                                 box_rearrange.F90
                                 rearrange.F90
-                                pio_support.F90
          	                iompi_mod.F90
            	                piodarray.F90
 	                        pio_spmd_utils.F90
 	                        pio_msg_getput_callbacks.F90
-                                calcdisplace_mod.F90
-                                calcdecomp.F90
         )
 
-ADD_LIBRARY(pio ${SRCS_F90} ${SRC_C} ${TEMPSRCF90})
+FOREACH(tempfile IN LISTS TEMPSRCF90)
+ADD_CUSTOM_COMMAND(
+	OUTPUT ${tempfile}
+	COMMAND ${GENF90_PATH}/genf90.pl ${CMAKE_CURRENT_SOURCE_DIR}/${tempfile}.in > ${tempfile}
+	DEPENDS  ${tempfile}.in
+)
+ENDFOREACH()
+
+ADD_LIBRARY(pio ${SRCS_F90} ${SRCS_C} ${TEMPSRCF90})
 TARGET_LINK_LIBRARIES(pio ${Pnetcdf_LIBRARIES})
-TARGET_LINK_LIBRARIES(pio ${Netcdf_LIBRARIES})
+TARGET_LINK_LIBRARIES(pio ${NETCDF_LIBRARIES})
+TARGET_LINK_LIBRARIES(pio ${ADDITIONAL_LIBS})
+

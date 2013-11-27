@@ -6,8 +6,8 @@
 #define __PIO_FILE__ "pionfatt_mod.F90"
 !>
 !! @file 
-!! $Revision: 787 $
-!! $LastChangedDate: 2013-05-08 12:00:13 -0600 (Wed, 08 May 2013) $
+!! $Revision: 812 $
+!! $LastChangedDate: 2013-05-13 11:19:21 -0600 (Mon, 13 May 2013) $
 !! @brief NetCDF attribute interface to PIO
 !<
 module pionfatt_mod
@@ -34,7 +34,7 @@ module pionfatt_mod
 !! @private
 !<
   public :: put_att
-# 32 "pionfatt_mod.F90.in"
+# 32 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   interface put_att
      module procedure put_att_text, put_att_desc_text
      module procedure put_att_real, put_att_desc_real
@@ -53,7 +53,7 @@ module pionfatt_mod
 !! @private
 !<
   public :: get_att
-# 43 "pionfatt_mod.F90.in"
+# 43 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   interface get_att
      module procedure get_att_text, get_att_desc_text
      module procedure get_att_real, get_att_desc_real
@@ -81,7 +81,7 @@ module pionfatt_mod
   private :: modName
   character(len=*), parameter :: modName='pionfatt_mod'
 
-# 63 "pionfatt_mod.F90.in"
+# 63 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
 contains
 
 !>
@@ -95,7 +95,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 76 "pionfatt_mod.F90.in"
+# 76 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_text (File, varid, name, value) result(ierr)
     use pio_msg_mod, only : pio_msg_putatt
     type (File_desc_t), intent(inout) , target :: File
@@ -167,8 +167,10 @@ contains
 #endif
 
 #ifdef _NETCDF
+!       case(iotype_netcdf,PIO_iotype_netcdf4c,PIO_iotype_netcdf4p)
        case(iotype_netcdf,PIO_iotype_netcdf4c)
           if (Ios%io_rank==0) then
+             if(debug) print *,__FILE__,__LINE__,name,value
              ierr=nf90_put_att(File%fh,varid,name,value)
           endif
        case(PIO_iotype_netcdf4p)
@@ -194,7 +196,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 76 "pionfatt_mod.F90.in"
+# 76 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_real (File, varid, name, value) result(ierr)
     use pio_msg_mod, only : pio_msg_putatt
     type (File_desc_t), intent(inout) , target :: File
@@ -266,8 +268,10 @@ contains
 #endif
 
 #ifdef _NETCDF
+!       case(iotype_netcdf,PIO_iotype_netcdf4c,PIO_iotype_netcdf4p)
        case(iotype_netcdf,PIO_iotype_netcdf4c)
           if (Ios%io_rank==0) then
+             if(debug) print *,__FILE__,__LINE__,name,value
              ierr=nf90_put_att(File%fh,varid,name,value)
           endif
        case(PIO_iotype_netcdf4p)
@@ -293,7 +297,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 76 "pionfatt_mod.F90.in"
+# 76 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_double (File, varid, name, value) result(ierr)
     use pio_msg_mod, only : pio_msg_putatt
     type (File_desc_t), intent(inout) , target :: File
@@ -365,8 +369,10 @@ contains
 #endif
 
 #ifdef _NETCDF
+!       case(iotype_netcdf,PIO_iotype_netcdf4c,PIO_iotype_netcdf4p)
        case(iotype_netcdf,PIO_iotype_netcdf4c)
           if (Ios%io_rank==0) then
+             if(debug) print *,__FILE__,__LINE__,name,value
              ierr=nf90_put_att(File%fh,varid,name,value)
           endif
        case(PIO_iotype_netcdf4p)
@@ -392,7 +398,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 76 "pionfatt_mod.F90.in"
+# 76 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_int (File, varid, name, value) result(ierr)
     use pio_msg_mod, only : pio_msg_putatt
     type (File_desc_t), intent(inout) , target :: File
@@ -464,8 +470,10 @@ contains
 #endif
 
 #ifdef _NETCDF
+!       case(iotype_netcdf,PIO_iotype_netcdf4c,PIO_iotype_netcdf4p)
        case(iotype_netcdf,PIO_iotype_netcdf4c)
           if (Ios%io_rank==0) then
+             if(debug) print *,__FILE__,__LINE__,name,value
              ierr=nf90_put_att(File%fh,varid,name,value)
           endif
        case(PIO_iotype_netcdf4p)
@@ -492,7 +500,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 176 "pionfatt_mod.F90.in"
+# 178 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_1d_real (File, varid, name, value) result(ierr)
     use pio_msg_mod, only : pio_msg_putatt_1D
     type (File_desc_t), intent(inout) , target :: File
@@ -584,7 +592,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 176 "pionfatt_mod.F90.in"
+# 178 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_1d_double (File, varid, name, value) result(ierr)
     use pio_msg_mod, only : pio_msg_putatt_1D
     type (File_desc_t), intent(inout) , target :: File
@@ -676,7 +684,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 176 "pionfatt_mod.F90.in"
+# 178 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_1d_int (File, varid, name, value) result(ierr)
     use pio_msg_mod, only : pio_msg_putatt_1D
     type (File_desc_t), intent(inout) , target :: File
@@ -767,7 +775,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 266 "pionfatt_mod.F90.in"
+# 268 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_desc_text (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -790,7 +798,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 266 "pionfatt_mod.F90.in"
+# 268 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_desc_real (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -813,7 +821,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 266 "pionfatt_mod.F90.in"
+# 268 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_desc_double (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -836,7 +844,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 266 "pionfatt_mod.F90.in"
+# 268 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_desc_int (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -860,7 +868,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 289 "pionfatt_mod.F90.in"
+# 291 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_desc_1d_real (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -886,7 +894,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 289 "pionfatt_mod.F90.in"
+# 291 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_desc_1d_int (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -912,7 +920,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 289 "pionfatt_mod.F90.in"
+# 291 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function put_att_desc_1d_double (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -938,7 +946,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 314 "pionfatt_mod.F90.in"
+# 316 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_desc_text (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -964,7 +972,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 314 "pionfatt_mod.F90.in"
+# 316 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_desc_real (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -990,7 +998,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 314 "pionfatt_mod.F90.in"
+# 316 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_desc_double (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -1016,7 +1024,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 314 "pionfatt_mod.F90.in"
+# 316 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_desc_int (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -1042,7 +1050,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 339 "pionfatt_mod.F90.in"
+# 341 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_desc_1d_real (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -1068,7 +1076,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 339 "pionfatt_mod.F90.in"
+# 341 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_desc_1d_int (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -1094,7 +1102,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 339 "pionfatt_mod.F90.in"
+# 341 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_desc_1d_double (File,varDesc,name,value) result(ierr)
 
     type (File_desc_t), intent(inout) , target :: File
@@ -1119,7 +1127,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 363 "pionfatt_mod.F90.in"
+# 365 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_text (File,varid,name,value) result(ierr)
     use pio_msg_mod, only : pio_msg_getatt	
     type (File_desc_t), intent(in) , target :: File
@@ -1200,7 +1208,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 363 "pionfatt_mod.F90.in"
+# 365 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_real (File,varid,name,value) result(ierr)
     use pio_msg_mod, only : pio_msg_getatt	
     type (File_desc_t), intent(in) , target :: File
@@ -1281,7 +1289,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 363 "pionfatt_mod.F90.in"
+# 365 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_double (File,varid,name,value) result(ierr)
     use pio_msg_mod, only : pio_msg_getatt	
     type (File_desc_t), intent(in) , target :: File
@@ -1362,7 +1370,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 363 "pionfatt_mod.F90.in"
+# 365 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_int (File,varid,name,value) result(ierr)
     use pio_msg_mod, only : pio_msg_getatt	
     type (File_desc_t), intent(in) , target :: File
@@ -1444,7 +1452,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 444 "pionfatt_mod.F90.in"
+# 446 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_1d_real (File,varid,name,value) result(ierr)
     use pio_msg_mod, only : pio_msg_getatt_1d
 
@@ -1525,7 +1533,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 444 "pionfatt_mod.F90.in"
+# 446 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_1d_int (File,varid,name,value) result(ierr)
     use pio_msg_mod, only : pio_msg_getatt_1d
 
@@ -1606,7 +1614,7 @@ contains
 !! @param value : The value for the netcdf attribute 
 !! @retval ierr @copydoc error_return
 !<
-# 444 "pionfatt_mod.F90.in"
+# 446 "/glade/u/home/jedwards/pio_ut/pio/pionfatt_mod.F90.in"
   integer function get_att_1d_double (File,varid,name,value) result(ierr)
     use pio_msg_mod, only : pio_msg_getatt_1d
 

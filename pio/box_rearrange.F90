@@ -6,8 +6,8 @@
 !>
 !!
 !! @file 
-!! $Revision: 777 $
-!! $LastChangedDate: 2013-05-01 06:39:51 -0600 (Wed, 01 May 2013) $
+!! $Revision: 787 $
+!! $LastChangedDate: 2013-05-08 12:00:13 -0600 (Wed, 08 May 2013) $
 !! @brief
 !!  Perform data rearrangement with each io processor
 !!  owning a rectangular box in the output domain
@@ -103,7 +103,7 @@ module box_rearrange
        box_rearrange_comp2io, &
        box_rearrange_io2comp
 
-# 102 "box_rearrange.F90.in"
+# 102 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   interface box_rearrange_comp2io
      ! TYPE int,real,double
      module procedure box_rearrange_comp2io_int
@@ -113,7 +113,7 @@ module box_rearrange
      module procedure box_rearrange_comp2io_double
   end interface
 
-# 107 "box_rearrange.F90.in"
+# 107 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   interface box_rearrange_io2comp
      ! TYPE int,real,double
      module procedure box_rearrange_io2comp_int
@@ -130,7 +130,7 @@ integer :: msize, rss, mshare, mtext, mstack, lastrss=0
 #endif
 
 
-# 119 "box_rearrange.F90.in"
+# 119 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
 contains
 !>
 !! @public box_rearrange_comp2io
@@ -139,7 +139,7 @@ contains
 !!
 !<
 ! TYPE real,double,int
-# 127 "box_rearrange.F90.in"
+# 127 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
 subroutine box_rearrange_comp2io_real (IOsystem, ioDesc, s1, src, niodof, &
                                          dest, comm_option, fc_options)
 
@@ -411,7 +411,7 @@ end subroutine box_rearrange_comp2io_real
 !!
 !<
 ! TYPE real,double,int
-# 127 "box_rearrange.F90.in"
+# 127 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
 subroutine box_rearrange_comp2io_double (IOsystem, ioDesc, s1, src, niodof, &
                                          dest, comm_option, fc_options)
 
@@ -683,7 +683,7 @@ end subroutine box_rearrange_comp2io_double
 !!
 !<
 ! TYPE real,double,int
-# 127 "box_rearrange.F90.in"
+# 127 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
 subroutine box_rearrange_comp2io_int (IOsystem, ioDesc, s1, src, niodof, &
                                          dest, comm_option, fc_options)
 
@@ -950,7 +950,7 @@ subroutine box_rearrange_comp2io_int (IOsystem, ioDesc, s1, src, niodof, &
 end subroutine box_rearrange_comp2io_int
 
 ! TYPE real,double,int
-# 393 "box_rearrange.F90.in"
+# 393 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
 subroutine box_rearrange_io2comp_real (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
                                          comm_option, fc_options)
   implicit none
@@ -1210,7 +1210,7 @@ subroutine box_rearrange_io2comp_real (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
 end subroutine box_rearrange_io2comp_real
 
 ! TYPE real,double,int
-# 393 "box_rearrange.F90.in"
+# 393 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
 subroutine box_rearrange_io2comp_double (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
                                          comm_option, fc_options)
   implicit none
@@ -1470,7 +1470,7 @@ subroutine box_rearrange_io2comp_double (IOsystem,ioDesc,s1, iobuf,s2, compbuf, 
 end subroutine box_rearrange_io2comp_double
 
 ! TYPE real,double,int
-# 393 "box_rearrange.F90.in"
+# 393 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
 subroutine box_rearrange_io2comp_int (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
                                          comm_option, fc_options)
   implicit none
@@ -1736,7 +1736,7 @@ end subroutine box_rearrange_io2comp_int
   !   find the rank in union_comm of the ith io processor
   !
 
-# 658 "box_rearrange.F90.in"
+# 658 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   integer function find_io_comprank( Iosystem, ioprocindex )
     implicit none
 
@@ -1753,7 +1753,7 @@ end subroutine box_rearrange_io2comp_int
   !   find global xyz coordinates given a global index
   !
 
-# 674 "box_rearrange.F90.in"
+# 674 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   subroutine gindex_to_coord( gindex, gstride, ndim, gcoord )
     implicit none
     integer(kind=pio_offset),intent(in) :: gindex           ! 0-based global index
@@ -1790,7 +1790,7 @@ end subroutine box_rearrange_io2comp_int
   !   and 1-based index for that ioproc's iobuf          '
   !
 
-# 710 "box_rearrange.F90.in"
+# 710 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   logical function find_ioproc( gcoord, lb, ub, lstride, ndim, nioproc, &
        io_proc, io_index )
     implicit none
@@ -1804,7 +1804,7 @@ end subroutine box_rearrange_io2comp_int
     integer(kind=pio_offset),intent(out) :: io_index
 
     character(len=*), parameter :: subName=modName//'::find_ioproc'
-    integer :: i,j, decompstep(ndim)
+    integer :: i,j, decompstep(ndim), k
     logical :: found
     integer(kind=pio_offset) :: lcoord(ndim)
     integer(kind=pio_offset)::  lindex
@@ -1823,16 +1823,17 @@ end subroutine box_rearrange_io2comp_int
           enddo
        endif
     enddo
-
-    loop_ioproc: do while(.not. found)
+    k=0
+    loop_ioproc: do while(.not. found.and.k<1004)
+       k=k+1
        do j=1,ndim
           if ( gcoord(j) < lb(j,i) ) then
-             i = i-decompstep(j)
-!             print *,__LINE__,i,gcoord(:),lb(:,i),ub(:,i)
+             i = max(1,i-decompstep(j))
+             if(k>1000) print *,__FILE__,__LINE__,i,gcoord(:),lb(:,i),ub(:,i)
              cycle loop_ioproc
           else  if(gcoord(j) >= ub(j,i) ) then
-             i = i+decompstep(j)
-!             print *,__LINE__,i,gcoord(:),lb(:,i),ub(:,i)
+             i = min(nioproc,i+decompstep(j))
+             if(k>1000) print *,__FILE__,__LINE__,i,gcoord(:),lb(:,i),ub(:,i)
              cycle loop_ioproc
           endif
        end do
@@ -1872,7 +1873,7 @@ end subroutine box_rearrange_io2comp_int
   !
   !
 
-# 791 "box_rearrange.F90.in"
+# 792 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   subroutine compute_dest(compdof, start, kount, gsize, ndim, nioproc, &
                           dest_ioproc, dest_ioindex                    )
     implicit none
@@ -1983,7 +1984,7 @@ end subroutine box_rearrange_io2comp_int
 !! this space should be freed in box_rearrange_free
 !!
 !<
-# 901 "box_rearrange.F90.in"
+# 902 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   subroutine box_rearrange_create(Iosystem, compdof, gsize, ndim, &
                                   nioproc, ioDesc)
 
@@ -2138,7 +2139,7 @@ end subroutine box_rearrange_io2comp_int
 !!
 !<
 #ifndef _MPISERIAL
-# 1055 "box_rearrange.F90.in"
+# 1056 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   subroutine compute_counts(Iosystem, ioDesc, niodof)
     
     use calcdisplace_mod, only : calcdisplace,GCDblocksize,gcd
@@ -2662,7 +2663,7 @@ end subroutine box_rearrange_io2comp_int
 !!
 !<
 
-# 1578 "box_rearrange.F90.in"
+# 1579 "/glade/u/home/jedwards/pio_ut/pio/box_rearrange.F90.in"
   subroutine box_rearrange_free(Iosystem,ioDesc)
     implicit none
 

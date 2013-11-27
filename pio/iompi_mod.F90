@@ -5,8 +5,8 @@
 #define __PIO_FILE__ "iompi_mod.F90"
 !>
 !! @file 
-!! $Revision: 766 $
-!! $LastChangedDate: 2013-04-22 16:42:31 -0600 (Mon, 22 Apr 2013) $
+!! $Revision: 796 $
+!! $LastChangedDate: 2013-05-09 10:46:16 -0600 (Thu, 09 May 2013) $
 !! @brief The MPI-IO direct binary interface to PIO
 !<
 module iompi_mod
@@ -44,7 +44,7 @@ module iompi_mod
 !>
 !! @private
 !<
-# 43 "iompi_mod.F90.in"
+# 43 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
   interface write_mpiio
 ! TYPE int,real,double
        module procedure write_mpiio_int
@@ -54,7 +54,7 @@ module iompi_mod
        module procedure write_mpiio_double
     end interface
 
-# 48 "iompi_mod.F90.in"
+# 48 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
     interface read_mpiio
 ! TYPE int,real,double
        module procedure read_mpiio_int
@@ -66,10 +66,10 @@ module iompi_mod
 
 character(len=*), parameter :: modName='iompi_mod'
 
-# 55 "iompi_mod.F90.in"
+# 55 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
 contains 
 
-# 57 "iompi_mod.F90.in"
+# 57 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  integer function close_mpiio(File) result(ierr)
 
      type (File_desc_t), intent(inout) :: File ! file descriptor
@@ -102,7 +102,7 @@ contains
      end if
  end function close_mpiio
 
-# 89 "iompi_mod.F90.in"
+# 89 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  integer function create_mpiio(File,fname) result(ierr)
 
      type (File_desc_t), intent(inout) :: File ! file descriptor
@@ -146,7 +146,7 @@ contains
 #endif
  end function create_mpiio
 
-# 132 "iompi_mod.F90.in"
+# 132 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  integer function open_mpiio(File,fname, CheckMPI) result(ierr)
 
      type (File_desc_t), intent(inout) :: File ! file descriptor
@@ -193,7 +193,7 @@ contains
 
 
 ! TYPE int,real,double
-# 178 "iompi_mod.F90.in"
+# 178 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  integer function write_mpiio_int (File,IOBUF,varDesc, iodesc) result(ierr)
     type (File_desc_t), intent(inout)          :: File     ! file descriptor
     integer(i4), intent(in)                    :: IOBUF(:) ! IO buffer
@@ -266,7 +266,7 @@ contains
 
 
 ! TYPE int,real,double
-# 178 "iompi_mod.F90.in"
+# 178 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  integer function write_mpiio_real (File,IOBUF,varDesc, iodesc) result(ierr)
     type (File_desc_t), intent(inout)          :: File     ! file descriptor
     real(r4), intent(in)                    :: IOBUF(:) ! IO buffer
@@ -339,7 +339,7 @@ contains
 
 
 ! TYPE int,real,double
-# 178 "iompi_mod.F90.in"
+# 178 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  integer function write_mpiio_double (File,IOBUF,varDesc, iodesc) result(ierr)
     type (File_desc_t), intent(inout)          :: File     ! file descriptor
     real(r8), intent(in)                    :: IOBUF(:) ! IO buffer
@@ -409,7 +409,7 @@ contains
 #endif
 
  end function write_mpiio_double
-# 247 "iompi_mod.F90.in"
+# 247 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  integer function read_mpiio_text (File,IOBUF,varDesc, iodesc) result(ierr)
    
     type (File_desc_t), intent(inout)          :: File     ! file descriptor
@@ -684,7 +684,7 @@ contains
  end function read_mpiio_int
 
           
-# 317 "iompi_mod.F90.in"
+# 317 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  subroutine Write_FORTRAN_CntrlWord(File,reclen)
            
       type (File_desc_t), intent(inout) :: File
@@ -724,7 +724,7 @@ contains
 
  end subroutine Write_FORTRAN_CntrlWord
 !***********************************************************************
-# 356 "iompi_mod.F90.in"
+# 356 "/glade/u/home/jedwards/pio_ut/pio/iompi_mod.F90.in"
  subroutine Read_FORTRAN_CntrlWord(File,reclen)
 
       type (File_desc_t), intent(inout) :: File
