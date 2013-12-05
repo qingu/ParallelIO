@@ -4,8 +4,7 @@
 !<
 
 Program pio_unit_test_driver
-
-  use piolib_mod ! _EXTERNAL
+  use pio
   use global_vars
   use basic_tests
   use ncdf_tests
@@ -16,9 +15,12 @@ Program pio_unit_test_driver
   character(len=str_len) :: err_msg
   integer :: fail_cnt, test_cnt, ios, test_id, ierr, test_val 
   logical :: ltest_bin, ltest_bin_direct, ltest_netcdf, ltest_pnetcdf
+  logical :: ltest_netcdf4p, ltest_netcdf4c
   namelist/piotest_nml/ltest_bin,        &
                        ltest_bin_direct, &
                        ltest_netcdf,     &
+                       ltest_netcdf4p,     &
+                       ltest_netcdf4c,     &
                        ltest_pnetcdf,    &
                        stride
 
@@ -32,6 +34,8 @@ Program pio_unit_test_driver
     ltest_bin        = .false.
     ltest_bin_direct = .false.
     ltest_netcdf     = .false.
+    ltest_netcdf4p     = .false.
+    ltest_netcdf4c     = .false.
     ltest_pnetcdf    = .false.
     stride           = 1
 
@@ -68,6 +72,18 @@ Program pio_unit_test_driver
       ltest_netcdf     = .false.
     end if
 #endif
+#ifndef _NETCDF4
+    if (ltest_netcdf4p) then
+      write(*,"(A,x,A)") "WARNING: can not test netcdf4p files because PIO", &
+                         "was not compiled with -D_NETCDF4"
+      ltest_netcdf4p     = .false.
+    end if
+    if (ltest_netcdf4c) then
+      write(*,"(A,x,A)") "WARNING: can not test netcdf4c files because PIO", &
+                         "was not compiled with -D_NETCDF4"
+      ltest_netcdf4c     = .false.
+    end if
+#endif
 #ifndef _PNETCDF
     if (ltest_pnetcdf) then
       write(*,"(A,x,A)") "WARNING: can not test pnetcdf files because PIO", &
@@ -87,7 +103,10 @@ Program pio_unit_test_driver
   ltest(BINARY)  = ltest_bin
   ltest(BINDIR)  = ltest_bin_direct
   ltest(NETCDF)  = ltest_netcdf
+  ltest(NETCDF4P)  = ltest_netcdf4p
+  ltest(NETCDF4C)  = ltest_netcdf4c
   ltest(PNETCDF) = ltest_pnetcdf
+
   call MPI_Bcast(ltest,ntest,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
   call MPI_Bcast(stride,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   niotasks = ntasks/stride
@@ -118,6 +137,12 @@ Program pio_unit_test_driver
             write(*,"(A)") "Testing PIO's direct binary input / output:"
         case (NETCDF)
           if (master_task) &
+            write(*,"(A)") "Testing PIO's netcdf4 parallel input / output:"
+        case (NETCDF4P)
+          if (master_task) &
+            write(*,"(A)") "Testing PIO's netcdf4 compressed input / output:"
+        case (NETCDF4C)
+          if (master_task) &
             write(*,"(A)") "Testing PIO's netcdf input / output:"
         case (PNETCDF)
           if (master_task) &
@@ -134,7 +159,7 @@ Program pio_unit_test_driver
       call parse(err_msg, fail_cnt)
 
       ! test_open()
-      if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_openfile..."
+      if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_openfile...",test_id
       call test_open(test_id, err_msg)
       call parse(err_msg, fail_cnt)
 
@@ -175,14 +200,14 @@ Program pio_unit_test_driver
       integer,          intent(inout) :: fail_counter
       logical                         :: test_passed
 
-      test_passed = (trim(err_msg).eq."no_error")
       if (master_task) then
-        if (test_passed) then
-          write(*,"(A)") "success!"
-        else
-          write(*,"(A)") "FAILURE: " // trim(err_msg)
-          fail_counter = fail_counter+1
-        end if
+         test_passed = (trim(err_msg).eq."no_error")
+         if (test_passed) then
+            write(*,"(A)") "success!"
+         else
+            write(*,"(A)") "FAILURE: " // trim(err_msg)
+            fail_counter = fail_counter+1
+         end if
       end if
 
     End Subroutine parse

@@ -5,10 +5,7 @@
 
 module ncdf_tests
 
-  use pio         ! _EXTERNAL
-  use pio_types   ! _EXTERNAL
-  use piolib_mod  ! _EXTERNAL
-  use nf_mod      ! _EXTERNAL
+  use pio
   use global_vars
 
   Implicit None

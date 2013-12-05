@@ -6,10 +6,7 @@
 
 module basic_tests
 
-  use pio         ! _EXTERNAL
-  use pio_types   ! _EXTERNAL
-  use piolib_mod  ! _EXTERNAL
-  use nf_mod      ! _EXTERNAL
+  use pio 
   use global_vars
 
   Implicit None
@@ -205,6 +202,7 @@ module basic_tests
         ret_val = PIO_enddef(pio_file)
         if (ret_val.ne.0) then
           ! Error in PIO_enddef
+           print *,__FILE__,__LINE__
           err_msg = "Could not end define mode"
           call PIO_closefile(pio_file)
           return
@@ -233,7 +231,7 @@ module basic_tests
         end if
 
         ! Try to write (should fail)
-        call PIO_write_darray(pio_file, pio_var, iodesc_nCells, 1+data_to_write, ret_val)
+        call PIO_write_darray(pio_file, pio_var, iodesc_nCells, data_to_write, ret_val)
         if (ret_val.eq.0) then
           ! Error in PIO_write_darray
           err_msg = "Wrote to file opened in NoWrite mode"
