@@ -33,7 +33,7 @@ module basic_tests
 
       ! Local Vars
       character(len=str_len) :: filename
-      integer                :: iotype, ret_val
+      integer                :: iotype, ret_val, pio_dim
 
       err_msg = "no_error"
 
@@ -50,6 +50,7 @@ module basic_tests
         err_msg = "Could not create " // trim(filename)
         return
       end if
+
 
       ! netcdf files need to end define mode before closing
       if (is_netcdf(iotype)) then
@@ -202,7 +203,7 @@ module basic_tests
         ret_val = PIO_enddef(pio_file)
         if (ret_val.ne.0) then
           ! Error in PIO_enddef
-           print *,__FILE__,__LINE__
+           print *,__FILE__,__LINE__,ret_val
           err_msg = "Could not end define mode"
           call PIO_closefile(pio_file)
           return

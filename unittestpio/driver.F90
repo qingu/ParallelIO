@@ -23,7 +23,9 @@ Program pio_unit_test_driver
                        ltest_netcdf4c,     &
                        ltest_pnetcdf,    &
                        stride
-
+#if defined( _NETCDF4) && defined(LOGGING)
+  integer, external :: nc_set_log_level2
+#endif
   ! Set up MPI
   call MPI_Init(ierr)
   call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
@@ -135,13 +137,13 @@ Program pio_unit_test_driver
         case (BINDIR)
           if (master_task) &
             write(*,"(A)") "Testing PIO's direct binary input / output:"
-        case (NETCDF)
-          if (master_task) &
-            write(*,"(A)") "Testing PIO's netcdf4 parallel input / output:"
         case (NETCDF4P)
           if (master_task) &
-            write(*,"(A)") "Testing PIO's netcdf4 compressed input / output:"
+            write(*,"(A)") "Testing PIO's netcdf4 parallel input / output:"
         case (NETCDF4C)
+          if (master_task) &
+            write(*,"(A)") "Testing PIO's netcdf4 compressed input / output:"
+        case (NETCDF)
           if (master_task) &
             write(*,"(A)") "Testing PIO's netcdf input / output:"
         case (PNETCDF)
@@ -152,7 +154,9 @@ Program pio_unit_test_driver
             write(*,"(A,I0)") "Error, not configured for test #", test_id
           call MPI_Abort(MPI_COMM_WORLD)
       end select
-
+#if defined( _NETCDF4) && defined(LOGGING)
+          if(master_task) ierr = nc_set_log_level2(3)
+#endif
       ! test_create()
       if (master_task) write(*,"(3x,A,x)",advance="no") "testing PIO_createfile..."
       call test_create(test_id, err_msg)
@@ -162,16 +166,16 @@ Program pio_unit_test_driver
       if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_openfile...",test_id
       call test_open(test_id, err_msg)
       call parse(err_msg, fail_cnt)
-
+      
       ! netcdf-specific tests
       if (is_netcdf(iotypes(test_id))) then
-        if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_redef..."
-        call test_redef(test_id, err_msg)
-        call parse(err_msg, fail_cnt)
-
-        if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_enddef..."
-        call test_enddef(test_id, err_msg)
-        call parse(err_msg, fail_cnt)
+         if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_redef..."
+         call test_redef(test_id, err_msg)
+         call parse(err_msg, fail_cnt)
+         
+         if (master_task) write(*,"(3x,A,x)", advance="no") "testing PIO_enddef..."
+         call test_enddef(test_id, err_msg)
+         call parse(err_msg, fail_cnt)
       end if
 
       if (master_task) write(*,*) ""

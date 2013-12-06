@@ -73,7 +73,7 @@ module ncdf_tests
       ! Define a new dimension M (already has 'N' from previous tests)
       ret_val = PIO_def_dim(pio_file, 'M', 2*ntasks, pio_dim)
       if (ret_val.ne.0) then
-        err_msg = "Could not define dimension N"
+        err_msg = "Could not define dimension M"
         call PIO_closefile(pio_file)
         return
       end if
