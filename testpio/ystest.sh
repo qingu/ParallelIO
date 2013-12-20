@@ -8,6 +8,6 @@
 #BSUB -J myjob          # job name
 #BSUB -o myjob.%J.out   # output file name in which %J is replaced by the job ID
 #BSUB -e myjob.%J.err   # error file name in which %J is replaced by the job ID
-#BSUB -P P93300606
+#BSUB -P STDD0002
 #start the application
 ./testpio_run.pl --host=yellowstone --twopass
