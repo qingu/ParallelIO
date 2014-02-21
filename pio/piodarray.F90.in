@@ -1185,6 +1185,7 @@ contains
     {VTYPE}, pointer :: IOBUF(:)
     integer, intent(in) :: request
     integer :: cnt, mpierr, maxbuffsize, this_buffsize
+    integer :: len
     type(io_data_list), pointer :: ptr
 
     if(.not. associated(File%data_list_top)) then
@@ -1202,7 +1203,12 @@ contains
     end if
     ptr%request = request
     ptr%data_{TYPE} => IOBUF
-    this_buffsize = size(iobuf)*c_sizeof(iobuf(1))
+    len = size(iobuf)
+    if(len >0) then 
+       this_buffsize = len*c_sizeof(iobuf(1))
+    else
+       this_buffsize = 0
+    endif 
     file%buffsize=file%buffsize+this_buffsize
     total_buffsize = total_buffsize+this_buffsize
     call MPI_ALLREDUCE(total_buffsize,maxbuffsize,1,MPI_INTEGER,MPI_MAX,file%iosystem%io_comm, mpierr)
