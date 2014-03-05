@@ -45,6 +45,7 @@ if($build eq "pnetcdf" or $build eq "all"){
 if(defined($filesystem)){
     $cmake_opts .= " -DPIO_FILESYSTEM_HINTS=$filesystem ";
 }
+$cmake_opts .= " -DCMAKE_Fortran_FLAGS='-g -traceback'";
 
 mkdir "$scratch";
 unless(-d  "$scratch/pio.$build"){

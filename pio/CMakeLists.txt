@@ -16,7 +16,7 @@ find_file( TESTFILE NAMES TryCSizeOf.f90 PATHS ${CMAKE_MODULE_PATH} NO_DEFAULT_P
 get_filename_component( TESTFILEPATH ${TESTFILE} PATH)
 
 
-SET(pio_include_dirs_  ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+SET(pio_include_dirs_  ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${ADDITIONAL_INCS})
 SET(PIO_LIB_DIR  ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "")
 
 #SET(bld_PIO_DEFINITIONS)
@@ -27,7 +27,7 @@ TRY_COMPILE(WITH_CSIZEOF ${CMAKE_CURRENT_BINARY_DIR}/tryCompileCSIZEOF
 IF(${WITH_CSIZEOF} STREQUAL FALSE)
     MESSAGE(STATUS "Fortran compiler does not support c_sizeof function")
     SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -DNO_C_SIZEOF)
-endif()
+ENDIF()
 
 
 TRY_COMPILE(WITHOUT_MPISERIAL ${CMAKE_CURRENT_BINARY_DIR}/tryCompileMPISERIAL
@@ -142,8 +142,9 @@ IF (NOT ${PIO_USE_MPIMOD})
 ENDIF()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../timing)
-  SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -DTIMING -I ${CMAKE_CURRENT_BINARY_DIR}/timing)
-  ADD_SUBDIRECTORY(../timing timing)
+    ADD_SUBDIRECTORY(../timing timing)
+    SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -DTIMING)
+    SET(pio_include_dirs_ ${pio_include_dirs_} ${CMAKE_CURRENT_BINARY_DIR}/timing)
 endif()
 
 SET(PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} CACHE STRING "")
@@ -156,21 +157,21 @@ SET(SRCS_C topology.c)
 
 SET(SRCS_F90 pio.F90 pio_kinds.F90 nf_mod.F90  ionf_mod.F90 pio_types.F90
              piolib_mod.F90 pio_mpi_utils.F90 pio_nf_utils.F90 pio_utils.F90
-             pio_support.F90                                calcdisplace_mod.F90
-	     calcdecomp.F90 pio_msg_mod.F90 pio_msg_callbacks.F90)
+             pio_support.F90 calcdisplace_mod.F90 calcdecomp.F90 
+             pio_msg_mod.F90 pio_msg_callbacks.F90)
 
 SET(TEMPSRCF90    pionfatt_mod.F90
-         	                pionfread_mod.F90
-                                pionfwrite_mod.F90
-                                pionfput_mod.F90
-                                pionfget_mod.F90
-	                        alloc_mod.F90
-                                box_rearrange.F90
-                                rearrange.F90
-         	                iompi_mod.F90
-           	                piodarray.F90
-	                        pio_spmd_utils.F90
-	                        pio_msg_getput_callbacks.F90
+         	      pionfread_mod.F90
+                  pionfwrite_mod.F90
+                  pionfput_mod.F90
+                  pionfget_mod.F90
+	              alloc_mod.F90
+                  box_rearrange.F90
+                  rearrange.F90
+         	      iompi_mod.F90
+           	      piodarray.F90
+	              pio_spmd_utils.F90
+	              pio_msg_getput_callbacks.F90
         )
 
 FOREACH(tempfile IN LISTS TEMPSRCF90)
@@ -192,6 +193,7 @@ if(NETCDF_LIBRARIES)
   TARGET_LINK_LIBRARIES(pio ${NETCDF_LIBRARIES})
 ENDIF()
 TARGET_LINK_LIBRARIES(pio ${ADDITIONAL_LIBS})
+ADD_DEPENDENCIES(pio timing)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../unittests)
   ADD_SUBDIRECTORY(../unittests unittests)
