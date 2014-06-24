@@ -4,8 +4,8 @@
 !===================================================
 !>
 !! @file 
-!! $Revision: 894 $
-!! $LastChangedDate: 2013-12-13 22:04:58 +0000 (Fri, 13 Dec 2013) $
+!! $Revision: 1063 $
+!! $LastChangedDate: 2014-06-18 23:34:32 +0000 (Wed, 18 Jun 2014) $
 !! @brief Decomposed Write interface to NetCDF
 !<
 module pionfwrite_mod
@@ -51,7 +51,7 @@ contains
     use netcdf, only : nf90_put_var, nf90_inquire_variable   !_EXTERNAL
 #endif
 #ifdef _NETCDF4
-    use netcdf, only : nf90_var_par_access, nf90_collective  !_EXTERNAL
+    use netcdf, only : nf90_var_par_access, nf90_collective !_EXTERNAL
 #endif
 #ifdef TIMING
     use perf_mod, only : t_startf, t_stopf  !_EXTERNAL
@@ -60,7 +60,7 @@ contains
     use mpi !_EXTERNAL
 #endif
 #ifdef USE_PNETCDF_MOD
-    use pnetcdf  !_EXTERNAL
+    use pnetcdf !_EXTERNAL
 #endif
     implicit none
 #ifdef NO_MPIMOD
@@ -282,7 +282,7 @@ contains
     use netcdf, only : nf90_put_var, nf90_inquire_variable   !_EXTERNAL
 #endif
 #ifdef _NETCDF4
-    use netcdf, only : nf90_var_par_access, nf90_collective  !_EXTERNAL
+    use netcdf, only : nf90_var_par_access, nf90_collective !_EXTERNAL
 #endif
 #ifdef TIMING
     use perf_mod, only : t_startf, t_stopf  !_EXTERNAL

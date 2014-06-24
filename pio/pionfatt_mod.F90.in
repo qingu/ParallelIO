@@ -18,7 +18,7 @@ module pionfatt_mod
     use netcdf      ! _EXTERNAL
 #endif
 #ifdef USE_PNETCDF_MOD
-  use pnetcdf
+  use pnetcdf      !_EXTERNAL
 #endif  
   implicit none
 #ifdef _PNETCDF

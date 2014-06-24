@@ -5,8 +5,8 @@
 #define __PIO_FILE__ "pionfread_mod.F90.in"
 !>
 !! @file 
-!! $Revision: 925 $
-!! $LastChangedDate: 2014-01-24 20:55:17 +0000 (Fri, 24 Jan 2014) $
+!! $Revision: 1063 $
+!! $LastChangedDate: 2014-06-18 23:34:32 +0000 (Wed, 18 Jun 2014) $
 !! @brief Decomposed Read interface to NetCDF
 !<
 module pionfread_mod
@@ -56,7 +56,7 @@ contains
     use mpi   !_EXTERNAL
 #endif
 #ifdef USE_PNETCDF_MOD
-    use pnetcdf   !_EXTERNAL
+    use pnetcdf !_EXTERNAL
 #endif
     implicit none
 #ifdef NO_MPIMOD
@@ -243,7 +243,7 @@ contains
     use mpi   !_EXTERNAL
 #endif
 #ifdef USE_PNETCDF_MOD
-    use pnetcdf  ! _EXTERNAL
+    use pnetcdf !_EXTERNAL
 #endif
     implicit none
 #ifdef NO_MPIMOD

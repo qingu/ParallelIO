@@ -45,7 +45,7 @@ contains
     use mpi   !_EXTERNAL
 #endif
 #ifdef USE_PNETCDF_MOD
-    use pnetcdf
+    use pnetcdf !_EXTERNAL
 #endif
     implicit none
 #ifdef NO_MPIMOD

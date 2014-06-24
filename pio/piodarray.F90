@@ -6,8 +6,8 @@
 #define __PIO_FILE__ 'piodarray'
 !>
 !! @file 
-!! $Revision: 943 $
-!! $LastChangedDate: 2014-02-14 16:20:17 +0000 (Fri, 14 Feb 2014) $
+!! $Revision: 1063 $
+!! $LastChangedDate: 2014-06-18 23:34:32 +0000 (Wed, 18 Jun 2014) $
 !! @brief Read and write Routines for decomposed data.
 !<
 module piodarray
@@ -41,7 +41,7 @@ module piodarray
   use mpi           !_EXTERNAL
 #endif
 #ifdef USE_PNETCDF_MOD
-  use pnetcdf       ! _EXTERNAL
+  use pnetcdf   !_EXTERNAL
 #endif
   implicit none
 #ifdef NO_MPIMOD
