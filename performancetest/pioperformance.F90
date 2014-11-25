@@ -160,12 +160,16 @@ contains
        allocate(ifld_in(maplen))
        allocate(rfld(maplen))
        allocate(dfld(maplen))
+       allocate(rfld_in(maplen))
+       allocate(dfld_in(maplen))
 
 !       ifld = mype
        rfld = mype
        dfld = mype
        do j=1,maplen
           ifld(j) = mype*1000000 + compmap(j)
+          rfld(j) = ifld(j) / 1000_real
+          dfld(j) = ifld(j) / 1000000_real
        enddo
 
        do k=1,size(piotypes)
@@ -203,17 +207,16 @@ contains
 
                    call pio_write_darray(File, vari, iodesc_i4, ifld, ierr)
 
-!!$
-!!$                   
-!!$                   call PIO_setframe(File, varr, frame)
-!!$                   call pio_write_darray(File, varr, iodesc_r4, rfld, ierr)
-!!$                   
-!!$                   
-!!$                   call PIO_setframe(File, vard, frame)
-!!$                   
-!!$                   call pio_write_darray(File, vard, iodesc_r8, dfld, ierr)
-!!$
-!!$
+
+                   
+                   call PIO_setframe(File, varr, frame)
+                   call pio_write_darray(File, varr, iodesc_r4, rfld, ierr)
+                   
+                   
+                   call PIO_setframe(File, vard, frame)
+                   
+                   call pio_write_darray(File, vard, iodesc_r8, dfld, ierr)
+
                 enddo
                 call pio_closefile(File)
 
@@ -236,6 +239,10 @@ contains
                 do frame=1,nframes                   
                    call PIO_setframe(File, vari, frame)
                    call pio_read_darray(File, vari, iodesc_i4, ifld_in, ierr)
+                   call PIO_setframe(File, varr, frame)
+                   call pio_read_darray(File, varr, iodesc_r4, rfld_in, ierr)
+                   call PIO_setframe(File, vard, frame)
+                   call pio_read_darray(File, vard, iodesc_r8, dfld_in, ierr)
                 enddo
                 
                 call pio_closefile(File)
