@@ -112,8 +112,8 @@ contains
     type(iosystem_desc_t) :: iosystem
     integer :: stride, n
     integer, allocatable :: ifld(:), ifld_in(:)
-    real, allocatable :: rfld(:)
-    double precision, allocatable :: dfld(:)
+    real, allocatable :: rfld(:), rfld_in(:)
+    double precision, allocatable :: dfld(:), dfld_in(:) 
     type(file_desc_t) :: File
     type(io_desc_t) :: iodesc_i4, iodesc_r4, iodesc_r8
     integer :: ierr
@@ -168,8 +168,8 @@ contains
        dfld = mype
        do j=1,maplen
           ifld(j) = mype*1000000 + compmap(j)
-          rfld(j) = ifld(j) / 1000_real
-          dfld(j) = ifld(j) / 1000000_real
+          rfld(j) = ifld(j) / 1000.0
+          dfld(j) = ifld(j) / 10000000.0
        enddo
 
        do k=1,size(piotypes)
@@ -236,14 +236,22 @@ contains
                 call MPI_Barrier(comm,ierr)
                 call t_stampf(wall(1), usr(1), sys(1))
                 
-                do frame=1,nframes                   
+                do frame=1,nframes       
+! Try reading the real var on file into the double in memory    
+                   call PIO_setframe(File, varr, frame)
+                   call pio_read_darray(File, varr, iodesc_r8, dfld_in, ierr)
+
+
+            
                    call PIO_setframe(File, vari, frame)
                    call pio_read_darray(File, vari, iodesc_i4, ifld_in, ierr)
                    call PIO_setframe(File, varr, frame)
                    call pio_read_darray(File, varr, iodesc_r4, rfld_in, ierr)
                    call PIO_setframe(File, vard, frame)
                    call pio_read_darray(File, vard, iodesc_r8, dfld_in, ierr)
-                enddo
+
+
+                 enddo
                 
                 call pio_closefile(File)
                 call MPI_Barrier(comm,ierr)
