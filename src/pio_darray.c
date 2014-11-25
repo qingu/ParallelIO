@@ -416,7 +416,7 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 	else
 	  bufptr=(void *)((char *) IOBUF + tsize*region->loffset);
 
-	//		printf("%s %d %d %d %d\n",__FILE__,__LINE__,iodesc->llen - region->loffset, iodesc->llen, region->loffset);
+	//	printf("%s %d %d %ld %ld %d\n",__FILE__,__LINE__,iodesc->llen, region, bufptr, regioncnt);
 
 	if(vdesc->record >= 0 && fndims>1){
 	  start[0] = vdesc->record;
@@ -538,7 +538,7 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 	    for(int j=0;j<ndims; j++){
 	      tmp_bufsize *= count[j];
 	    }
-#ifdef USE_PNETCDF_VARN
+#ifdef USE_PNETCDF_VARN_READ
 	   if(regioncnt==0){
 	     for(i=0;i<iodesc->maxregions;i++){
 	       startlist[i] = (PIO_Offset *) malloc(fndims * sizeof(PIO_Offset));
@@ -565,6 +565,7 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 	      }
 	    }
 #else
+	    //	    printf("%s %d %ld %d %ld %ld %ld %ld \n",__FILE__,__LINE__,bufptr,tmp_bufsize,start[0],start[1],count[0],count[1]);
 	    ierr = ncmpi_get_vara_all(file->fh, vid,(PIO_Offset *) start,(PIO_Offset *) count, bufptr, tmp_bufsize, iodesc->basetype);
 
 	    if(ierr != PIO_NOERR){
@@ -640,7 +641,7 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
   }else{
     iobuf = array;
   }
-
+  //  printf("%s %d %d %ld %d %d\n",__FILE__,__LINE__,rlen,iobuf,iodesc->maxiobuflen, iodesc->llen);
   switch(file->iotype){
   case PIO_IOTYPE_PNETCDF:
   case PIO_IOTYPE_NETCDF:
