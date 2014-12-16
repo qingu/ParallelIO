@@ -22,9 +22,45 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
    return(oldsize);
  }
 
+void find_darray_extra_dims(const int fh, const int vid, const int ndims, int *extradims, int *varhasUnlimdim, PIO_Offset *extradimlens[])
+{
+  int fndims;
+  int ierr, idim;
+  ierr = PIOc_inq_varndims(fh, vid, &fndims);
+  PIO_Offset dimlen[fndims];
+
+   *extradims = 0;
+   *varhasUnlimdim = 0;
+   *extradimlens=NULL;
+   if(fndims > ndims){
+     int vdimid[fndims];
+     ierr = PIOc_inq_vardimid(fh, vid, vdimid);
+     if(vdimid[0]==PIO_UNLIMITED){
+       *varhasUnlimdim=1;
+     }else{
+       *varhasUnlimdim=0;
+     }     
+     *extradims = fndims-(ndims+(*varhasUnlimdim));
+     if((*extradims) > 0){
+       *extradimlens = (PIO_Offset *) malloc( (*extradims)*sizeof(PIO_Offset));
+       for(idim=0; idim< (*extradims)  ;idim++){
+	 ierr = PIOc_inq_dimlen (fh, vdimid[ndims+(*varhasUnlimdim)+idim], (*extradimlens)+idim);
+       }
+     
+     }
+   }
 
 
- int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void *IOBUF, void *fillvalue)
+}
+
+/**
+ ** @internal
+ ** The actual write is done here.
+ ** @endinternal 
+ */
+
+int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void *IOBUF,const  int extradims,
+			const int varhasUnlimdim ,const PIO_Offset extradimlen[], void *fillvalue)
  {
    iosystem_desc_t *ios;
    var_desc_t *vdesc;
@@ -37,7 +73,6 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
    MPI_Status status;
    PIO_Offset usage;
    MPI_Request request;
-   int fndims;
    PIO_Offset tdsize;
 
    tdsize=0;
@@ -54,7 +89,7 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
      fprintf(stderr,"Failed to find variable handle %d\n",vid);
      return PIO_EBADID;
    }
-   ndims = iodesc->ndims;
+   ndims = iodesc->ndims + extradims + varhasUnlimdim;
    msg = 0;
 
    if(ios->async_interface && ! ios->ioproc){
@@ -63,7 +98,6 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
      mpierr = MPI_Bcast(&(file->fh),1, MPI_INT, ios->compmaster, ios->intercomm);
    }
 
-   ierr = PIOc_inq_varndims(file->fh, vid, &fndims);
 
    if(ios->ioproc){
      io_region *region;
@@ -73,9 +107,10 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
      void *bufptr;
      void *tmp_buf=NULL;
      int tsize;
-     size_t start[fndims];
-     size_t count[fndims];
+     size_t start[ndims];
+     size_t count[ndims];
      int buflen, j;
+     int iorank;
 #ifdef USE_PNETCDF_VARN
      PIO_Offset *startlist[iodesc->maxregions];
      PIO_Offset *countlist[iodesc->maxregions];
@@ -88,8 +123,6 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 #endif
      region = iodesc->firstregion;
 
-     if(vdesc->record >= 0 && ndims<fndims)
-       ndims++;
 #ifdef _PNETCDF
      if(file->iotype == PIO_IOTYPE_PNETCDF){
        // make sure we have room in the buffer ;
@@ -113,19 +146,25 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
        if(region != NULL){
 	 bufptr = (void *)((char *) IOBUF+tsize*region->loffset);
 	 // this is a record based multidimensional array
-	 if(vdesc->record >= 0){
+	 if(vdesc->record >= 0 && varhasUnlimdim>0){
 	   start[0] = vdesc->record;
-	   for(i=1;i<ndims;i++){
+	   for(i=1;i<iodesc->ndims;i++){
 	     start[i] = region->start[i-1];
 	     count[i] = region->count[i-1];
 	   }
-	  if(count[1]>0)
-	    count[0] = 1;
+	   for(i=0;i<extradims;i++){
+	     count[i+iodesc->ndims] = extradimlen[i];
+	   }
+	   if(count[1]>0)
+	     count[0] = 1;
 	 // Non-time dependent array
 	 }else{
-	   for( i=0;i<ndims;i++){
+	   for( i=0;i<iodesc->ndims;i++){
 	     start[i] = region->start[i];
 	     count[i] = region->count[i];
+	   }
+	   for(i=0;i<extradims;i++){
+	     count[i+iodesc->ndims] = extradimlen[i];
 	   }
 	 }
        }
@@ -162,9 +201,9 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
  #endif
 	   size_t tstart[ndims], tcount[ndims];
 	   if(ios->io_rank==0){
-         // FIX(SPM, 100714)  don't use i, use something like myrank and iam
-	     for(i=0;i<iodesc->num_aiotasks;i++){
-	       if(i==0){	    
+
+	     for(iorank=0;i<iodesc->num_aiotasks;i++){
+	       if(iorank==0){	    
 		 buflen=1;
 		 for(j=0;j<ndims;j++){
 		   tstart[j] =  start[j];
@@ -173,13 +212,13 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 		   tmp_buf = bufptr;
 		 }
 	       }else{
-		 mpierr = MPI_Send( &ierr, 1, MPI_INT, i, 0, ios->io_comm);  // handshake - tell the sending task I'm ready
-		 mpierr = MPI_Recv( &buflen, 1, MPI_INT, i, 1, ios->io_comm, &status);
+		 mpierr = MPI_Send( &ierr, 1, MPI_INT, iorank, 0, ios->io_comm);  // handshake - tell the sending task I'm ready
+		 mpierr = MPI_Recv( &buflen, 1, MPI_INT, iorank, 1, ios->io_comm, &status);
 		 if(buflen>0){
-		   mpierr = MPI_Recv( tstart, ndims, MPI_OFFSET, i, ios->num_iotasks+i, ios->io_comm, &status);
-		   mpierr = MPI_Recv( tcount, ndims, MPI_OFFSET, i,2*ios->num_iotasks+i, ios->io_comm, &status);
+		   mpierr = MPI_Recv( tstart, ndims, MPI_OFFSET, iorank, ios->num_iotasks+iorank, ios->io_comm, &status);
+		   mpierr = MPI_Recv( tcount, ndims, MPI_OFFSET, iorank,2*ios->num_iotasks+iorank, ios->io_comm, &status);
 		   tmp_buf = malloc(buflen * dsize);	
-		   mpierr = MPI_Recv( tmp_buf, buflen, iodesc->basetype, i, i, ios->io_comm, &status);
+		   mpierr = MPI_Recv( tmp_buf, buflen, iodesc->basetype, iorank, iorank, ios->io_comm, &status);
 		 }
 	       }
 
@@ -240,9 +279,9 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 	 */
 	 if(dsize>0){
 	   //	   printf("%s %d %d %d\n",__FILE__,__LINE__,ios->io_rank,dsize);
-	   startlist[rrcnt] = (PIO_Offset *) calloc(fndims, sizeof(PIO_Offset));
-	   countlist[rrcnt] = (PIO_Offset *) calloc(fndims, sizeof(PIO_Offset));
-	   for( i=0; i<fndims;i++){
+	   startlist[rrcnt] = (PIO_Offset *) calloc(ndims, sizeof(PIO_Offset));
+	   countlist[rrcnt] = (PIO_Offset *) calloc(ndims, sizeof(PIO_Offset));
+	   for( i=0; i<ndims;i++){
 	     startlist[rrcnt][i]=start[i];
 	     countlist[rrcnt][i]=count[i];
 	   }
@@ -282,6 +321,18 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
    return ierr;
  }
 
+/**
+ ** @ingroup PIO_write_darray
+ ** @brief  C interface to distributed write function
+ ** @param ncid : The PIO file id (input)
+ ** @param vid : The variable id (input)
+ ** @param ioid : The io descripter id (input)
+ ** @param arraylen : Length of the data array (input)
+ ** @param array : the data array on the compute processors (input)
+ ** @param fillvalue : the fillvalue to use where no value is to be written (optional input)
+ ** 
+ */
+
  int PIOc_write_darray(const int ncid, const int vid, const int ioid, const PIO_Offset arraylen, void *array, void *fillvalue)
  {
    iosystem_desc_t *ios;
@@ -291,6 +342,11 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
    size_t vsize, rlen;
    int ierr;
    MPI_Datatype vtype;
+   int varhasUnlimdim;
+   int indim = 1;
+   int extradims;
+   int idim;
+   PIO_Offset **extradimlens;
 
    ierr = PIO_NOERR;
 
@@ -309,10 +365,33 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 
    ios = file->iosystem;
 
-   rlen = iodesc->llen;
+   find_darray_extra_dims(file->fh, vid, iodesc->ndims, &extradims, &varhasUnlimdim,
+			  extradimlens);
+
+   printf("%s %d %d %d\n",__FILE__,__LINE__,arraylen,iodesc->ndof);
+
+   int fdimlen=1;
+   for(idim=0; idim<extradims  ;idim++){
+     fdimlen *= (*extradimlens)[idim];
+   }
+   if(extradims>0 && arraylen > iodesc->ndof ){
+     // indicates that an iodesc is being reused for another variable with a different innermost dimension length.
+     if(arraylen % iodesc->ndof != 0){
+       piodie("Invalid arraylength and iodescriptor combination",__FILE__,__LINE__);
+     }
+     indim = arraylen/iodesc->ndof;
+     if(fdimlen != indim){
+       piodie("Invalid arraylength and iodescriptor combination",__FILE__,__LINE__);
+     }
+   }
+   rlen = iodesc->llen*indim;
    if(iodesc->rearranger>0){
+     if(indim>1 && iodesc->rearranger != PIO_REARR_SUBSET){
+       piodie("iodescriptor reuse is only available with the subset rearranger",__FILE__,__LINE__);
+     }
      if(rlen>0){
        vtype = (MPI_Datatype) iodesc->basetype;
+
        //       printf("rlen = %ld\n",rlen);
        if(vtype == MPI_INTEGER){
 	 MALLOC_FILL_ARRAY(int, rlen, fillvalue, iobuf);
@@ -331,11 +410,7 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
      //  }
 
 
-     ierr = rearrange_comp2io(*ios, iodesc, array, iobuf, 0, 0);
-
-
-
-
+     ierr = rearrange_comp2io(*ios, iodesc, array, iobuf, indim);
 
    }else{
      iobuf = array;
@@ -345,8 +420,13 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
    case PIO_IOTYPE_NETCDF:
    case PIO_IOTYPE_NETCDF4P:
    case PIO_IOTYPE_NETCDF4C:
-     ierr = pio_write_darray_nc(file, iodesc, vid, iobuf, fillvalue);
+     ierr = pio_write_darray_nc(file, iodesc, vid, iobuf,
+				extradims, varhasUnlimdim, *extradimlens, fillvalue);
    }
+   if(*extradimlens != NULL){
+     free(extradimlens);
+   }
+
 
    if(iodesc->rearranger>0 && rlen>0)
      free(iobuf);
@@ -355,7 +435,8 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
 
  }
 
-int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void *IOBUF)
+int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void *IOBUF,
+		       const int extradims, const int varhasUnlimdim,const PIO_Offset extradimlens[])
 {
   int ierr=PIO_NOERR;
   iosystem_desc_t *ios;
@@ -363,7 +444,6 @@ int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void
   int ndims, fndims;
   MPI_Status status;
   int i;
-
 
   ios = file->iosystem;
   if(ios == NULL)
@@ -374,17 +454,17 @@ int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void
   if(vdesc == NULL)
     return PIO_EBADID;
   
-  ndims = iodesc->ndims;
-  ierr = PIOc_inq_varndims(file->fh, vid, &fndims);
-  if(fndims==ndims) 
-    vdesc->record=-1;
+  ndims = iodesc->ndims + extradims + varhasUnlimdim;
   
+  if(ndims==iodesc->ndims){ 
+    vdesc->record=-1;
+  }
   if(ios->ioproc){
     io_region *region;
-    size_t start[fndims];
-    size_t count[fndims];
-    size_t tmp_start[fndims];
-    size_t tmp_count[fndims];
+    size_t start[ndims];
+    size_t count[ndims];
+    size_t tmp_start[ndims];
+    size_t tmp_count[ndims];
     size_t tmp_bufsize=1;
     int regioncnt;
     void *bufptr;
@@ -404,16 +484,14 @@ int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void
 #else
     MPI_Type_size(iodesc->basetype, &tsize);
 #endif
-    if(fndims>ndims){
-      ndims++;
-      if(vdesc->record<0) 
+    if(varhasUnlimdim && vdesc->record<0) {
 	vdesc->record=0;
     }
     for(regioncnt=0;regioncnt<iodesc->maxregions;regioncnt++){
       //            printf("%s %d %d %ld %d %d\n",__FILE__,__LINE__,regioncnt,region,fndims,ndims);
       tmp_bufsize=1;
       if(region==NULL || iodesc->llen==0){
-	for(i=0;i<fndims;i++){
+	for(i=0;i<ndims;i++){
 	  start[i] = 0;
 	  count[i] = 0;
 	}
@@ -426,9 +504,9 @@ int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void
 	 
 	//		printf("%s %d %d %d %d\n",__FILE__,__LINE__,iodesc->llen - region->loffset, iodesc->llen, region->loffset);
 	
-	if(vdesc->record >= 0 && fndims>1){
+	if(varhasUnlimdim && ndims>1){
 	  start[0] = vdesc->record;
-	  for(i=1;i<ndims;i++){
+	  for(i=1;i<iodesc->ndims;i++){
 	    start[i] = region->start[i-1];
 	    count[i] = region->count[i-1];
 	    //	    printf("%s %d %d %ld %ld\n",__FILE__,__LINE__,i,start[i],count[i]); 
@@ -443,6 +521,9 @@ int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void
 	     // printf("%s %d %d %ld %ld\n",__FILE__,__LINE__,i,start[i],count[i]); 
 	  }
 	}
+      }
+      for(i=0;i<extradims;i++){
+	count[i+iodesc->ndims+varhasUnlimdim]= extradimlens[i];
       }
        
       switch(file->iotype){
@@ -600,9 +681,11 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
   io_desc_t *iodesc;
   void *iobuf=NULL;
   size_t vsize=0, rlen=0;
-  int ierr;
+  int ierr, idim;
   MPI_Datatype vtype;
- 
+  int extradims, varhasUnlimdim;
+  PIO_Offset **extradimlens;
+  int indim=1;
 
   file = pio_get_file_from_id(ncid);
 
@@ -616,11 +699,31 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
     return PIO_EBADID;
   }
   ios = file->iosystem;
+
+  find_darray_extra_dims(file->fh, vid, iodesc->ndims, &extradims, &varhasUnlimdim,
+			 extradimlens);
+  int fdimlen=1;
+  for(idim=0; idim<extradims  ;idim++){
+    fdimlen *= (*extradimlens)[idim];
+  }
+  if(extradims>0 && arraylen > iodesc->ndof ){
+    // indicates that an iodesc is being reused for another variable with a different innermost dimension length.
+    if(arraylen % iodesc->ndof != 0){
+      piodie("Invalid arraylength and iodescriptor combination",__FILE__,__LINE__);
+    }
+    indim = arraylen/iodesc->ndof;
+    if(fdimlen != indim){
+      piodie("Invalid arraylength and iodescriptor combination",__FILE__,__LINE__);
+    }
+  }
+
   if(ios->iomaster){
     rlen = iodesc->maxiobuflen;
   }else{
     rlen = iodesc->llen;
   }
+  rlen *= indim;
+
   if(iodesc->rearranger > 0){
     if(ios->ioproc && rlen>0){
       vtype = (MPI_Datatype) iodesc->basetype;
@@ -649,15 +752,19 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
   case PIO_IOTYPE_NETCDF:
   case PIO_IOTYPE_NETCDF4P:
   case PIO_IOTYPE_NETCDF4C:
-    ierr = pio_read_darray_nc(file, iodesc, vid, iobuf);
+    ierr = pio_read_darray_nc(file, iodesc, vid, iobuf,
+			      extradims, varhasUnlimdim, *extradimlens);
   }
   if(iodesc->rearranger > 0){
     //	      printf("%s %d %d\n",__FILE__,__LINE__,ierr);
-    ierr = rearrange_io2comp(*ios, iodesc, iobuf, array, 0, 0);
+    ierr = rearrange_io2comp(*ios, iodesc, iobuf, array, indim);
     //	      printf("%s %d %d\n",__FILE__,__LINE__,ierr);
 
     if(rlen>0)
       free(iobuf);
+  }
+  if(*extradimlens != NULL){
+    free(extradimlens);
   }
 
   return ierr;

@@ -260,9 +260,19 @@ int create_mpi_datatypes(const MPI_Datatype basetype,const int msgcnt,const PIO_
 ** Create the derived MPI datatypes used for comp2io and io2comp transfers
 ** @endinternal
 */
-int define_iodesc_datatypes(const iosystem_desc_t ios, io_desc_t *iodesc)
+int define_iodesc_datatypes(const iosystem_desc_t ios, io_desc_t *iodesc,const int indim)
 {
   int i;
+  MPI_Datatype derivedtype;
+
+  if(indim > 1){
+    CheckMPIReturn(MPI_Type_contiguous(indim, iodesc->basetype, &derivedtype),__FILE__,__LINE__);
+    CheckMPIReturn(MPI_Type_commit(&derivedtype), __FILE__,__LINE__);
+  }else{
+    derivedtype = iodesc->basetype;
+  }
+
+
   if(ios.ioproc){
     if(iodesc->rtype==NULL){
       int ntypes = iodesc->nrecvs;
@@ -273,9 +283,9 @@ int define_iodesc_datatypes(const iosystem_desc_t ios, io_desc_t *iodesc)
       iodesc->num_rtypes = ntypes;
 
       if(iodesc->rearranger==PIO_REARR_SUBSET){
-	create_mpi_datatypes(iodesc->basetype, iodesc->nrecvs, iodesc->llen, iodesc->rindex, iodesc->rcount, iodesc->rfrom, iodesc->rtype);
+	create_mpi_datatypes(derivedtype, iodesc->nrecvs, iodesc->llen, iodesc->rindex, iodesc->rcount, iodesc->rfrom, iodesc->rtype);
       }else{
-	create_mpi_datatypes(iodesc->basetype, iodesc->nrecvs, iodesc->llen, iodesc->rindex, iodesc->rcount, NULL, iodesc->rtype);
+	create_mpi_datatypes(derivedtype, iodesc->nrecvs, iodesc->llen, iodesc->rindex, iodesc->rcount, NULL, iodesc->rtype);
       }
 #ifndef _MPISERIAL
       /*      if(tmpioproc==95)     {
@@ -310,7 +320,7 @@ int define_iodesc_datatypes(const iosystem_desc_t ios, io_desc_t *iodesc)
     }
     iodesc->num_stypes = ntypes;
 
-    create_mpi_datatypes(iodesc->basetype, ntypes, iodesc->ndof, iodesc->sindex, iodesc->scount, NULL, iodesc->stype);
+    create_mpi_datatypes(derivedtype, ntypes, iodesc->ndof, iodesc->sindex, iodesc->scount, NULL, iodesc->stype);
 #ifndef _MPISERIAL
     /*    if(tmpioproc==95)   {
       MPI_Aint lb;
@@ -323,6 +333,10 @@ int define_iodesc_datatypes(const iosystem_desc_t ios, io_desc_t *iodesc)
     */
 #endif
   }
+  if(indim > 1){
+    CheckMPIReturn(MPI_Type_free(&derivedtype), __FILE__,__LINE__);
+  }
+
 
   return PIO_NOERR;
 
@@ -546,7 +560,7 @@ int compute_counts(const iosystem_desc_t ios, io_desc_t *iodesc, const int maple
 
 
 int rearrange_comp2io(const iosystem_desc_t ios, io_desc_t *iodesc, void *sbuf,
-			  void *rbuf, const int comm_option, const int fc_options)
+			  void *rbuf, const int indim)
 {
 
   bool handshake=false;
@@ -577,16 +591,12 @@ int rearrange_comp2io(const iosystem_desc_t ios, io_desc_t *iodesc, void *sbuf,
   MPI_Comm_size(mycomm, &ntasks);
 
 #ifdef _MPISERIAL
-  if(iodesc->basetype == 4){
-    for(i=0;i<iodesc->llen;i++)
-      ((int *) rbuf)[ iodesc->rindex[i] ] = ((int *)sbuf)[ iodesc->sindex[i]];
-  }else{
-    for(i=0;i<iodesc->llen;i++){
-      ((double *) rbuf)[ iodesc->rindex[i] ] = ((double *)sbuf)[ iodesc->sindex[i]];   
-    }
+  /* in mpiserial iodesc->basetype is the byte length of the basic type */
+  for(i=0;i<iodesc->llen; i++){
+    memcpy((char *) rbuf+ iodesc->rindex[i],(char *) sbuf + iodesc->sindex[i], (size_t) (iodesc->basetype * indim));
   }
 #else
-  define_iodesc_datatypes(ios, iodesc);
+  define_iodesc_datatypes(ios, iodesc, indim);
   
   sendcounts = (int *) malloc(ntasks*sizeof(int));
   recvcounts = (int *) malloc(ntasks*sizeof(int));
@@ -665,7 +675,7 @@ int rearrange_comp2io(const iosystem_desc_t ios, io_desc_t *iodesc, void *sbuf,
  */
 
 int rearrange_io2comp(const iosystem_desc_t ios, io_desc_t *iodesc, void *sbuf,
-			  void *rbuf, const int comm_option, const int fc_options)
+			  void *rbuf, const int indim)
 {
   
 
@@ -697,15 +707,11 @@ int rearrange_io2comp(const iosystem_desc_t ios, io_desc_t *iodesc, void *sbuf,
   MPI_Comm_size(mycomm, &ntasks);
 
 #ifdef _MPISERIAL
-  if(iodesc->basetype == 4){
-    for(i=0;i<iodesc->llen;i++)
-      ((int *) rbuf)[ iodesc->sindex[i] ] = ((int *)sbuf)[ iodesc->rindex[i]];
-  }else{
-    for(i=0;i<iodesc->llen;i++)
-      ((double *) rbuf)[ iodesc->sindex[i] ] = ((double *)sbuf)[ iodesc->rindex[i]];
+  for(i=0;i<iodesc->llen;i++){
+    memcpy((char *) rbuf+ iodesc->sindex[i],(char *)sbuf + iodesc->rindex[i], (size_t) (iodesc->basetype * indim));
   }
 #else  
-  define_iodesc_datatypes(ios, iodesc);
+  define_iodesc_datatypes(ios, iodesc, indim);
 
   sendcounts = (int *) calloc(ntasks,sizeof(int));
   recvcounts = (int *) calloc(ntasks,sizeof(int));

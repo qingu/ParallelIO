@@ -87,9 +87,9 @@ typedef struct mapsort
   
 
   int rearrange_io2comp(const iosystem_desc_t ios, io_desc_t *iodesc, void *sbuf,
-			void *rbuf, const int comm_option, const int fc_options);
+			void *rbuf, const int indim);
   int rearrange_comp2io(const iosystem_desc_t ios, io_desc_t *iodesc, void *sbuf,
-			void *rbuf, const int comm_option, const int fc_options);
+			void *rbuf, const int indim);
   int calcdisplace(const int bsize, const int numblocks,const PIO_Offset map[],int displace[]);
   io_desc_t *malloc_iodesc(const int piotype, const int ndims);
   
@@ -106,7 +106,7 @@ typedef struct mapsort
 
   int ceil2(const int i);
   int pair(const int np, const int p, const int k);
-  int define_iodesc_datatypes(const iosystem_desc_t ios, io_desc_t *iodesc);
+  int define_iodesc_datatypes(const iosystem_desc_t ios, io_desc_t *iodesc, const int indim);
 
   int create_mpi_datatypes(const MPI_Datatype basetype,const int msgcnt,const PIO_Offset dlen, 
 			   const PIO_Offset mindex[],const int mcount[],int *mfrom, MPI_Datatype mtype[]);
