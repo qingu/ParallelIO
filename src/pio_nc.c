@@ -2572,6 +2572,7 @@ int PIOc_inq_unlimdim (int ncid, int *unlimdimidp)
   }
 
   ierr = check_netcdf(file, ierr, __FILE__,__LINE__);
+    mpierr = MPI_Bcast(unlimdimidp , 1, MPI_INT, ios->ioroot, ios->my_comm);
 
   return ierr;
 }

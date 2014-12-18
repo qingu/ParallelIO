@@ -198,6 +198,8 @@ foreach my $func (keys %{$functions}){
 		  print F "    mpierr = MPI_Bcast(lenp , 1, MPI_OFFSET, ios->ioroot, ios->my_comm);\n";
 	      }elsif($func =~ /inq_varid/){
 		  print F "    mpierr = MPI_Bcast(varidp , 1, MPI_INT, ios->ioroot, ios->my_comm);\n";
+	      }elsif($func =~ /inq_unlimdim/){
+		  print F "    mpierr = MPI_Bcast(unlimdimidp , 1, MPI_INT, ios->ioroot, ios->my_comm);\n";
 	      }elsif($func =~ /inq_vartype/ || $func =~ /inq_atttype/){
 		  print F "    mpierr = MPI_Bcast(xtypep , 1, MPI_INT, ios->ioroot, ios->my_comm);\n";
 	      }elsif($func =~ /inq_attid/ || $func =~ /inq_dimid/){

@@ -22,33 +22,41 @@ PIO_Offset PIO_BUFFER_SIZE_LIMIT= 100000000; // 100MB default limit
    return(oldsize);
  }
 
-void find_darray_extra_dims(const int fh, const int vid, const int ndims, int *extradims, int *varhasUnlimdim, PIO_Offset *extradimlens[])
+void find_darray_extra_dims(int ncid, const int vid, const int ndims, int *extradims, int *varhasUnlimdim, PIO_Offset *extradimlens[])
 {
   int fndims;
   int ierr, idim;
-  ierr = PIOc_inq_varndims(fh, vid, &fndims);
+  ierr = PIOc_inq_varndims(ncid, vid, &fndims);
   PIO_Offset dimlen[fndims];
+  int unlimdimid;
 
    *extradims = 0;
    *varhasUnlimdim = 0;
    *extradimlens=NULL;
+   //   printf("%s %d %d %d\n",__FILE__,__LINE__,fndims,ndims);
    if(fndims > ndims){
      int vdimid[fndims];
-     ierr = PIOc_inq_vardimid(fh, vid, vdimid);
-     if(vdimid[0]==PIO_UNLIMITED){
+     ierr = PIOc_inq_vardimid(ncid, vid, vdimid);
+     
+     ierr = PIOc_inq_unlimdim(ncid, &unlimdimid);
+     if(vdimid[0]==unlimdimid){
        *varhasUnlimdim=1;
      }else{
        *varhasUnlimdim=0;
      }     
+     //      printf("%s %d %d %d %d %d %d\n",__FILE__,__LINE__,fndims, ndims, *varhasUnlimdim,vdimid[0],unlimdimid );
+
+
      *extradims = fndims-(ndims+(*varhasUnlimdim));
      if((*extradims) > 0){
        *extradimlens = (PIO_Offset *) malloc( (*extradims)*sizeof(PIO_Offset));
        for(idim=0; idim< (*extradims)  ;idim++){
-	 ierr = PIOc_inq_dimlen (fh, vdimid[ndims+(*varhasUnlimdim)+idim], (*extradimlens)+idim);
+	 ierr = PIOc_inq_dimlen (ncid, vdimid[ndims+(*varhasUnlimdim)+idim], *extradimlens+idim);
        }
      
      }
    }
+   //     printf("%s %d\n",__FILE__,__LINE__);
 
 
 }
@@ -91,6 +99,7 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
    }
    ndims = iodesc->ndims + extradims + varhasUnlimdim;
    msg = 0;
+
 
    if(ios->async_interface && ! ios->ioproc){
      if(ios->comp_rank==0) 
@@ -136,7 +145,6 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
 
      }
 #endif
-
      rrcnt=0;
      for(regioncnt=0;regioncnt<iodesc->maxregions;regioncnt++){
        for(i=0;i<ndims;i++){
@@ -146,17 +154,19 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
        if(region != NULL){
 	 bufptr = (void *)((char *) IOBUF+tsize*region->loffset);
 	 // this is a record based multidimensional array
+	 //	 printf("%s %d %d %d %d\n",__FILE__,__LINE__,vdesc->record, varhasUnlimdim, extradims);
 	 if(vdesc->record >= 0 && varhasUnlimdim>0){
 	   start[0] = vdesc->record;
-	   for(i=1;i<iodesc->ndims;i++){
+	   for(i=1;i<=iodesc->ndims;i++){
 	     start[i] = region->start[i-1];
 	     count[i] = region->count[i-1];
 	   }
 	   for(i=0;i<extradims;i++){
-	     count[i+iodesc->ndims] = extradimlen[i];
+	     count[i+iodesc->ndims+varhasUnlimdim] = extradimlen[i];
 	   }
-	   if(count[1]>0)
+	   if(count[1]>0){
 	     count[0] = 1;
+	   }
 	 // Non-time dependent array
 	 }else{
 	   for( i=0;i<iodesc->ndims;i++){
@@ -164,10 +174,16 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
 	     count[i] = region->count[i];
 	   }
 	   for(i=0;i<extradims;i++){
-	     count[i+iodesc->ndims] = extradimlen[i];
+	     count[i+iodesc->ndims+varhasUnlimdim] = extradimlen[i];
 	   }
 	 }
        }
+
+       //       for(i=0;i<ndims;i++)
+       //	 printf("%s %d %d %d %d\n",__FILE__,__LINE__,i,start[i],count[i]);
+
+
+
 
        switch(file->iotype){
 #ifdef _NETCDF
@@ -201,8 +217,7 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
  #endif
 	   size_t tstart[ndims], tcount[ndims];
 	   if(ios->io_rank==0){
-
-	     for(iorank=0;i<iodesc->num_aiotasks;i++){
+	     for(iorank=0;iorank<iodesc->num_aiotasks;iorank++){
 	       if(iorank==0){	    
 		 buflen=1;
 		 for(j=0;j<ndims;j++){
@@ -223,6 +238,9 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
 	       }
 
 	       if(buflen>0){
+		 // for(i=0;i<ndims;i++)
+		   //		   printf("%s %d %d dim %d start %ld count %ld\n",__FILE__,__LINE__,iorank, i,tstart[i],tcount[i]);
+
 		 if(iodesc->basetype == MPI_INTEGER){
 		   ierr = nc_put_vara_int (ncid, vid, tstart, tcount, (const int *) tmp_buf); 
 		 }else if(iodesc->basetype == MPI_DOUBLE || iodesc->basetype == MPI_REAL8){
@@ -365,10 +383,8 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
 
    ios = file->iosystem;
 
-   find_darray_extra_dims(file->fh, vid, iodesc->ndims, &extradims, &varhasUnlimdim,
+   find_darray_extra_dims(ncid, vid, iodesc->ndims, &extradims, &varhasUnlimdim,
 			  extradimlens);
-
-   printf("%s %d %d %d\n",__FILE__,__LINE__,arraylen,iodesc->ndof);
 
    int fdimlen=1;
    for(idim=0; idim<extradims  ;idim++){
@@ -409,7 +425,6 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
 
      //  }
 
-
      ierr = rearrange_comp2io(*ios, iodesc, array, iobuf, indim);
 
    }else{
@@ -424,8 +439,9 @@ int pio_write_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, voi
 				extradims, varhasUnlimdim, *extradimlens, fillvalue);
    }
    if(*extradimlens != NULL){
-     free(extradimlens);
+     free(*extradimlens);
    }
+
 
 
    if(iodesc->rearranger>0 && rlen>0)
@@ -700,7 +716,7 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
   }
   ios = file->iosystem;
 
-  find_darray_extra_dims(file->fh, vid, iodesc->ndims, &extradims, &varhasUnlimdim,
+  find_darray_extra_dims(ncid, vid, iodesc->ndims, &extradims, &varhasUnlimdim,
 			 extradimlens);
   int fdimlen=1;
   for(idim=0; idim<extradims  ;idim++){
