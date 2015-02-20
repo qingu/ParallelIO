@@ -110,6 +110,9 @@ contains
 
 
     if(Ios%IOProc) then
+#ifdef TIMING
+       call t_startf("pio_put_var1_text_ioproc")
+#endif 
        allocate(count(size(index)))
 !       if(Ios%io_rank == 0) then
           count(:) = 1
@@ -157,6 +160,9 @@ contains
           call piodie(__PIO_FILE__,__LINE__,"bad iotype specified")
        end select
        deallocate(count)
+#ifdef TIMING
+       call t_stopf("pio_put_var1_text_ioproc")
+#endif 
     end if
     call check_netcdf(File,ierr,__PIO_FILE__,__LINE__)
 
@@ -213,6 +219,9 @@ contains
 
     if(Ios%IOProc) then
 
+#ifdef TIMING
+       call t_startf("pio_put_var1_{TYPE}_ioproc")
+#endif 
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
@@ -253,6 +262,9 @@ contains
           print *,__PIO_FILE__,__LINE__,iotype
           call piodie(__PIO_FILE__,__LINE__,"bad iotype specified")
        end select
+#ifdef TIMING
+       call t_stopf("pio_put_var1_{TYPE}_ioproc")
+#endif 
     end if
     call check_netcdf(File,ierr,__PIO_FILE__,__LINE__)
 
@@ -342,6 +354,9 @@ contains
     end if
 
     if(Ios%IOProc) then
+#ifdef TIMING
+       call t_startf("pio_put_var_{DIMS}d_text_ioproc")
+#endif 
        if(Ios%io_rank==0) then
     	  count(1)=len(ival)
 	  is=1
@@ -394,6 +409,9 @@ contains
           call piodie(__PIO_FILE__,__LINE__,"bad iotype specified" )
 
        end select
+#ifdef TIMING
+       call t_stopf("pio_put_var_{DIMS}d_text_ioproc")
+#endif 
     end if
 
     call check_netcdf(File,ierr,__PIO_FILE__,__LINE__)
@@ -436,13 +454,20 @@ contains
 
 #ifdef _PNETCDF
     if(iotype == pio_iotype_pnetcdf) then
+#ifdef TIMING
+       call t_startf("pio_put_var_{DIMS}d_{TYPE}_a")
+#endif 
        do i=1,{DIMS}
           count(i) = size(ival,i)
        end do
        ierr = put_vara_{DIMS}d_{TYPE} (File, varid, start, count, ival)
+#ifdef TIMING
+       call t_stopf("pio_put_var_{DIMS}d_{TYPE}_a")
+#endif 
        return
     end if
 #endif
+
 #ifdef TIMING
     call t_startf("pio_put_var_{DIMS}d_{TYPE}")
 #endif 
@@ -466,6 +491,9 @@ contains
     end if
 
     if(Ios%IOProc) then
+#ifdef TIMING
+       call t_startf("pio_put_var_{DIMS}d_{TYPE}_ioproc")
+#endif 
        if(Ios%io_rank==0) then
           do i=1,{DIMS}
              count(i+is) = size(ival,i)
@@ -492,6 +520,9 @@ contains
           call piodie(__PIO_FILE__,__LINE__,"bad iotype specified" )
 
        end select
+#ifdef TIMING
+       call t_stopf("pio_put_var_{DIMS}d_{TYPE}_ioproc")
+#endif 
     end if
 
     call check_netcdf(File,ierr,__PIO_FILE__,__LINE__)
@@ -547,6 +578,9 @@ contains
     end if
 
     if(Ios%IOProc) then
+#ifdef TIMING
+       call t_startf("pio_put_var_0d_{TYPE}_ioproc")
+#endif 
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
@@ -568,6 +602,9 @@ contains
           call piodie(__PIO_FILE__,__LINE__,"bad iotype specified" )
 
        end select
+#ifdef TIMING
+       call t_stopf("pio_put_var_0d_{TYPE}_ioproc")
+#endif 
     end if
 
     call check_netcdf(File,ierr,__PIO_FILE__,__LINE__)
@@ -666,6 +703,9 @@ contains
 
     
     if(Ios%IOProc) then
+#ifdef TIMING
+       call t_startf("pio_put_vara_{DIMS}d_text_ioproc")
+#endif 
        allocate(pstart(ndims),pcount(ndims))
        if(Ios%io_rank==0) then
           pstart = start(1:ndims)
@@ -710,6 +750,9 @@ contains
           call piodie(__PIO_FILE__,__LINE__,"bad iotype specified")
        end select
        deallocate(pstart, pcount)
+#ifdef TIMING
+       call t_stopf("pio_put_vara_{DIMS}d_text_ioproc")
+#endif 
     end if
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
 
@@ -782,6 +825,9 @@ contains
 
     
     if(Ios%IOProc) then
+#ifdef TIMING
+       call t_startf("pio_put_vara_{DIMS}d_{TYPE}_ioproc")
+#endif 
        select case (iotype) 
 #ifdef _PNETCDF
        case(pio_iotype_pnetcdf)
@@ -830,6 +876,9 @@ contains
           print *,__PIO_FILE__,__LINE__,iotype
           call piodie(__PIO_FILE__,__LINE__,"bad iotype specified")
        end select
+#ifdef TIMING
+       call t_stopf("pio_put_vara_{DIMS}d_{TYPE}_ioproc")
+#endif 
     end if
     call check_netcdf(File, ierr,__PIO_FILE__,__LINE__)
 
