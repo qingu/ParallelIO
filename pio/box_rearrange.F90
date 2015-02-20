@@ -6,8 +6,8 @@
 !>
 !!
 !! @file 
-!! $Revision: 819 $
-!! $LastChangedDate: 2013-05-31 12:32:27 -0600 (Fri, 31 May 2013) $
+!! $Revision: 1467 $
+!! $LastChangedDate: 2015-02-20 13:56:41 -0700 (Fri, 20 Feb 2015) $
 !! @brief
 !!  Perform data rearrangement with each io processor
 !!  owning a rectangular box in the output domain
@@ -40,7 +40,10 @@
 #define FLOW_CONTROL 2
 #define DEF_P2P_HANDSHAKE .true.
 #define DEF_P2P_ISEND .false.
-#define DEF_P2P_MAXREQ 64
+!pw #define DEF_P2P_MAXREQ 64
+!pw++
+#define DEF_P2P_MAXREQ -1
+!pw--
 
 #ifndef _MPISERIAL
 #ifndef _NO_FLOW_CONTROL
@@ -86,6 +89,11 @@ module box_rearrange
   use pio_support, only : piodie, Debug, DebugIO, CheckMPIReturn, pio_fc_gather_offset
                           
 #endif
+!pw++
+#ifdef TIMING
+  use perf_mod, only : t_startf, t_stopf  !_EXTERNAL
+#endif
+!pw--
   use alloc_mod,      only : alloc_check, dealloc_check
   use pio_spmd_utils, only : pio_swapm
 #ifndef NO_MPIMOD
@@ -103,7 +111,7 @@ module box_rearrange
        box_rearrange_comp2io, &
        box_rearrange_io2comp
 
-# 102 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 110 "box_rearrange.F90.in"
   interface box_rearrange_comp2io
      ! TYPE int,real,double
      module procedure box_rearrange_comp2io_int
@@ -113,7 +121,7 @@ module box_rearrange
      module procedure box_rearrange_comp2io_double
   end interface
 
-# 107 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 115 "box_rearrange.F90.in"
   interface box_rearrange_io2comp
      ! TYPE int,real,double
      module procedure box_rearrange_io2comp_int
@@ -130,7 +138,7 @@ integer :: msize, rss, mshare, mtext, mstack, lastrss=0
 #endif
 
 
-# 119 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 127 "box_rearrange.F90.in"
 contains
 !>
 !! @public box_rearrange_comp2io
@@ -139,7 +147,7 @@ contains
 !!
 !<
 ! TYPE real,double,int
-# 127 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 135 "box_rearrange.F90.in"
 subroutine box_rearrange_comp2io_real (IOsystem, ioDesc, s1, src, niodof, &
                                          dest, comm_option, fc_options)
 
@@ -312,16 +320,36 @@ subroutine box_rearrange_comp2io_real (IOsystem, ioDesc, s1, src, niodof, &
 #ifdef _USE_ALLTOALLW
     if (pio_option == COLLECTIVE) then
 
+!pw++
+#ifdef TIMING
+      call t_startf("a2a_box_rear_comp2io_real")
+#endif
+!pw--
       call MPI_ALLTOALLW(src,  a2a_sendcounts, a2a_displs, a2a_sendtypes, &
                          dest, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
                          IOsystem%union_comm, ierror                       )
+!pw++
+#ifdef TIMING
+      call t_stopf("a2a_box_rear_comp2io_real")
+#endif
+!pw--
       call CheckMPIReturn('box_rearrange', ierror)
     else
 #endif
+!pw++
+#ifdef TIMING
+      call t_startf("swapm_box_rear_comp2io_real")
+#endif
+!pw--
       call pio_swapm( nprocs, myrank,                            &
         src,  ndof,   a2a_sendcounts, a2a_displs, a2a_sendtypes, &
         dest, niodof, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
         IOsystem%union_comm, pio_hs, pio_isend, pio_maxreq        )
+!pw++
+#ifdef TIMING
+      call t_stopf("swapm_box_rear_comp2io_real")
+#endif
+!pw--
 #ifdef _USE_ALLTOALLW
     endif
 #endif
@@ -339,6 +367,12 @@ subroutine box_rearrange_comp2io_real (IOsystem, ioDesc, s1, src, niodof, &
       print *,'comp2io using cached rearranger info'
     endif
 #endif
+
+!pw++
+#ifdef TIMING
+    call t_startf("p2p_box_rear_comp2io_real")
+#endif
+!pw--
 
     !
     ! send data from comp procs
@@ -395,6 +429,12 @@ subroutine box_rearrange_comp2io_real (IOsystem, ioDesc, s1, src, niodof, &
 
     call dealloc_check(sreq, 'send requests')
 
+!pw++
+#ifdef TIMING
+    call t_stopf("p2p_box_rear_comp2io_real")
+#endif
+!pw--
+
 #if DEBUG_BARRIER
     call MPI_BARRIER(IOsystem%union_comm,ierror)
     call CheckMPIReturn(subName,ierror)
@@ -403,10 +443,10 @@ subroutine box_rearrange_comp2io_real (IOsystem, ioDesc, s1, src, niodof, &
 
   endif  ! POINT_TO_POINT
 #endif /* not _MPISERIAL */
-# 390 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 430 "box_rearrange.F90.in"
 end subroutine box_rearrange_comp2io_real
 ! TYPE real,double,int
-# 127 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 135 "box_rearrange.F90.in"
 subroutine box_rearrange_comp2io_double (IOsystem, ioDesc, s1, src, niodof, &
                                          dest, comm_option, fc_options)
 
@@ -579,16 +619,36 @@ subroutine box_rearrange_comp2io_double (IOsystem, ioDesc, s1, src, niodof, &
 #ifdef _USE_ALLTOALLW
     if (pio_option == COLLECTIVE) then
 
+!pw++
+#ifdef TIMING
+      call t_startf("a2a_box_rear_comp2io_double")
+#endif
+!pw--
       call MPI_ALLTOALLW(src,  a2a_sendcounts, a2a_displs, a2a_sendtypes, &
                          dest, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
                          IOsystem%union_comm, ierror                       )
+!pw++
+#ifdef TIMING
+      call t_stopf("a2a_box_rear_comp2io_double")
+#endif
+!pw--
       call CheckMPIReturn('box_rearrange', ierror)
     else
 #endif
+!pw++
+#ifdef TIMING
+      call t_startf("swapm_box_rear_comp2io_double")
+#endif
+!pw--
       call pio_swapm( nprocs, myrank,                            &
         src,  ndof,   a2a_sendcounts, a2a_displs, a2a_sendtypes, &
         dest, niodof, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
         IOsystem%union_comm, pio_hs, pio_isend, pio_maxreq        )
+!pw++
+#ifdef TIMING
+      call t_stopf("swapm_box_rear_comp2io_double")
+#endif
+!pw--
 #ifdef _USE_ALLTOALLW
     endif
 #endif
@@ -606,6 +666,12 @@ subroutine box_rearrange_comp2io_double (IOsystem, ioDesc, s1, src, niodof, &
       print *,'comp2io using cached rearranger info'
     endif
 #endif
+
+!pw++
+#ifdef TIMING
+    call t_startf("p2p_box_rear_comp2io_double")
+#endif
+!pw--
 
     !
     ! send data from comp procs
@@ -662,6 +728,12 @@ subroutine box_rearrange_comp2io_double (IOsystem, ioDesc, s1, src, niodof, &
 
     call dealloc_check(sreq, 'send requests')
 
+!pw++
+#ifdef TIMING
+    call t_stopf("p2p_box_rear_comp2io_double")
+#endif
+!pw--
+
 #if DEBUG_BARRIER
     call MPI_BARRIER(IOsystem%union_comm,ierror)
     call CheckMPIReturn(subName,ierror)
@@ -670,10 +742,10 @@ subroutine box_rearrange_comp2io_double (IOsystem, ioDesc, s1, src, niodof, &
 
   endif  ! POINT_TO_POINT
 #endif /* not _MPISERIAL */
-# 390 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 430 "box_rearrange.F90.in"
 end subroutine box_rearrange_comp2io_double
 ! TYPE real,double,int
-# 127 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 135 "box_rearrange.F90.in"
 subroutine box_rearrange_comp2io_int (IOsystem, ioDesc, s1, src, niodof, &
                                          dest, comm_option, fc_options)
 
@@ -846,16 +918,36 @@ subroutine box_rearrange_comp2io_int (IOsystem, ioDesc, s1, src, niodof, &
 #ifdef _USE_ALLTOALLW
     if (pio_option == COLLECTIVE) then
 
+!pw++
+#ifdef TIMING
+      call t_startf("a2a_box_rear_comp2io_int")
+#endif
+!pw--
       call MPI_ALLTOALLW(src,  a2a_sendcounts, a2a_displs, a2a_sendtypes, &
                          dest, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
                          IOsystem%union_comm, ierror                       )
+!pw++
+#ifdef TIMING
+      call t_stopf("a2a_box_rear_comp2io_int")
+#endif
+!pw--
       call CheckMPIReturn('box_rearrange', ierror)
     else
 #endif
+!pw++
+#ifdef TIMING
+      call t_startf("swapm_box_rear_comp2io_int")
+#endif
+!pw--
       call pio_swapm( nprocs, myrank,                            &
         src,  ndof,   a2a_sendcounts, a2a_displs, a2a_sendtypes, &
         dest, niodof, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
         IOsystem%union_comm, pio_hs, pio_isend, pio_maxreq        )
+!pw++
+#ifdef TIMING
+      call t_stopf("swapm_box_rear_comp2io_int")
+#endif
+!pw--
 #ifdef _USE_ALLTOALLW
     endif
 #endif
@@ -873,6 +965,12 @@ subroutine box_rearrange_comp2io_int (IOsystem, ioDesc, s1, src, niodof, &
       print *,'comp2io using cached rearranger info'
     endif
 #endif
+
+!pw++
+#ifdef TIMING
+    call t_startf("p2p_box_rear_comp2io_int")
+#endif
+!pw--
 
     !
     ! send data from comp procs
@@ -929,6 +1027,12 @@ subroutine box_rearrange_comp2io_int (IOsystem, ioDesc, s1, src, niodof, &
 
     call dealloc_check(sreq, 'send requests')
 
+!pw++
+#ifdef TIMING
+    call t_stopf("p2p_box_rear_comp2io_int")
+#endif
+!pw--
+
 #if DEBUG_BARRIER
     call MPI_BARRIER(IOsystem%union_comm,ierror)
     call CheckMPIReturn(subName,ierror)
@@ -937,11 +1041,11 @@ subroutine box_rearrange_comp2io_int (IOsystem, ioDesc, s1, src, niodof, &
 
   endif  ! POINT_TO_POINT
 #endif /* not _MPISERIAL */
-# 390 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 430 "box_rearrange.F90.in"
 end subroutine box_rearrange_comp2io_int
 
 ! TYPE real,double,int
-# 393 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 433 "box_rearrange.F90.in"
 subroutine box_rearrange_io2comp_real (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
                                          comm_option, fc_options)
   implicit none
@@ -1114,16 +1218,35 @@ subroutine box_rearrange_io2comp_real (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
 
 #ifdef _USE_ALLTOALLW
     if (pio_option == COLLECTIVE) then
+!pw++
+#ifdef TIMING
+      call t_startf("a2a_box_rear_io2comp_real")
+#endif
+!pw--
       call MPI_ALLTOALLW(iobuf,   a2a_sendcounts, a2a_displs, a2a_sendtypes, &
                          compbuf, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
                          IOsystem%union_comm, ierror                          )
+!pw++
+#ifdef TIMING
+      call t_stopf("a2a_box_rear_io2comp_real")
+#endif
+!pw--
       call CheckMPIReturn(subName, ierror)
     else
 #endif
+!pw++
+#ifdef TIMING
+      call t_startf("swapm_box_rear_io2comp_real")
+#endif
+!pw--
       call pio_swapm( nprocs, myrank,                               &
         iobuf,   niodof, a2a_sendcounts, a2a_displs, a2a_sendtypes, &
         compbuf, ndof,   a2a_recvcounts, a2a_displs, a2a_recvtypes, &
         IOsystem%union_comm, pio_hs, pio_isend, pio_maxreq           )
+!pw++
+#ifdef TIMING
+      call t_stopf("swapm_box_rear_io2comp_real")
+#endif
 #ifdef _USE_ALLTOALLW
     endif
 #endif
@@ -1134,6 +1257,12 @@ subroutine box_rearrange_io2comp_real (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
     call dealloc_check(a2a_recvtypes)
 
   else
+
+!pw++
+#ifdef TIMING
+    call t_startf("p2p_box_rear_io2comp_real")
+#endif
+!pw--
 
     call alloc_check(rreq, num_iotasks, 'recv requests')
 
@@ -1194,14 +1323,19 @@ subroutine box_rearrange_io2comp_real (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
 
       call dealloc_check(sreq,'send requests')
     endif
+!pw++
+#ifdef TIMING
+    call t_stopf("p2p_box_rear_io2comp_real")
+#endif
+!pw--
 
   endif ! POINT_TO_POINT
 #endif  /* not _MPISERIAL */
 
-# 649 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 719 "box_rearrange.F90.in"
 end subroutine box_rearrange_io2comp_real
 ! TYPE real,double,int
-# 393 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 433 "box_rearrange.F90.in"
 subroutine box_rearrange_io2comp_double (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
                                          comm_option, fc_options)
   implicit none
@@ -1374,16 +1508,35 @@ subroutine box_rearrange_io2comp_double (IOsystem,ioDesc,s1, iobuf,s2, compbuf, 
 
 #ifdef _USE_ALLTOALLW
     if (pio_option == COLLECTIVE) then
+!pw++
+#ifdef TIMING
+      call t_startf("a2a_box_rear_io2comp_double")
+#endif
+!pw--
       call MPI_ALLTOALLW(iobuf,   a2a_sendcounts, a2a_displs, a2a_sendtypes, &
                          compbuf, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
                          IOsystem%union_comm, ierror                          )
+!pw++
+#ifdef TIMING
+      call t_stopf("a2a_box_rear_io2comp_double")
+#endif
+!pw--
       call CheckMPIReturn(subName, ierror)
     else
 #endif
+!pw++
+#ifdef TIMING
+      call t_startf("swapm_box_rear_io2comp_double")
+#endif
+!pw--
       call pio_swapm( nprocs, myrank,                               &
         iobuf,   niodof, a2a_sendcounts, a2a_displs, a2a_sendtypes, &
         compbuf, ndof,   a2a_recvcounts, a2a_displs, a2a_recvtypes, &
         IOsystem%union_comm, pio_hs, pio_isend, pio_maxreq           )
+!pw++
+#ifdef TIMING
+      call t_stopf("swapm_box_rear_io2comp_double")
+#endif
 #ifdef _USE_ALLTOALLW
     endif
 #endif
@@ -1394,6 +1547,12 @@ subroutine box_rearrange_io2comp_double (IOsystem,ioDesc,s1, iobuf,s2, compbuf, 
     call dealloc_check(a2a_recvtypes)
 
   else
+
+!pw++
+#ifdef TIMING
+    call t_startf("p2p_box_rear_io2comp_double")
+#endif
+!pw--
 
     call alloc_check(rreq, num_iotasks, 'recv requests')
 
@@ -1454,14 +1613,19 @@ subroutine box_rearrange_io2comp_double (IOsystem,ioDesc,s1, iobuf,s2, compbuf, 
 
       call dealloc_check(sreq,'send requests')
     endif
+!pw++
+#ifdef TIMING
+    call t_stopf("p2p_box_rear_io2comp_double")
+#endif
+!pw--
 
   endif ! POINT_TO_POINT
 #endif  /* not _MPISERIAL */
 
-# 649 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 719 "box_rearrange.F90.in"
 end subroutine box_rearrange_io2comp_double
 ! TYPE real,double,int
-# 393 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 433 "box_rearrange.F90.in"
 subroutine box_rearrange_io2comp_int (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
                                          comm_option, fc_options)
   implicit none
@@ -1634,16 +1798,35 @@ subroutine box_rearrange_io2comp_int (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
 
 #ifdef _USE_ALLTOALLW
     if (pio_option == COLLECTIVE) then
+!pw++
+#ifdef TIMING
+      call t_startf("a2a_box_rear_io2comp_int")
+#endif
+!pw--
       call MPI_ALLTOALLW(iobuf,   a2a_sendcounts, a2a_displs, a2a_sendtypes, &
                          compbuf, a2a_recvcounts, a2a_displs, a2a_recvtypes, &
                          IOsystem%union_comm, ierror                          )
+!pw++
+#ifdef TIMING
+      call t_stopf("a2a_box_rear_io2comp_int")
+#endif
+!pw--
       call CheckMPIReturn(subName, ierror)
     else
 #endif
+!pw++
+#ifdef TIMING
+      call t_startf("swapm_box_rear_io2comp_int")
+#endif
+!pw--
       call pio_swapm( nprocs, myrank,                               &
         iobuf,   niodof, a2a_sendcounts, a2a_displs, a2a_sendtypes, &
         compbuf, ndof,   a2a_recvcounts, a2a_displs, a2a_recvtypes, &
         IOsystem%union_comm, pio_hs, pio_isend, pio_maxreq           )
+!pw++
+#ifdef TIMING
+      call t_stopf("swapm_box_rear_io2comp_int")
+#endif
 #ifdef _USE_ALLTOALLW
     endif
 #endif
@@ -1654,6 +1837,12 @@ subroutine box_rearrange_io2comp_int (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
     call dealloc_check(a2a_recvtypes)
 
   else
+
+!pw++
+#ifdef TIMING
+    call t_startf("p2p_box_rear_io2comp_int")
+#endif
+!pw--
 
     call alloc_check(rreq, num_iotasks, 'recv requests')
 
@@ -1714,11 +1903,16 @@ subroutine box_rearrange_io2comp_int (IOsystem,ioDesc,s1, iobuf,s2, compbuf, &
 
       call dealloc_check(sreq,'send requests')
     endif
+!pw++
+#ifdef TIMING
+    call t_stopf("p2p_box_rear_io2comp_int")
+#endif
+!pw--
 
   endif ! POINT_TO_POINT
 #endif  /* not _MPISERIAL */
 
-# 649 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 719 "box_rearrange.F90.in"
 end subroutine box_rearrange_io2comp_int
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1728,7 +1922,7 @@ end subroutine box_rearrange_io2comp_int
   !   find the rank in union_comm of the ith io processor
   !
 
-# 658 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 728 "box_rearrange.F90.in"
   integer function find_io_comprank( Iosystem, ioprocindex )
     implicit none
 
@@ -1736,7 +1930,7 @@ end subroutine box_rearrange_io2comp_int
     integer ioprocindex
 
     find_io_comprank=iosystem%ioranks(ioprocindex)
-# 665 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 735 "box_rearrange.F90.in"
   end function find_io_comprank
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1746,7 +1940,7 @@ end subroutine box_rearrange_io2comp_int
   !   find global xyz coordinates given a global index
   !
 
-# 674 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 744 "box_rearrange.F90.in"
   subroutine gindex_to_coord( gindex, gstride, ndim, gcoord )
     implicit none
     integer(kind=pio_offset),intent(in) :: gindex           ! 0-based global index
@@ -1772,7 +1966,7 @@ end subroutine box_rearrange_io2comp_int
     ! base case - innermost dimension
     gcoord(1) = tempindex
 
-# 699 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 769 "box_rearrange.F90.in"
   end subroutine gindex_to_coord
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1784,7 +1978,7 @@ end subroutine box_rearrange_io2comp_int
   !   and 1-based index for that ioproc's iobuf          '
   !
 
-# 710 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 780 "box_rearrange.F90.in"
   logical function find_ioproc( gcoord, lb, ub, lstride, ndim, nioproc, &
        io_proc, io_index )
     implicit none
@@ -1857,7 +2051,7 @@ end subroutine box_rearrange_io2comp_int
     endif
 
 
-# 782 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 852 "box_rearrange.F90.in"
   end function find_ioproc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1868,7 +2062,7 @@ end subroutine box_rearrange_io2comp_int
   !
   !
 
-# 792 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 862 "box_rearrange.F90.in"
   subroutine compute_dest(compdof, start, kount, gsize, ndim, nioproc, &
                           dest_ioproc, dest_ioindex                    )
     implicit none
@@ -1965,7 +2159,7 @@ end subroutine box_rearrange_io2comp_int
 
     end do  ! i=1,ndof
 
-# 888 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 958 "box_rearrange.F90.in"
   end subroutine compute_dest
 
 !>
@@ -1980,7 +2174,7 @@ end subroutine box_rearrange_io2comp_int
 !! this space should be freed in box_rearrange_free
 !!
 !<
-# 902 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 972 "box_rearrange.F90.in"
   subroutine box_rearrange_create(Iosystem, compdof, gsize, ndim, &
                                   nioproc, ioDesc)
 
@@ -2127,7 +2321,7 @@ end subroutine box_rearrange_io2comp_int
 ! not _MPISERIAL
 #endif
 
-# 1048 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 1118 "box_rearrange.F90.in"
   end subroutine box_rearrange_create
 
 !>
@@ -2136,7 +2330,7 @@ end subroutine box_rearrange_io2comp_int
 !!
 !<
 #ifndef _MPISERIAL
-# 1056 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 1126 "box_rearrange.F90.in"
   subroutine compute_counts(Iosystem, ioDesc, niodof)
     
     use calcdisplace_mod, only : calcdisplace,GCDblocksize,gcd
@@ -2651,7 +2845,7 @@ end subroutine box_rearrange_io2comp_int
 
     call dealloc_check(sindex, 'sindex temp')
 
-# 1570 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 1640 "box_rearrange.F90.in"
   end subroutine compute_counts
 #endif
 
@@ -2661,7 +2855,7 @@ end subroutine box_rearrange_io2comp_int
 !!
 !<
 
-# 1579 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 1649 "box_rearrange.F90.in"
   subroutine box_rearrange_free(Iosystem,ioDesc)
     implicit none
 
@@ -2728,7 +2922,7 @@ end subroutine box_rearrange_io2comp_int
 #endif
 
 
-# 1645 "/glade/u/home/jedwards/pio_trunk/pio/box_rearrange.F90.in"
+# 1715 "box_rearrange.F90.in"
   end subroutine box_rearrange_free
 
 end module box_rearrange
