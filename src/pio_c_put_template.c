@@ -54,16 +54,16 @@ int PIO_function()
 	ierr = ncmpi_function();
 	if(ierr == PIO_NOERR){
 	  pio_push_request(file, request);
-	  ierr = ncmpi_inq_buffer_usage(ncid, &usage);
+	  //	  ierr = ncmpi_inq_buffer_usage(ncid, &usage);
 	}
 	//	printf("%s %d %d\n",__FILE__,__LINE__,usage);
       }
       // ncmpi_end_indep_data(file->fh);
-      MPI_Bcast(&usage, 1,  MPI_LONG_LONG, file->indep_rank, ios->io_comm);
-      file->indep_rank = (file->indep_rank + 1) % ios->num_iotasks;
-      if(usage >= 0.8*PIO_BUFFER_SIZE_LIMIT){
-	flush_output_buffer(file);
-      }
+      //      MPI_Bcast(&usage, 1,  MPI_LONG_LONG, file->indep_rank, ios->io_comm);
+      //      file->indep_rank = (file->indep_rank + 1) % ios->num_iotasks;
+      //      if(usage >= 0.8*PIO_BUFFER_SIZE_LIMIT){
+	flush_output_buffer(file, 0, 0.8*PIO_BUFFER_SIZE_LIMIT);
+	//      }
 
 
       break;

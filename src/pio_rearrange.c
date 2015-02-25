@@ -905,8 +905,8 @@ void determine_fill(iosystem_desc_t ios, io_desc_t *iodesc, const int gsize[])
     iodesc->needsfill = false;
     iodesc->gsize = NULL;
   }
-  //  TURN OFF FILL for timing test
-  //  iodesc->needsfill=false;
+  //  TURN OFF FILL for testing
+    iodesc->needsfill=false;
 
   if(iodesc->needsfill){
     iodesc->gsize = (PIO_Offset *) bget(iodesc->ndims * sizeof(PIO_Offset));

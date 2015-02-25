@@ -270,50 +270,53 @@ contains
 #endif
                 end if
 ! Now the Read
-                ierr = PIO_OpenFile(iosystem, File, iotype, trim(fname), mode=PIO_NOWRITE);
-                do nv=1,nvars
-                   write(varname,'(a,i4.4)') 'vari',nv
-                   ierr =  pio_inq_varid(File, varname, vari(nv))
-                enddo
-                call MPI_Barrier(comm,ierr)
-                call t_stampf(wall(1), usr(1), sys(1))
+                call PIO_seterrorhandling(File, PIO_BCAST_ERROR)  
+                ierr = PIO_OpenFile(iosystem, File, iotype, trim(fname), mode=PIO_NOWRITE)
+                call PIO_seterrorhandling(File, PIO_INTERNAL_ERROR)  
+		if(ierr == PIO_NOERR) then
+                  do nv=1,nvars
+                    write(varname,'(a,i4.4)') 'vari',nv
+                    ierr =  pio_inq_varid(File, varname, vari(nv))
+                  enddo
+                  call MPI_Barrier(comm,ierr)
+                  call t_stampf(wall(1), usr(1), sys(1))
                 
-                do frame=1,nframes                   
-                   do nv=1,nvars
-                      call PIO_setframe(File, vari(nv), frame)
-                      call pio_read_darray(File, vari(nv), iodesc_i4, ifld_in(:,nv), ierr)
-                   enddo
-                enddo
+                  do frame=1,nframes                   
+                     do nv=1,nvars
+                        call PIO_setframe(File, vari(nv), frame)
+                        call pio_read_darray(File, vari(nv), iodesc_i4, ifld_in(:,nv), ierr)
+                     enddo
+                  enddo
                 
-                call pio_closefile(File)
-                call MPI_Barrier(comm,ierr)
-                call t_stampf(wall(2), usr(2), sys(2))
-                wall(1) = wall(2)-wall(1)
-                call MPI_Reduce(wall(1), wall(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-                errorcnt = 0
-                do nv=1,nvars
-                   do j=1,maplen
-                      if(ifld(j,nv) /= ifld_in(j,nv) .and. compmap(j) /= 0) then
-                         if(errorcnt < 10) then
-                            print *,__LINE__,mype,j,nv,ifld(j,nv),ifld_in(j,nv),compmap(j)
-                         endif
-                         errorcnt = errorcnt+1
-                      endif
-                   enddo
-                enddo
-                j = errorcnt
-                call MPI_Reduce(j, errorcnt, 1, MPI_INTEGER, MPI_SUM, 0, comm, ierr)
+                  call pio_closefile(File)
+                  call MPI_Barrier(comm,ierr)
+                  call t_stampf(wall(2), usr(2), sys(2))
+                  wall(1) = wall(2)-wall(1)
+                  call MPI_Reduce(wall(1), wall(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+                  errorcnt = 0
+                  do nv=1,nvars
+                     do j=1,maplen
+                        if(ifld(j,nv) /= ifld_in(j,nv) .and. compmap(j) /= 0) then
+                           if(errorcnt < 10) then
+                              print *,__LINE__,mype,j,nv,ifld(j,nv),ifld_in(j,nv),compmap(j)
+                           endif
+                           errorcnt = errorcnt+1
+                        endif
+                     enddo
+                  enddo
+                  j = errorcnt
+                  call MPI_Reduce(j, errorcnt, 1, MPI_INTEGER, MPI_SUM, 0, comm, ierr)
                 
-                if(mype==0) then
-                   if(errorcnt > 0) then
-                      print *,'ERROR: INPUT/OUTPUT data mismatch ',errorcnt
-                   endif
-                   print *, 'read ',rearr, ntasks,nvars, nvars*nframes*gmaplen*4.0/(1048576.0*wall(2))
+                  if(mype==0) then
+                     if(errorcnt > 0) then
+                        print *,'ERROR: INPUT/OUTPUT data mismatch ',errorcnt
+                     endif
+                     print *, 'read ',rearr, ntasks,nvars, nvars*nframes*gmaplen*4.0/(1048576.0*wall(2))
 #ifdef BGQTRY 
   call print_memusage()
 #endif
-                end if
-                
+                  end if
+               endif
                 call PIO_freedecomp(iosystem, iodesc_r4)
                 call PIO_freedecomp(iosystem, iodesc_r8)
                 call PIO_freedecomp(iosystem, iodesc_i4)

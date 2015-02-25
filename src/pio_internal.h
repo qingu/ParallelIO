@@ -100,7 +100,7 @@ typedef struct mapsort
   int calcdisplace(const int bsize, const int numblocks,const PIO_Offset map[],int displace[]);
   io_desc_t *malloc_iodesc(const int piotype, const int ndims);
   
-  int flush_output_buffer(file_desc_t *file);
+  int flush_output_buffer(file_desc_t *file, long long thissize, int maxsize);
   void compute_maxIObuffersize(MPI_Comm io_comm, io_desc_t *iodesc);
   io_region *alloc_region(const int ndims);
   int pio_delete_iosystem_from_list(int piosysid);

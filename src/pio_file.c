@@ -281,6 +281,7 @@ int PIOc_closefile(int ncid)
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
       if((file->mode & PIO_WRITE)){
+	flush_output_buffer(file,0,1);
 	ierr = ncmpi_buffer_detach(file->fh);
       }
       ierr = ncmpi_close(file->fh);
@@ -418,7 +419,7 @@ int PIOc_sync (int ncid)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
-      flush_output_buffer(file);
+      flush_output_buffer(file,0,1);
       ierr = ncmpi_sync(file->fh);;
       break;
 #endif

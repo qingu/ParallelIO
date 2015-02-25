@@ -5,7 +5,7 @@
 PIO_Offset PIO_BUFFER_SIZE_LIMIT= 10485760; // 10MB default limit
 bufsize PIO_CNBUFFER_LIMIT=10485760; // 10MB default limit
 static void *CN_bpool=NULL; 
-
+static int maxusage=0;
  // Changes to PIO_BUFFER_SIZE_LIMIT only apply to files opened after the change
  PIO_Offset PIOc_set_buffer_size_limit(const PIO_Offset limit)
  {
@@ -100,13 +100,13 @@ void compute_buffer_init(iosystem_desc_t ios)
 #ifdef _PNETCDF
      if(file->iotype == PIO_IOTYPE_PNETCDF){
        // make sure we have room in the buffer ;
-	 ierr = ncmpi_inq_buffer_usage(ncid, &usage);
-	 usage += tsize*(iodesc->maxiobuflen);
-	 MPI_Allreduce(MPI_IN_PLACE, &usage, 1,  MPI_LONG_LONG,  MPI_MAX, ios->io_comm);
+       //	 ierr = ncmpi_inq_buffer_usage(ncid, &usage);
+       // usage += tsize*(iodesc->maxiobuflen);
+       // MPI_Allreduce(MPI_IN_PLACE, &usage, 1,  MPI_LONG_LONG,  MPI_MAX, ios->io_comm);
 	 //         if(ios->io_rank==0) printf("%s %d %d %d\n",__FILE__,__LINE__,iodesc->maxregions,usage);
-	 if(usage >= PIO_BUFFER_SIZE_LIMIT){
-	   flush_output_buffer(file);
-	 }
+       // if(usage >= PIO_BUFFER_SIZE_LIMIT){
+       flush_output_buffer(file,tsize*iodesc->maxiobuflen, PIO_BUFFER_SIZE_LIMIT);
+	   // }
 
      }
 #endif
@@ -386,7 +386,7 @@ int pio_write_darray_multi_nc(file_desc_t *file, io_desc_t *iodesc,const int nva
      // Need to flush the buffer of fill values before the next write
      //     printf("%s %d \n",__FILE__,__LINE__);
      if(ios->ioproc && file->iotype == PIO_IOTYPE_PNETCDF){
-       flush_output_buffer(file);
+       flush_output_buffer(file, 0, 1);
      }
 #endif
    }
@@ -414,18 +414,16 @@ int pio_write_darray_multi_nc(file_desc_t *file, io_desc_t *iodesc,const int nva
 #ifdef _PNETCDF
      if(file->iotype == PIO_IOTYPE_PNETCDF){
        // make sure we have room in the buffer ;
-	 ierr = ncmpi_inq_buffer_usage(ncid, &usage);
-	 usage += nvars*tsize*(iodesc->maxiobuflen);
-	 //printf("%s %d %ld %ld\n",__FILE__,__LINE__,usage,PIO_BUFFER_SIZE_LIMIT);
-	 MPI_Allreduce(MPI_IN_PLACE, &usage, 1,  MPI_LONG_LONG,  MPI_MAX, ios->io_comm);
-
-	 if(usage >= PIO_BUFFER_SIZE_LIMIT){	   
-	 //  printf("%s %d %ld %d %ld %ld\n",__FILE__,__LINE__,usage,nvars,PIO_BUFFER_SIZE_LIMIT,nvars*tsize*(iodesc->maxiobuflen));
-	   flush_output_buffer(file);
-	   ierr = ncmpi_inq_buffer_usage(ncid, &usage);
-	  // printf("%s %d %ld \n",__FILE__,__LINE__,usage);
-	 }
-
+       //	 ierr = ncmpi_inq_buffer_usage(ncid, &usage);
+       //usage += nvars*tsize*(iodesc->maxiobuflen);
+       //printf("%s %d %ld %ld\n",__FILE__,__LINE__,usage,PIO_BUFFER_SIZE_LIMIT);
+       //MPI_Allreduce(MPI_IN_PLACE, &usage, 1,  MPI_LONG_LONG,  MPI_MAX, ios->io_comm);
+       
+       //	 if(usage >= PIO_BUFFER_SIZE_LIMIT){	   
+       //  printf("%s %d %ld %d %ld %ld\n",__FILE__,__LINE__,usage,nvars,PIO_BUFFER_SIZE_LIMIT,nvars*tsize*(iodesc->maxiobuflen));
+       flush_output_buffer(file, tsize*iodesc->maxiobuflen, PIO_BUFFER_SIZE_LIMIT);
+       //  ierr = ncmpi_inq_buffer_usage(ncid, &usage);
+       // printf("%s %d %ld \n",__FILE__,__LINE__,usage);
      }
 #endif
 
@@ -587,7 +585,7 @@ int pio_write_darray_multi_nc(file_desc_t *file, io_desc_t *iodesc,const int nva
 	   }
 	   rrcnt++;
 	 }	 
-	 if(regioncnt==iodesc->maxregions-1){
+	 if(regioncnt==iodesc->maxregions-1 && tdsize>0){
 	   //printf("%s %d %d %ld %ld\n",__FILE__,__LINE__,ios->io_rank,iodesc->llen, tdsize);
 	   //	   ierr = ncmpi_put_varn_all(ncid, vid, iodesc->maxregions, startlist, countlist, 
 	   //			     IOBUF, iodesc->llen, iodesc->basetype);
@@ -731,7 +729,7 @@ int PIOc_write_darray_multi(const int ncid, const int vid[], const int ioid, con
      ierr = pio_write_darray_multi_nc(file, iodesc, nvars, vid, iobuf, frame, fillvalue);
    }
    
-   flush_output_buffer(file);
+   //   flush_output_buffer(file);
 
    //printf("%s %d %ld\n",__FILE__,__LINE__,iobuf);
    if(iobuf != NULL && iobuf != array){
@@ -1203,7 +1201,9 @@ int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void
 	    for(int j=0;j<fndims; j++){
 	      startlist[rrlen][j] = start[j];
 	      countlist[rrlen][j] = count[j];
+
 	      //	      printf("%s %d %d %d %d %ld %ld %ld\n",__FILE__,__LINE__,realregioncnt,iodesc->maxregions, j,start[j],count[j],tmp_bufsize);
+
 	    }
             rrlen++;
 	  }
@@ -1293,14 +1293,34 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
 
 }
 
-int flush_output_buffer(file_desc_t *file)
+int flush_output_buffer(file_desc_t *file, PIO_Offset thissize,int flushval)
 {
   var_desc_t *vardesc;
   int ierr=PIO_NOERR;
+  iosystem_desc_t *ios;
+  PIO_Offset usage;
+  ios = file->iosystem;
 #ifdef _PNETCDF
 //  if(file->nreq==0)
 //    return ierr;
   int status[file->nreq];
+
+  if(flushval > 0){
+    ierr = ncmpi_inq_buffer_usage(file->fh, &usage);
+    usage += thissize;
+    MPI_Allreduce(MPI_IN_PLACE, &usage, 1,  MPI_OFFSET,  MPI_MAX, ios->io_comm);
+    if(ios->iomaster){
+      printf("%s %d %ld %ld %ld\n",__FILE__,__LINE__,usage,maxusage, PIO_BUFFER_SIZE_LIMIT);
+    }
+    //if(usage < flushval) return 0;
+  }
+  if(usage > maxusage){
+    maxusage = usage;
+  }
+  //  if(flushval==1 && ios->iomaster){
+  printf("%s %d %d %ld %ld %ld\n",__FILE__,__LINE__,file->nreq,usage,maxusage, PIO_BUFFER_SIZE_LIMIT);
+    //  }
+
 
   if(file->nreq>PIO_MAX_REQUESTS){
     fprintf(stderr,"Need to increase PIO_MAX_REQUESTS %d\n",file->nreq);
