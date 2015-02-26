@@ -82,6 +82,12 @@ contains
 
     request = MPI_REQUEST_NULL
 
+    ! make ifort happy when running with -O0 -g <entry id="PIO_DEBUG_LEVEL"   value="6"  />.
+    ! Supresses
+    ! forrtl: severe (193): Run-Time Check Failure. The variable 
+    !'pionfwrite_mod_mp_write_nfdarray_double_$I' is being used without being defined 
+    i = 0 
+
 #ifdef TIMING
     call t_startf("pio_write_nfdarray_{TYPE}")
 #endif
@@ -208,12 +214,11 @@ contains
                         i,2*File%iosystem%num_iotasks+i,File%iosystem%IO_comm,status,mpierr)
                    call CheckMPIReturn(subName,mpierr)
 
-	           if(sum(temp_count(1:ndims))>0) then
-
+                   if(sum(temp_count(1:ndims))>0) then
 #ifdef TIMING
                       call t_startf("nc_put_var2")
 #endif
-                      ierr=nf90_put_var( fh,vid,	&
+                      ierr=nf90_put_var( fh,vid,    &
                            temp_iobuf,temp_start(1:ndims),temp_count(1:ndims))
                       if(Debug) print *, subname,__LINE__,i,fh,vid, ierr
 #ifdef TIMING
