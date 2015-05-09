@@ -512,12 +512,15 @@ int pio_write_darray_multi_nc(file_desc_t *file, const int nvars, const int vid[
 	     }
 	     bufptr = (void *)((char *) IOBUF + nv*tsize*llen);
 
+	     /*
 	     ierr = ncmpi_iput_varn(ncid, vid[nv], rrcnt, startlist, countlist, 
 				    bufptr, llen, basetype, &request);
-	     /*
+	     */
+	     
 	     ierr = ncmpi_bput_varn(ncid, vid[nv], rrcnt, startlist, countlist, 
-				    bufptr, iodesc->llen, iodesc->basetype, &request);
-	     */ 
+				    bufptr, llen, basetype, &request);
+	      
+	     
 	     pio_push_request(file,request);
 	     
 	   }
@@ -674,14 +677,14 @@ int PIOc_write_darray_multi(const int ncid, const int vid[], const int ioid, con
    }
    
    /* We cannot free the iobuf and the fillbuf until the flush completes */
-   flush_output_buffer(file, true, 0);
+   flush_output_buffer(file, false, 0);
 
    //printf("%s %d %ld\n",__FILE__,__LINE__,iobuf);
    if(iobuf != NULL && iobuf != array){
      //     printf("%s %d 0x%.16X\n",__FILE__,__LINE__,iobuf);
      free(iobuf);
      //     brel(iobuf);
-     //  printf("%s %d\n",__FILE__,__LINE__);
+     printf("%s %d %d\n",__FILE__,__LINE__, file->nreq);
    }
    if(fillbuf != NULL){
        brel(fillbuf);
@@ -799,7 +802,7 @@ int PIOc_write_darray_multi(const int ncid, const int vid[], const int ioid, con
 
     if(needflush ){
       // need to flush first
-      //      printf("%s %d %ld %d %ld %ld\n",__FILE__,__LINE__,maxfree, wmb->validvars, (1+wmb->validvars)*arraylen*tsize,totfree);
+          printf("%s %d %ld %d %ld %ld\n",__FILE__,__LINE__,maxfree, wmb->validvars, (1+wmb->validvars)*arraylen*tsize,totfree);
             cn_buffer_report(*ios, true);
 	
       flush_buffer(ncid,wmb);
@@ -1261,7 +1264,8 @@ int flush_output_buffer(file_desc_t *file, bool force, PIO_Offset addsize)
     if(file->nreq>PIO_MAX_REQUESTS){
       fprintf(stderr,"Need to increase PIO_MAX_REQUESTS %d\n",file->nreq);
     }
-
+    printf("%s %d %d %ld %d\n",__FILE__,__LINE__,force,usage, file->nreq);
+    //    print_trace(NULL);
     ierr = ncmpi_wait_all(file->fh,file->nreq,  file->request,status);
     for(int i=0;i<file->nreq;i++){
       file->request[i]=NC_REQ_NULL;
