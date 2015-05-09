@@ -315,12 +315,12 @@ contains
                                print *,__LINE__,'Int: ',mype,j,nv,ifld(j,nv),ifld_in(j,nv),compmap(j)
                             endif
                             errorcnt = errorcnt+1
+
                          else if(rfld(j,nv) /= rfld_in(j,nv) ) then
                             if(errorcnt < 10) then
                                print *,__LINE__,'Real:', mype,j,nv,rfld(j,nv),rfld_in(j,nv),compmap(j)
                             endif
                             errorcnt = errorcnt+1
-                            
                          else if(dfld(j,nv) /= dfld_in(j,nv) ) then
                             if(errorcnt < 10) then
                                print *,__LINE__,'Dbl:',mype,j,nv,dfld(j,nv),dfld_in(j,nv),compmap(j)
@@ -388,8 +388,12 @@ contains
     do nv=1,nvars
        write(varname,'(a,i4.4)') 'vari',nv
        iostat = PIO_def_var(File, varname, PIO_INT, dimid, vari(nv))
+    enddo
+    do nv=1,nvars
        write(varname,'(a,i4.4)') 'varr',nv
        iostat = PIO_def_var(File, varname, PIO_REAL, dimid, varr(nv))
+    enddo
+    do nv=1,nvars
        write(varname,'(a,i4.4)') 'vard',nv
        iostat = PIO_def_var(File, varname, PIO_DOUBLE, dimid, vard(nv))
     enddo
