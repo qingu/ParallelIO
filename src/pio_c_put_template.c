@@ -12,9 +12,9 @@ int PIO_function()
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -22,7 +22,7 @@ int PIO_function()
     return PIO_EBADID;
   ios = file->iosystem;
   msg = 0;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -48,11 +48,10 @@ int PIO_function()
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
+	request = &(vdesc->request);
 	ierr = ncmpi_function();
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
       }
       flush_output_buffer(file, false, 0);
       break;

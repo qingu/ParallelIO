@@ -50,6 +50,7 @@ typedef struct var_desc_t
 {
   int record; 
   int ndims;
+  int request; // used for pnetcdf iput calls
 } var_desc_t;
 
 /**
@@ -184,7 +185,7 @@ typedef struct file_desc_t
   int fh;
   int iotype;
   struct var_desc_t varlist[PIO_MAX_VARS];
-  int request[PIO_MAX_REQUESTS];   // request associated with buffered data for pnetcdf (not an MPI_Request)
+  //  int request[PIO_MAX_REQUESTS];   // request associated with buffered data for pnetcdf (not an MPI_Request)
   int nreq;   // next empty request slot to fill.
   int mode;
   struct wmulti_buffer buffer;

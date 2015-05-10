@@ -185,8 +185,11 @@ contains
        allocate(dfld_in(maplen,nvars))
 
        ifld = ifill
+       ifld_in = ifill
        rfld = rfill
+       rfld_in = rfill
        dfld = dfill
+       dfld_in = dfill
        do nv=1,nvars
           do j=1,maplen
 	     if(compmap(j) > 0) then

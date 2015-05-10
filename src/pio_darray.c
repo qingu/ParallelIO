@@ -53,7 +53,6 @@ void compute_buffer_init(iosystem_desc_t ios)
    int dsize;
    MPI_Status status;
    PIO_Offset usage;
-   int request;
    int fndims;
    PIO_Offset tdsize;
 #ifdef TIMING
@@ -69,7 +68,7 @@ void compute_buffer_init(iosystem_desc_t ios)
      return PIO_EBADID;
    }
    vdesc = (file->varlist)+vid;
-
+  
    if(vdesc == NULL){
      fprintf(stderr,"Failed to find variable handle %d\n",vid);
      return PIO_EBADID;
@@ -252,9 +251,8 @@ void compute_buffer_init(iosystem_desc_t ios)
 	   //			     IOBUF, iodesc->llen, iodesc->basetype);
 	   
 	   ierr = ncmpi_bput_varn(ncid, vid, rrcnt, startlist, countlist, 
-				  IOBUF, iodesc->llen, iodesc->basetype, &request);
-	   pio_push_request(file,request);
-	   //	   printf("%s %d %X %d\n",__FILE__,__LINE__,IOBUF,request);
+				  IOBUF, iodesc->llen, iodesc->basetype, &(vdesc->request));
+
 	   for(i=0;i<rrcnt;i++){
 	     free(startlist[i]);
 	     free(countlist[i]);
@@ -293,7 +291,6 @@ int pio_write_darray_multi_nc(file_desc_t *file, const int nvars, const int vid[
    int dsize;
    MPI_Status status;
    PIO_Offset usage;
-   int request;
    int fndims;
    PIO_Offset tdsize;
    int tsize;
@@ -505,23 +502,25 @@ int pio_write_darray_multi_nc(file_desc_t *file, const int nvars, const int vid[
 	   
 	   //printf("%s %d %ld \n",__FILE__,__LINE__,IOBUF);
 	   for(int nv=0; nv<nvars; nv++){
+	     vdesc = (file->varlist)+vid[nv];
 	     if(vdesc->record >= 0){
 	       for(int rc=0;rc<rrcnt;rc++){
 		 startlist[rc][0] = frame[nv];
 	       }
 	     }
 	     bufptr = (void *)((char *) IOBUF + nv*tsize*llen);
-
 	     /*
 	     ierr = ncmpi_iput_varn(ncid, vid[nv], rrcnt, startlist, countlist, 
-				    bufptr, llen, basetype, &request);
+				    bufptr, llen, basetype, &(vdesc->request));
 	     */
 	     
-	     ierr = ncmpi_bput_varn(ncid, vid[nv], rrcnt, startlist, countlist, 
-				    bufptr, llen, basetype, &request);
-	      
 	     
-	     pio_push_request(file,request);
+	     ierr = ncmpi_bput_varn(ncid, vid[nv], rrcnt, startlist, countlist, 
+				    bufptr, llen, basetype, &(vdesc->request));
+	     
+	     printf("%s %d %d %d\n",__FILE__,__LINE__,vid[nv],vdesc->request);
+	      
+
 	     
 	   }
 	   for(i=0;i<rrcnt;i++){
@@ -684,7 +683,6 @@ int PIOc_write_darray_multi(const int ncid, const int vid[], const int ioid, con
      //     printf("%s %d 0x%.16X\n",__FILE__,__LINE__,iobuf);
      free(iobuf);
      //     brel(iobuf);
-     printf("%s %d %d\n",__FILE__,__LINE__, file->nreq);
    }
    if(fillbuf != NULL){
        brel(fillbuf);
@@ -1146,7 +1144,7 @@ int pio_read_darray_nc(file_desc_t *file, io_desc_t *iodesc, const int vid, void
 	    for(int j=0;j<fndims; j++){
 	      startlist[rrlen][j] = start[j];
 	      countlist[rrlen][j] = count[j];
-	      //	      printf("%s %d %d %d %d %ld %ld %ld\n",__FILE__,__LINE__,realregioncnt,iodesc->maxregions, j,start[j],count[j],tmp_bufsize);
+	      //	      	      printf("%s %d %d %d %ld %ld %ld\n",__FILE__,__LINE__,iodesc->maxregions, j,start[j],count[j],tmp_bufsize);
 	    }
             rrlen++;
 	  }
@@ -1243,7 +1241,6 @@ int flush_output_buffer(file_desc_t *file, bool force, PIO_Offset addsize)
 #ifdef _PNETCDF
 //  if(file->nreq==0)
 //    return ierr;
-  int status[file->nreq];
   PIO_Offset usage;
 #ifdef TIMING
   GPTLstart("PIO:flush_output_buffer");
@@ -1260,17 +1257,33 @@ int flush_output_buffer(file_desc_t *file, bool force, PIO_Offset addsize)
     maxusage = usage;
   }
   if(force || usage>=PIO_BUFFER_SIZE_LIMIT){
+    int status[PIO_MAX_VARS];
+    int request[PIO_MAX_VARS];
+    int i, nreq;
+    var_desc_t *vard;
+    nreq=0;
+    /* BGQ onesided optimization requires that the list of requests in a single call to wait
+       be associated with a contiguous list of variable ids */ 
+    for(i=0;i<PIO_MAX_VARS;i++){
+      vard = file->varlist+i;
+      if(vard->request != NC_REQ_NULL){
+	request[nreq++] = vard->request;
+	printf("%s %d %d %d %d\n",__FILE__,__LINE__,i,nreq,vard->request);
+	vard->request = NC_REQ_NULL;  //too eager?
+      }else if(nreq > 0){
+	printf("%s %d ",__FILE__,__LINE__);	
+	for(int j=0;j<nreq;j++)
+	  printf("%d ",request[j]);
+	printf("\n");
 
-    if(file->nreq>PIO_MAX_REQUESTS){
-      fprintf(stderr,"Need to increase PIO_MAX_REQUESTS %d\n",file->nreq);
+	ierr = ncmpi_wait_all(file->fh,nreq, request,status);
+	for(int j=0; j<nreq; j++)
+	  request[j]=NC_REQ_NULL;
+	nreq=0;
+	
+      }
     }
-    printf("%s %d %d %ld %d\n",__FILE__,__LINE__,force,usage, file->nreq);
-    //    print_trace(NULL);
-    ierr = ncmpi_wait_all(file->fh,file->nreq,  file->request,status);
-    for(int i=0;i<file->nreq;i++){
-      file->request[i]=NC_REQ_NULL;
-    }
-    file->nreq = 0;
+  printf("%s %d %d\n",__FILE__,__LINE__,nreq);
   }
 #ifdef TIMING
   GPTLstop("PIO:flush_output_buffer");

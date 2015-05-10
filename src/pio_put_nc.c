@@ -15,9 +15,9 @@ int PIOc_put_vars_uchar (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -25,7 +25,7 @@ int PIOc_put_vars_uchar (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_UCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -51,11 +51,10 @@ int PIOc_put_vars_uchar (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_uchar(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_uchar(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -84,9 +83,9 @@ int PIOc_put_vars_ushort (int ncid, int varid, const PIO_Offset start[], const P
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -94,7 +93,7 @@ int PIOc_put_vars_ushort (int ncid, int varid, const PIO_Offset start[], const P
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_USHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -120,11 +119,10 @@ int PIOc_put_vars_ushort (int ncid, int varid, const PIO_Offset start[], const P
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_ushort(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_ushort(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -153,9 +151,9 @@ int PIOc_put_vars_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -163,7 +161,7 @@ int PIOc_put_vars_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_ULONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -189,11 +187,10 @@ int PIOc_put_vars_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_ulonglong(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_ulonglong(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -222,9 +219,9 @@ int PIOc_put_varm (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -232,7 +229,7 @@ int PIOc_put_varm (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -258,11 +255,10 @@ int PIOc_put_varm (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm(file->fh, varid, start, count, stride, imap, buf, bufcount, buftype, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm(file->fh, varid, start, count, stride, imap, buf, bufcount, buftype, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -291,9 +287,9 @@ int PIOc_put_vars_uint (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -301,7 +297,7 @@ int PIOc_put_vars_uint (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_UINT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -327,11 +323,10 @@ int PIOc_put_vars_uint (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_uint(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_uint(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -360,9 +355,9 @@ int PIOc_put_varm_uchar (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -370,7 +365,7 @@ int PIOc_put_varm_uchar (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_UCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -396,11 +391,10 @@ int PIOc_put_varm_uchar (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_uchar(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_uchar(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -429,9 +423,9 @@ int PIOc_put_var_ushort (int ncid, int varid, const unsigned short *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -439,7 +433,7 @@ int PIOc_put_var_ushort (int ncid, int varid, const unsigned short *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_USHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -465,11 +459,10 @@ int PIOc_put_var_ushort (int ncid, int varid, const unsigned short *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_ushort(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_ushort(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -498,9 +491,9 @@ int PIOc_put_var1_longlong (int ncid, int varid, const PIO_Offset index[], const
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -508,7 +501,7 @@ int PIOc_put_var1_longlong (int ncid, int varid, const PIO_Offset index[], const
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_LONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -534,11 +527,10 @@ int PIOc_put_var1_longlong (int ncid, int varid, const PIO_Offset index[], const
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_longlong(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_longlong(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -567,9 +559,9 @@ int PIOc_put_vara_uchar (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -577,7 +569,7 @@ int PIOc_put_vara_uchar (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_UCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -603,11 +595,10 @@ int PIOc_put_vara_uchar (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_uchar(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_uchar(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -636,9 +627,9 @@ int PIOc_put_varm_short (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -646,7 +637,7 @@ int PIOc_put_varm_short (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_SHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -672,11 +663,10 @@ int PIOc_put_varm_short (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_short(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_short(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -705,9 +695,9 @@ int PIOc_put_var1_long (int ncid, int varid, const PIO_Offset index[], const lon
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -715,7 +705,7 @@ int PIOc_put_var1_long (int ncid, int varid, const PIO_Offset index[], const lon
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_LONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -741,11 +731,10 @@ int PIOc_put_var1_long (int ncid, int varid, const PIO_Offset index[], const lon
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_long(file->fh, varid, index, ip, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_long(file->fh, varid, index, ip, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -774,9 +763,9 @@ int PIOc_put_vars_long (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -784,7 +773,7 @@ int PIOc_put_vars_long (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_LONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -810,11 +799,10 @@ int PIOc_put_vars_long (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_long(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_long(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -843,9 +831,9 @@ int PIOc_put_var_short (int ncid, int varid, const short *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -853,7 +841,7 @@ int PIOc_put_var_short (int ncid, int varid, const short *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_SHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -879,11 +867,10 @@ int PIOc_put_var_short (int ncid, int varid, const short *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_short(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_short(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -912,9 +899,9 @@ int PIOc_put_vara_int (int ncid, int varid, const PIO_Offset start[], const PIO_
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -922,7 +909,7 @@ int PIOc_put_vara_int (int ncid, int varid, const PIO_Offset start[], const PIO_
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_INT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -948,11 +935,10 @@ int PIOc_put_vara_int (int ncid, int varid, const PIO_Offset start[], const PIO_
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_int(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_int(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -981,9 +967,9 @@ int PIOc_put_var1_ushort (int ncid, int varid, const PIO_Offset index[], const u
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -991,7 +977,7 @@ int PIOc_put_var1_ushort (int ncid, int varid, const PIO_Offset index[], const u
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_USHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1017,11 +1003,10 @@ int PIOc_put_var1_ushort (int ncid, int varid, const PIO_Offset index[], const u
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_ushort(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_ushort(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1050,9 +1035,9 @@ int PIOc_put_vara_text (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1060,7 +1045,7 @@ int PIOc_put_vara_text (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_TEXT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1086,11 +1071,10 @@ int PIOc_put_vara_text (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_text(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_text(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1119,9 +1103,9 @@ int PIOc_put_varm_text (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1129,7 +1113,7 @@ int PIOc_put_varm_text (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_TEXT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1155,11 +1139,10 @@ int PIOc_put_varm_text (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_text(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_text(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1188,9 +1171,9 @@ int PIOc_put_varm_ushort (int ncid, int varid, const PIO_Offset start[], const P
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1198,7 +1181,7 @@ int PIOc_put_varm_ushort (int ncid, int varid, const PIO_Offset start[], const P
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_USHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1224,11 +1207,10 @@ int PIOc_put_varm_ushort (int ncid, int varid, const PIO_Offset start[], const P
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_ushort(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_ushort(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1257,9 +1239,9 @@ int PIOc_put_var_ulonglong (int ncid, int varid, const unsigned long long *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1267,7 +1249,7 @@ int PIOc_put_var_ulonglong (int ncid, int varid, const unsigned long long *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_ULONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1293,11 +1275,10 @@ int PIOc_put_var_ulonglong (int ncid, int varid, const unsigned long long *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_ulonglong(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_ulonglong(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1326,9 +1307,9 @@ int PIOc_put_var_int (int ncid, int varid, const int *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1336,7 +1317,7 @@ int PIOc_put_var_int (int ncid, int varid, const int *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_INT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1362,11 +1343,10 @@ int PIOc_put_var_int (int ncid, int varid, const int *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_int(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_int(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1395,9 +1375,9 @@ int PIOc_put_var_longlong (int ncid, int varid, const long long *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1405,7 +1385,7 @@ int PIOc_put_var_longlong (int ncid, int varid, const long long *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_LONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1431,11 +1411,10 @@ int PIOc_put_var_longlong (int ncid, int varid, const long long *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_longlong(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_longlong(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1464,9 +1443,9 @@ int PIOc_put_var_schar (int ncid, int varid, const signed char *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1474,7 +1453,7 @@ int PIOc_put_var_schar (int ncid, int varid, const signed char *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_SCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1500,11 +1479,10 @@ int PIOc_put_var_schar (int ncid, int varid, const signed char *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_schar(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_schar(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1533,9 +1511,9 @@ int PIOc_put_var_uint (int ncid, int varid, const unsigned int *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1543,7 +1521,7 @@ int PIOc_put_var_uint (int ncid, int varid, const unsigned int *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_UINT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1569,11 +1547,10 @@ int PIOc_put_var_uint (int ncid, int varid, const unsigned int *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_uint(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_uint(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1602,9 +1579,9 @@ int PIOc_put_var (int ncid, int varid, const void *buf, PIO_Offset bufcount, MPI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1612,7 +1589,7 @@ int PIOc_put_var (int ncid, int varid, const void *buf, PIO_Offset bufcount, MPI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1638,11 +1615,10 @@ int PIOc_put_var (int ncid, int varid, const void *buf, PIO_Offset bufcount, MPI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var(file->fh, varid, buf, bufcount, buftype, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var(file->fh, varid, buf, bufcount, buftype, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1671,9 +1647,9 @@ int PIOc_put_vara_ushort (int ncid, int varid, const PIO_Offset start[], const P
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1681,7 +1657,7 @@ int PIOc_put_vara_ushort (int ncid, int varid, const PIO_Offset start[], const P
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_USHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1707,11 +1683,10 @@ int PIOc_put_vara_ushort (int ncid, int varid, const PIO_Offset start[], const P
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_ushort(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_ushort(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1740,9 +1715,9 @@ int PIOc_put_vars_short (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1750,7 +1725,7 @@ int PIOc_put_vars_short (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_SHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1776,11 +1751,10 @@ int PIOc_put_vars_short (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_short(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_short(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1809,9 +1783,9 @@ int PIOc_put_vara_uint (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1819,7 +1793,7 @@ int PIOc_put_vara_uint (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_UINT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1845,11 +1819,10 @@ int PIOc_put_vara_uint (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_uint(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_uint(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1878,9 +1851,9 @@ int PIOc_put_vara_schar (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1888,7 +1861,7 @@ int PIOc_put_vara_schar (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_SCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1914,11 +1887,10 @@ int PIOc_put_vara_schar (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_schar(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_schar(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -1947,9 +1919,9 @@ int PIOc_put_varm_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -1957,7 +1929,7 @@ int PIOc_put_varm_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_ULONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -1983,11 +1955,10 @@ int PIOc_put_varm_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_ulonglong(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_ulonglong(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2016,9 +1987,9 @@ int PIOc_put_var1_uchar (int ncid, int varid, const PIO_Offset index[], const un
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2026,7 +1997,7 @@ int PIOc_put_var1_uchar (int ncid, int varid, const PIO_Offset index[], const un
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_UCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2052,11 +2023,10 @@ int PIOc_put_var1_uchar (int ncid, int varid, const PIO_Offset index[], const un
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_uchar(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_uchar(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2085,9 +2055,9 @@ int PIOc_put_varm_int (int ncid, int varid, const PIO_Offset start[], const PIO_
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2095,7 +2065,7 @@ int PIOc_put_varm_int (int ncid, int varid, const PIO_Offset start[], const PIO_
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_INT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2121,11 +2091,10 @@ int PIOc_put_varm_int (int ncid, int varid, const PIO_Offset start[], const PIO_
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_int(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_int(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2154,9 +2123,9 @@ int PIOc_put_vars_schar (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2164,7 +2133,7 @@ int PIOc_put_vars_schar (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_SCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2190,11 +2159,10 @@ int PIOc_put_vars_schar (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_schar(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_schar(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2223,9 +2191,9 @@ int PIOc_put_var1 (int ncid, int varid, const PIO_Offset index[], const void *bu
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2233,7 +2201,7 @@ int PIOc_put_var1 (int ncid, int varid, const PIO_Offset index[], const void *bu
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2259,11 +2227,10 @@ int PIOc_put_var1 (int ncid, int varid, const PIO_Offset index[], const void *bu
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1(file->fh, varid, index, buf, bufcount, buftype, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1(file->fh, varid, index, buf, bufcount, buftype, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2292,9 +2259,9 @@ int PIOc_put_vara_float (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2302,7 +2269,7 @@ int PIOc_put_vara_float (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_FLOAT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2328,11 +2295,10 @@ int PIOc_put_vara_float (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_float(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_float(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2361,9 +2327,9 @@ int PIOc_put_var1_float (int ncid, int varid, const PIO_Offset index[], const fl
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2371,7 +2337,7 @@ int PIOc_put_var1_float (int ncid, int varid, const PIO_Offset index[], const fl
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_FLOAT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2397,11 +2363,10 @@ int PIOc_put_var1_float (int ncid, int varid, const PIO_Offset index[], const fl
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_float(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_float(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2430,9 +2395,9 @@ int PIOc_put_varm_float (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2440,7 +2405,7 @@ int PIOc_put_varm_float (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_FLOAT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2466,11 +2431,10 @@ int PIOc_put_varm_float (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_float(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_float(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2499,9 +2463,9 @@ int PIOc_put_var1_text (int ncid, int varid, const PIO_Offset index[], const cha
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2509,7 +2473,7 @@ int PIOc_put_var1_text (int ncid, int varid, const PIO_Offset index[], const cha
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_TEXT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2535,11 +2499,10 @@ int PIOc_put_var1_text (int ncid, int varid, const PIO_Offset index[], const cha
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_text(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_text(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2568,9 +2531,9 @@ int PIOc_put_vars_text (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2578,7 +2541,7 @@ int PIOc_put_vars_text (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_TEXT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2604,11 +2567,10 @@ int PIOc_put_vars_text (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_text(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_text(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2637,9 +2599,9 @@ int PIOc_put_varm_long (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2647,7 +2609,7 @@ int PIOc_put_varm_long (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_LONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2673,11 +2635,10 @@ int PIOc_put_varm_long (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_long(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_long(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2706,9 +2667,9 @@ int PIOc_put_vars_double (int ncid, int varid, const PIO_Offset start[], const P
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2716,7 +2677,7 @@ int PIOc_put_vars_double (int ncid, int varid, const PIO_Offset start[], const P
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_DOUBLE;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2742,11 +2703,10 @@ int PIOc_put_vars_double (int ncid, int varid, const PIO_Offset start[], const P
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_double(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_double(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2775,9 +2735,9 @@ int PIOc_put_vara_longlong (int ncid, int varid, const PIO_Offset start[], const
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2785,7 +2745,7 @@ int PIOc_put_vara_longlong (int ncid, int varid, const PIO_Offset start[], const
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_LONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2811,11 +2771,10 @@ int PIOc_put_vara_longlong (int ncid, int varid, const PIO_Offset start[], const
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_longlong(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_longlong(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2844,9 +2803,9 @@ int PIOc_put_var_double (int ncid, int varid, const double *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2854,7 +2813,7 @@ int PIOc_put_var_double (int ncid, int varid, const double *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_DOUBLE;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2880,11 +2839,10 @@ int PIOc_put_var_double (int ncid, int varid, const double *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_double(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_double(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2913,9 +2871,9 @@ int PIOc_put_var_float (int ncid, int varid, const float *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2923,7 +2881,7 @@ int PIOc_put_var_float (int ncid, int varid, const float *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_FLOAT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -2949,11 +2907,10 @@ int PIOc_put_var_float (int ncid, int varid, const float *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_float(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_float(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -2982,9 +2939,9 @@ int PIOc_put_var1_ulonglong (int ncid, int varid, const PIO_Offset index[], cons
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -2992,7 +2949,7 @@ int PIOc_put_var1_ulonglong (int ncid, int varid, const PIO_Offset index[], cons
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_ULONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3018,11 +2975,10 @@ int PIOc_put_var1_ulonglong (int ncid, int varid, const PIO_Offset index[], cons
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_ulonglong(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_ulonglong(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3051,9 +3007,9 @@ int PIOc_put_varm_uint (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3061,7 +3017,7 @@ int PIOc_put_varm_uint (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_UINT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3087,11 +3043,10 @@ int PIOc_put_varm_uint (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_uint(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_uint(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3120,9 +3075,9 @@ int PIOc_put_var1_uint (int ncid, int varid, const PIO_Offset index[], const uns
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3130,7 +3085,7 @@ int PIOc_put_var1_uint (int ncid, int varid, const PIO_Offset index[], const uns
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_UINT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3156,11 +3111,10 @@ int PIOc_put_var1_uint (int ncid, int varid, const PIO_Offset index[], const uns
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_uint(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_uint(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3189,9 +3143,9 @@ int PIOc_put_var1_int (int ncid, int varid, const PIO_Offset index[], const int 
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3199,7 +3153,7 @@ int PIOc_put_var1_int (int ncid, int varid, const PIO_Offset index[], const int 
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_INT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3225,11 +3179,10 @@ int PIOc_put_var1_int (int ncid, int varid, const PIO_Offset index[], const int 
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_int(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_int(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3258,9 +3211,9 @@ int PIOc_put_vars_float (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3268,7 +3221,7 @@ int PIOc_put_vars_float (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_FLOAT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3294,11 +3247,10 @@ int PIOc_put_vars_float (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_float(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_float(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3327,9 +3279,9 @@ int PIOc_put_vara_short (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3337,7 +3289,7 @@ int PIOc_put_vara_short (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_SHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3363,11 +3315,10 @@ int PIOc_put_vara_short (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_short(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_short(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3396,9 +3347,9 @@ int PIOc_put_var1_schar (int ncid, int varid, const PIO_Offset index[], const si
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3406,7 +3357,7 @@ int PIOc_put_var1_schar (int ncid, int varid, const PIO_Offset index[], const si
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_SCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3432,11 +3383,10 @@ int PIOc_put_var1_schar (int ncid, int varid, const PIO_Offset index[], const si
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_schar(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_schar(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3465,9 +3415,9 @@ int PIOc_put_vara_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3475,7 +3425,7 @@ int PIOc_put_vara_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_ULONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3501,11 +3451,10 @@ int PIOc_put_vara_ulonglong (int ncid, int varid, const PIO_Offset start[], cons
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_ulonglong(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_ulonglong(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3534,9 +3483,9 @@ int PIOc_put_varm_double (int ncid, int varid, const PIO_Offset start[], const P
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3544,7 +3493,7 @@ int PIOc_put_varm_double (int ncid, int varid, const PIO_Offset start[], const P
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_DOUBLE;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3570,11 +3519,10 @@ int PIOc_put_varm_double (int ncid, int varid, const PIO_Offset start[], const P
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_double(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_double(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3603,9 +3551,9 @@ int PIOc_put_vara (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3613,7 +3561,7 @@ int PIOc_put_vara (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3639,11 +3587,10 @@ int PIOc_put_vara (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara(file->fh, varid, start, count, buf, bufcount, buftype, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara(file->fh, varid, start, count, buf, bufcount, buftype, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3672,9 +3619,9 @@ int PIOc_put_vara_long (int ncid, int varid, const PIO_Offset start[], const PIO
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3682,7 +3629,7 @@ int PIOc_put_vara_long (int ncid, int varid, const PIO_Offset start[], const PIO
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_LONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3708,11 +3655,10 @@ int PIOc_put_vara_long (int ncid, int varid, const PIO_Offset start[], const PIO
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_long(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_long(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3741,9 +3687,9 @@ int PIOc_put_var1_double (int ncid, int varid, const PIO_Offset index[], const d
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3751,7 +3697,7 @@ int PIOc_put_var1_double (int ncid, int varid, const PIO_Offset index[], const d
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_DOUBLE;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3777,11 +3723,10 @@ int PIOc_put_var1_double (int ncid, int varid, const PIO_Offset index[], const d
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_double(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_double(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3810,9 +3755,9 @@ int PIOc_put_varm_schar (int ncid, int varid, const PIO_Offset start[], const PI
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3820,7 +3765,7 @@ int PIOc_put_varm_schar (int ncid, int varid, const PIO_Offset start[], const PI
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_SCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3846,11 +3791,10 @@ int PIOc_put_varm_schar (int ncid, int varid, const PIO_Offset start[], const PI
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_schar(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_schar(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3879,9 +3823,9 @@ int PIOc_put_var_text (int ncid, int varid, const char *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3889,7 +3833,7 @@ int PIOc_put_var_text (int ncid, int varid, const char *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_TEXT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3915,11 +3859,10 @@ int PIOc_put_var_text (int ncid, int varid, const char *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_text(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_text(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -3948,9 +3891,9 @@ int PIOc_put_vars_int (int ncid, int varid, const PIO_Offset start[], const PIO_
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -3958,7 +3901,7 @@ int PIOc_put_vars_int (int ncid, int varid, const PIO_Offset start[], const PIO_
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_INT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -3984,11 +3927,10 @@ int PIOc_put_vars_int (int ncid, int varid, const PIO_Offset start[], const PIO_
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_int(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_int(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -4017,9 +3959,9 @@ int PIOc_put_var1_short (int ncid, int varid, const PIO_Offset index[], const sh
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -4027,7 +3969,7 @@ int PIOc_put_var1_short (int ncid, int varid, const PIO_Offset index[], const sh
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR1_SHORT;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -4053,11 +3995,10 @@ int PIOc_put_var1_short (int ncid, int varid, const PIO_Offset index[], const sh
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var1_short(file->fh, varid, index, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var1_short(file->fh, varid, index, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -4086,9 +4027,9 @@ int PIOc_put_vars_longlong (int ncid, int varid, const PIO_Offset start[], const
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -4096,7 +4037,7 @@ int PIOc_put_vars_longlong (int ncid, int varid, const PIO_Offset start[], const
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS_LONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -4122,11 +4063,10 @@ int PIOc_put_vars_longlong (int ncid, int varid, const PIO_Offset start[], const
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars_longlong(file->fh, varid, start, count, stride, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars_longlong(file->fh, varid, start, count, stride, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -4155,9 +4095,9 @@ int PIOc_put_vara_double (int ncid, int varid, const PIO_Offset start[], const P
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -4165,7 +4105,7 @@ int PIOc_put_vara_double (int ncid, int varid, const PIO_Offset start[], const P
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARA_DOUBLE;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -4191,11 +4131,10 @@ int PIOc_put_vara_double (int ncid, int varid, const PIO_Offset start[], const P
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vara_double(file->fh, varid, start, count, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vara_double(file->fh, varid, start, count, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -4224,9 +4163,9 @@ int PIOc_put_vars (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -4234,7 +4173,7 @@ int PIOc_put_vars (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARS;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -4260,11 +4199,10 @@ int PIOc_put_vars (int ncid, int varid, const PIO_Offset start[], const PIO_Offs
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_vars(file->fh, varid, start, count, stride, buf, bufcount, buftype, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_vars(file->fh, varid, start, count, stride, buf, bufcount, buftype, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -4293,9 +4231,9 @@ int PIOc_put_var_uchar (int ncid, int varid, const unsigned char *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -4303,7 +4241,7 @@ int PIOc_put_var_uchar (int ncid, int varid, const unsigned char *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_UCHAR;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -4329,11 +4267,10 @@ int PIOc_put_var_uchar (int ncid, int varid, const unsigned char *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_uchar(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_uchar(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -4362,9 +4299,9 @@ int PIOc_put_var_long (int ncid, int varid, const long *op)
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -4372,7 +4309,7 @@ int PIOc_put_var_long (int ncid, int varid, const long *op)
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VAR_LONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -4398,11 +4335,10 @@ int PIOc_put_var_long (int ncid, int varid, const long *op)
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_var_long(file->fh, varid, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_var_long(file->fh, varid, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
@@ -4431,9 +4367,9 @@ int PIOc_put_varm_longlong (int ncid, int varid, const PIO_Offset start[], const
   int mpierr;
   iosystem_desc_t *ios;
   file_desc_t *file;
-  int request;
+  int *request;
   PIO_Offset usage;
-
+  var_desc_t *vdesc;
   ierr = PIO_NOERR;
 
   file = pio_get_file_from_id(ncid);
@@ -4441,7 +4377,7 @@ int PIOc_put_varm_longlong (int ncid, int varid, const PIO_Offset start[], const
     return PIO_EBADID;
   ios = file->iosystem;
   msg = PIO_MSG_PUT_VARM_LONGLONG;
-
+  
   if(ios->async_interface && ! ios->ioproc){
     if(ios->compmaster) 
       mpierr = MPI_Send(&msg, 1,MPI_INT, ios->ioroot, 1, ios->union_comm);
@@ -4467,11 +4403,10 @@ int PIOc_put_varm_longlong (int ncid, int varid, const PIO_Offset start[], const
 #endif
 #ifdef _PNETCDF
     case PIO_IOTYPE_PNETCDF:
+      vdesc = file->varlist+varid;
       if(ios->io_rank==0){
-	ierr = ncmpi_bput_varm_longlong(file->fh, varid, start, count, stride, imap, op, &request);;
-	if(ierr == PIO_NOERR){
-	  pio_push_request(file, request);
-	}
+	request = &(vdesc->request);
+	ierr = ncmpi_bput_varm_longlong(file->fh, varid, start, count, stride, imap, op, request);;
       }
       flush_output_buffer(file, false, 0);
       break;
