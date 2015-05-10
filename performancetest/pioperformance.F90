@@ -388,12 +388,8 @@ contains
     do nv=1,nvars
        write(varname,'(a,i4.4)') 'vari',nv
        iostat = PIO_def_var(File, varname, PIO_INT, dimid, vari(nv))
-    enddo
-    do nv=1,nvars
        write(varname,'(a,i4.4)') 'varr',nv
        iostat = PIO_def_var(File, varname, PIO_REAL, dimid, varr(nv))
-    enddo
-    do nv=1,nvars
        write(varname,'(a,i4.4)') 'vard',nv
        iostat = PIO_def_var(File, varname, PIO_DOUBLE, dimid, vard(nv))
     enddo
