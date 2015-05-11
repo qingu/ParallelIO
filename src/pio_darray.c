@@ -1231,11 +1231,17 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
       if(ierr == PIO_NOERR){
 	switch(nctype){
 	case NC_INT:
-	case NC_FLOAT:
 	  fillval = bget(4);
 	  PIOc_get_att_int(ncid, vid, "_FillValue", (int *) fillval);
 	  for(int i=0;i<arraylen;i++){
 	    ((int *) array)[i]= *((int *) fillval);
+	  }
+	  break;
+	case NC_FLOAT:
+	  fillval = bget(4);
+	  PIOc_get_att_float(ncid, vid, "_FillValue", (float *) fillval);
+	  for(int i=0;i<arraylen;i++){
+	    ((float *) array)[i]= *((float *) fillval);
 	  }
 	  break;
 	case NC_DOUBLE:
