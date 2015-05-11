@@ -154,6 +154,8 @@ typedef struct pio_swapm_defaults
 }
 #endif
 
+#define PIO_REQ_NULL (NC_REQ_NULL-1)
+
 enum PIO_MSG{
   PIO_MSG_OPEN_FILE,
   PIO_MSG_CREATE_FILE,

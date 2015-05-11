@@ -52,6 +52,9 @@ int PIO_function()
       if(ios->io_rank==0){
 	request = &(vdesc->request);
 	ierr = ncmpi_function();
+      }else{
+	// keeps the ncmpi_wait_all calls synced
+	vdesc->request = PIO_REQ_NULL;
       }
       flush_output_buffer(file, false, 0);
       break;
