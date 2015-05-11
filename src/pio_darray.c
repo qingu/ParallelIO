@@ -645,17 +645,16 @@ int PIOc_write_darray_multi(const int ncid, const int vid[], const int ioid, con
    case PIO_IOTYPE_NETCDF4P:
    case PIO_IOTYPE_NETCDF4C:
      //     printf("%s %d %d %d %d\n",__FILE__,__LINE__,iodesc->holegridsize,vsize,nvars);
-     if(iodesc->rearranger == PIO_REARR_SUBSET && iodesc->needsfill &&
-	iodesc->holegridsize>0){
+     if(iodesc->rearranger == PIO_REARR_SUBSET && iodesc->needsfill && iodesc->holegridsize>0){
        fillbuf = bget(iodesc->holegridsize*vsize*nvars);
        if(vsize==4){
 	 for(int nv=0;nv<nvars;nv++){
 	   for(int i=0;i<iodesc->holegridsize;i++){
 	     ((float *) fillbuf)[i+nv*iodesc->holegridsize] = ((float *) fillvalue)[nv];
 	   }
-	 
+	   
 	   //         printf("%s %d %d %d\n",__FILE__,__LINE__,nv,((int *)fillbuf)[0]);
-          }
+	 }
        }else if(vsize==8){
 	 for(int nv=0;nv<nvars;nv++){
 	   for(int i=0;i<iodesc->holegridsize;i++){
@@ -672,15 +671,20 @@ int PIOc_write_darray_multi(const int ncid, const int vid[], const int ioid, con
        for(int nv=0;nv<nvars;nv++){
 	 vdesc = file->varlist+vid[nv];
 	 vdesc->fillrequest = vdesc->request;
+	 printf("%s %d %d\n",__FILE__,__LINE__,vdesc->fillrequest);
        }
      }
-
+       
      ierr = pio_write_darray_multi_nc(file, nvars, vid,  
 				      iodesc->ndims, iodesc->basetype, iodesc->gsize,
 				      iodesc->maxregions, iodesc->firstregion, iodesc->llen,
 				      iodesc->maxiobuflen, iodesc->num_aiotasks,
 				      iobuf, frame);
      
+     for(int nv=0;nv<nvars;nv++){
+       vdesc = file->varlist+vid[nv];
+       printf("%s %d %d\n",__FILE__,__LINE__,vdesc->request);
+     }
    }
    
    /* We cannot free the iobuf and the fillbuf until the flush completes */
@@ -1221,59 +1225,56 @@ int PIOc_read_darray(const int ncid, const int vid, const int ioid, const PIO_Of
 	 piomemerror(*ios,rlen*((size_t) tsize), __FILE__,__LINE__);
        }
      }
-    if(iodesc->rearranger == PIO_REARR_SUBSET){
-      // need to prefill fillvalue
-      nc_type nctype;
-      int errmethod, ierr;
-      errmethod = PIOc_Set_File_Error_Handling(ncid, PIO_BCAST_ERROR);
-      ierr = PIOc_inq_att(ncid, vid, "_FillValue", &nctype, NULL);
-      PIOc_Set_File_Error_Handling(ncid, errmethod);
-      if(ierr == PIO_NOERR){
-	switch(nctype){
-	case NC_INT:
-	  fillval = bget(4);
-	  PIOc_get_att_int(ncid, vid, "_FillValue", (int *) fillval);
-	  for(int i=0;i<arraylen;i++){
-	    ((int *) array)[i]= *((int *) fillval);
-	  }
-	  break;
-	case NC_FLOAT:
-	  fillval = bget(4);
-	  PIOc_get_att_float(ncid, vid, "_FillValue", (float *) fillval);
-	  for(int i=0;i<arraylen;i++){
-	    ((float *) array)[i]= *((float *) fillval);
-	  }
-	  break;
-	case NC_DOUBLE:
-	  fillval = bget(8);
-	  PIOc_get_att_double(ncid, vid, "_FillValue", (double *) fillval);
-	  for(int i=0;i<arraylen;i++){
-	    ((double *) array)[i]= *((double *) fillval);
-	  }
-	  break;
-	default:
-	  piodie("Unrecognized _Fillvalue type in read_darray",__FILE__,__LINE__);
+    // need to prefill fillvalue
+    nc_type nctype;
+    int errmethod, ierr;
+    errmethod = PIOc_Set_File_Error_Handling(ncid, PIO_BCAST_ERROR);
+    ierr = PIOc_inq_att(ncid, vid, "_FillValue", &nctype, NULL);
+    PIOc_Set_File_Error_Handling(ncid, errmethod);
+    if(ierr == PIO_NOERR){
+      switch(nctype){
+      case NC_INT:
+	fillval = bget(4);
+	PIOc_get_att_int(ncid, vid, "_FillValue", (int *) fillval);
+	for(int i=0;i<arraylen;i++){
+	  ((int *) array)[i]= *((int *) fillval);
 	}
-	brel(fillval);
-      }else{  // use  the default netcdf fill value
-       vtype = (MPI_Datatype) iodesc->basetype;
-       if(vtype == MPI_INTEGER){
-	 for(int i=0;i<arraylen;i++){
-	   ((int *) array)[i]= PIO_FILL_INT;
-	 }
-       }else if(vtype == MPI_FLOAT || vtype == MPI_REAL4){
-	 for(int i=0;i<arraylen;i++){
-	   ((int *) array)[i]= PIO_FILL_FLOAT;
-	 }
-       }else if(vtype == MPI_DOUBLE || vtype == MPI_REAL8){
-	 for(int i=0;i<arraylen;i++){
-	   ((int *) array)[i]= PIO_FILL_DOUBLE;
-	 }
-       }else{
-	  piodie("Unrecognized _Fillvalue type in read_darray",__FILE__,__LINE__);
-       }
+	break;
+      case NC_FLOAT:
+	fillval = bget(4);
+	PIOc_get_att_float(ncid, vid, "_FillValue", (float *) fillval);
+	for(int i=0;i<arraylen;i++){
+	  ((float *) array)[i]= *((float *) fillval);
+	}
+	break;
+      case NC_DOUBLE:
+	fillval = bget(8);
+	PIOc_get_att_double(ncid, vid, "_FillValue", (double *) fillval);
+	for(int i=0;i<arraylen;i++){
+	  ((double *) array)[i]= *((double *) fillval);
+	}
+	break;
+      default:
+	piodie("Unrecognized _Fillvalue type in read_darray",__FILE__,__LINE__);
       }
-
+      brel(fillval);
+    }else{  // use  the default netcdf fill value
+      vtype = (MPI_Datatype) iodesc->basetype;
+      if(vtype == MPI_INTEGER){
+	for(int i=0;i<arraylen;i++){
+	  ((int *) array)[i]= PIO_FILL_INT;
+	}
+      }else if(vtype == MPI_FLOAT || vtype == MPI_REAL4){
+	for(int i=0;i<arraylen;i++){
+	  ((int *) array)[i]= PIO_FILL_FLOAT;
+	}
+      }else if(vtype == MPI_DOUBLE || vtype == MPI_REAL8){
+	for(int i=0;i<arraylen;i++){
+	  ((int *) array)[i]= PIO_FILL_DOUBLE;
+	}
+      }else{
+	piodie("Unrecognized _Fillvalue type in read_darray",__FILE__,__LINE__);
+      }
     }
 
   }else{
@@ -1340,21 +1341,19 @@ int flush_output_buffer(file_desc_t *file, bool force, PIO_Offset addsize)
 	    request[nreq++] = NC_REQ_NULL;
 	  }else{
 	    request[nreq++] = vard->request;
-	    if(vard->fillrequest != NC_REQ_NULL){
-	      request[nreq++] = vard->fillrequest;
-	    }
 	  }
+	  request[nreq++] = vard->fillrequest;
 	  //	  printf("%s %d %d %d %d\n",__FILE__,__LINE__,i,nreq,vard->request);
-	  vard->request = NC_REQ_NULL;  //too eager?
+	  vard->request = NC_REQ_NULL; 
+	  vard->fillrequest = NC_REQ_NULL;  
 	}else if(nreq > 0){
-	  /*	  printf("%s %d ",__FILE__,__LINE__);	
+	  	  printf("%s %d ",__FILE__,__LINE__);	
 	  for(int j=0;j<nreq;j++)
 	    printf("%d ",request[j]);
 	  printf("\n");
-	  */
+	  
 	  ierr = ncmpi_wait_all(file->fh,nreq, request,status);
-	  for(int j=0; j<nreq; j++)
-	    request[j]=NC_REQ_NULL;
+
 	  nreq=0;
 	
 	}
