@@ -1,169 +1,128 @@
-PROJECT(PIO C Fortran)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5)
-OPTION(PIO_BUILD_TIMING  "" OFF)
-OPTION(PIO_BUILD_TESTS   "" OFF)
-#cmake_policy(SET CMP0043 OLD)
-#ENABLE_TESTING()
-if(PIO_BUILD_TESTS)
-  include( CTest )
-ENDIF()
+cmake_minimum_required (VERSION 2.8.12)
+project (PIO C Fortran)
 
-IF (USER_CMAKE_MODULE_PATH)
-  LIST(APPEND CMAKE_MODULE_PATH ${USER_CMAKE_MODULE_PATH})
-ELSE()
-  LIST (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bin/cmake" "${CMAKE_CURRENT_SOURCE_DIR}")
-ENDIF()
-include(PIO_Macros OPTIONAL)
-ENABLE_LANGUAGE(Fortran)
+# The project version number.
+set(VERSION_MAJOR   2   CACHE STRING "Project major version number.")
+set(VERSION_MINOR   0   CACHE STRING "Project minor version number.")
+set(VERSION_PATCH  28   CACHE STRING "Project patch version number.")
+mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
 
-if(DEFINED ENV{BGQDRV})
-  set(CMAKE_EXE_LINKER_FLAGS "-Wl,--whole-archive ${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-whole-archive" )
-ENDIF()
+#==============================================================================
+#  USER-DEFINED OPTIONS (set with "-DOPT=VAL" from command line)
+#==============================================================================
 
-find_file( TESTFILE NAMES TryCSizeOf.f90 PATHS ${CMAKE_MODULE_PATH} NO_DEFAULT_PATH)
-get_filename_component( TESTFILEPATH ${TESTFILE} PATH)
+#===== Library Options =====
+option (PIO_ENABLE_FORTRAN   "Enable the Fortran library builds"            ON)
+option (PIO_ENABLE_TIMING    "Enable the use of the GPTL timing library"    ON)
+option (PIO_TEST_BIG_ENDIAN  "Enable test to see if machine is big endian"  ON)
+option (PIO_USE_MPIIO        "Enable support for MPI-IO auto detect"        ON)
+option (PIO_USE_MPISERIAL    "Enable mpi-serial support (instead of MPI)"   OFF)
+option (PIO_USE_MALLOC       "Use native malloc (instead of bget package)"  OFF)
+option (WITH_PNETCDF         "Require the use of PnetCDF"                   ON)
 
-SET(pio_include_dirs_  ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src)
-SET(PIO_LIB_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src CACHE STRING "")
-
-
-TRY_COMPILE(WITH_CSIZEOF ${CMAKE_CURRENT_BINARY_DIR}/tryCompileCSIZEOF 
-                        ${TESTFILEPATH}/TryCSizeOf.f90)
-
-IF(${WITH_CSIZEOF} STREQUAL FALSE)
-    MESSAGE(STATUS "Fortran compiler does not support c_sizeof function")
-    LIST(APPEND bld_PIO_DEFINITIONS -DNO_C_SIZEOF)
+if(PIO_USE_MALLOC)
+  set(USE_MALLOC 1)
+else()
+  set(USE_MALLOC 0)
 endif()
 
-# Netcdf c library is required
+#===== Library Variables =====
+set (PIO_FILESYSTEM_HINTS IGNORE CACHE STRING "Filesystem hints (lustre or gpfs)")
 
-FIND_PACKAGE(NETCDF_C)
-IF (${NETCDF_C_FOUND})
-  MESSAGE("Building PIO with netcdf support ") 
-  LIST(APPEND bld_PIO_DEFINITIONS  ${NETCDF_C_DEFINITIONS})
-ENDIF ()
+#===== Testing Options =====
+option (PIO_ENABLE_TESTS  "Enable the testing builds"                           ON)
+option (PIO_HDF5_LOGGING  "Enable hdf5 logging (requires instrumented netcdf4)" OFF)
 
+#==============================================================================
+#  BACKWARDS COMPATIBILITY
+#==============================================================================
 
-# PNetcdf is optional but used by default
-OPTION(WITH_PNETCDF "Whether to build with PNetcdf" TRUE)
-IF (${WITH_PNETCDF})
-  FIND_PACKAGE(Pnetcdf REQUIRED)
-ELSE ()
-  MESSAGE(WARNING "Warning: Not building with PNetcdf - cannot run all regression tests.")
-ENDIF ()
+# Old NETCDF_DIR variable --> NetCDF_PATH
+if (DEFINED NETCDF_DIR)
+    set (NetCDF_PATH ${NETCDF_DIR}
+         CACHE STRING "Location of the NetCDF library installation")
+endif ()
 
+# Old PNETCDF_DIR variable --> PnetCDF_PATH
+if (DEFINED PNETCDF_DIR)
+    set (PnetCDF_PATH ${PNETCDF_DIR}
+         CACHE STRING "Location of the PnetCDF library installation")
+endif ()
 
-OPTION(PIO_BIG_ENDIAN "Specify that the machine is big endian" test)
-IF ("${PIO_BIG_ENDIAN}" STREQUAL "test") 
-  INCLUDE(TestBigEndian)
-  TestBigEndian(PIO_BIG_ENDIAN_TEST)
-  IF(PIO_BIG_ENDIAN_TEST) 
-    SET(PIO_BIG_ENDIAN ON  CACHE BOOL "")
-  ELSE()
-    SET(PIO_BIG_ENDIAN OFF CACHE BOOL "")
-  ENDIF()
-ELSE()
-  SET(PIO_BIG_ENDIAN ${PIO_BIG_ENDIAN} CACHE BOOL "")
-ENDIF()                                            
+#==============================================================================
+#  PREPEND TO CMAKE MODULE PATH
+#==============================================================================
 
+#===== Local modules =====
+list (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-IF (PIO_FILESYSTEM_HINTS STREQUAL "lustre")
-  MESSAGE(STATUS "PIO using lustre filesystem hints")
-  LIST(APPEND bld_PIO_DEFINITIONS -DPIO_LUSTRE_HINTS)
-ELSEIF(PIO_FILESYSTEM_HINTS STREQUAL "gpfs")
-  MESSAGE(STATUS "PIO using gpfs filesystem hints")
-  LIST(APPEND bld_PIO_DEFINITIONS -DPIO_GPFS_HINTS)
-ELSEIF(NOT "${PIO_FILESYSTEM_HINTS}" STREQUAL "")
-  MESSAGE(WARNING "${PIO_FILESYSTEM_HINTS} not valid option for PIO_FILESYSTEM_HINTS; use gpfs or lustre.")
-ENDIF()
+#===== External modules =====
+if (NOT DEFINED USER_CMAKE_MODULE_PATH)
+    message (STATUS "Importing CMake_Fortran_utils")
+    execute_process(
+        COMMAND git clone https://github.com/CESM-Development/CMake_Fortran_utils
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        OUTPUT_QUIET
+        ERROR_QUIET)
+    find_path (USER_CMAKE_MODULE_PATH
+               NAMES mpiexec.cmake
+               HINTS ${CMAKE_BINARY_DIR}/CMake_Fortran_utils)
+    if (USER_CMAKE_MODULE_PATH)
+        message (STATUS "Importing CMake_Fortran_utils - success")
+    else ()
+        message (FATAL_ERROR "Failed to import CMake_Fortran_utils")
+    endif ()
+endif ()
+set (USER_CMAKE_MODULE_PATH ${USER_CMAKE_MODULE_PATH}
+     CACHE STRING "Location of the CMake_Fortran_utils")
+list (APPEND CMAKE_MODULE_PATH ${USER_CMAKE_MODULE_PATH})
 
-IF(NETCDF_C_FOUND) 
-  LIST(APPEND pio_include_dirs_ ${NETCDF_C_INCLUDE_DIR})
-#  LIST(APPEND bld_PIO_DEFINITIONS  ${NETCDF_C_DEFINITIONS})
-ELSE()
-  LIST(APPEND bld_PIO_DEFINITIONS -D_NONETCDF)
-ENDIF()
-IF(PNETCDF_FOUND)
-  LIST(APPEND pio_include_dirs_  "${PNETCDF_INCLUDE_DIR}")
-  LIST(APPEND bld_PIO_DEFINITIONS "-D_PNETCDF" "${PNETCDF_CPPDEFS}")
-ELSE()
-  LIST(APPEND bld_PIO_DEFINITIONS  -D_NOPNETCDF)
-ENDIF()
+#==============================================================================
+#  HELPFUL GLOBAL VARIABLES
+#==============================================================================
 
+# System Name
+string (TOUPPER "${CMAKE_SYSTEM_NAME}" CMAKE_SYSTEM_NAME_CAPS)
+set (CMAKE_SYSTEM_DIRECTIVE "${CMAKE_SYSTEM_NAME_CAPS}"
+     CACHE STRING "System name preprocessor directive")
 
-FIND_PACKAGE(MPI)
+# C Compiler Name
+string (TOUPPER "${CMAKE_C_COMPILER_ID}" CMAKE_C_COMPILER_NAME)
+if (CMAKE_C_COMPILER_NAME STREQUAL "XL")
+    set (CMAKE_C_COMPILER_NAME "IBM")
+endif ()
+set (CMAKE_C_COMPILER_DIRECTIVE "CPR${CMAKE_C_COMPILER_NAME}"
+     CACHE STRING "C compiler name preprocessor directive")
 
-OPTION(PIO_USE_MPIIO "Enable support for MPI-IO (default auto detect)" ON)
-IF (PIO_USE_MPIIO) 
-  TRY_COMPILE(MPIIO_SUCCESS ${CMAKE_CURRENT_BINARY_DIR}/tryCompileMPIIO 
-                            ${TESTFILEPATH}/TryMPIIO.f90)
-  IF (${MPIIO_SUCCESS})
-    MESSAGE(STATUS "MPIIO detected and enabled.")
-  ELSE()
-    MESSAGE(STATUS "MPIIO not detected and therefore disabled.")
-    SET(PIO_USE_MPIIO FALSE)
-  ENDIF()
-ENDIF()
-IF (${PIO_USE_MPIIO}) 
-  LIST(APPEND bld_PIO_DEFINITIONS -DUSEMPIIO)
-ENDIF()
+# Fortran Compiler Name
+string (TOUPPER "${CMAKE_Fortran_COMPILER_ID}" CMAKE_Fortran_COMPILER_NAME)
+if (CMAKE_Fortran_COMPILER_NAME STREQUAL "XL")
+    set (CMAKE_Fortran_COMPILER_NAME "IBM")
+endif ()
+set (CMAKE_Fortran_COMPILER_DIRECTIVE "CPR${CMAKE_Fortran_COMPILER_NAME}"
+     CACHE STRING "Fortran compiler name preprocessor directive")
 
-
-TRY_COMPILE(MPIMOD_SUCCESS ${CMAKE_CURRENT_BINARY_DIR}/tryCompileMPIMod
-                             ${TESTFILEPATH}/TryMPIMod.f90)
-IF (${MPIMOD_SUCCESS})
-    MESSAGE(STATUS "MPI Fortran module detected and enabled.")
-ELSE()
-    MESSAGE(STATUS "MPI Fortran module not detected and therefore disabled.")
-    SET(PIO_USE_MPIMOD FALSE)
-    LIST(APPEND bld_PIO_DEFINITIONS  -DNO_MPIMOD)
-ENDIF()
-
-
-if(${PIO_BUILD_TIMING})
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/timing)
-    SET(bld_PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} -DTIMING )
-    ADD_SUBDIRECTORY(timing timing)
-    LIST(APPEND pio_include_dirs_  ${CMAKE_CURRENT_BINARY_DIR}/timing)
-    LIST(APPEND pio_include_dirs_  ${CMAKE_CURRENT_SOURCE_DIR}/timing)
-  endif()
-endif()
-
-SET(PIO_DEFINITIONS ${bld_PIO_DEFINITIONS} CACHE STRING "")
-ADD_DEFINITIONS(${PIO_DEFINITIONS})
-SET(PIO_INCLUDE_DIRS   ${pio_include_dirs_} CACHE STRING "")
-INCLUDE_DIRECTORIES(${PIO_INCLUDE_DIRS})
-
-IF( NOT GENF90_PATH) 
-  SET (GENF90_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-ENDIF()
-
-ADD_SUBDIRECTORY(src)
-
-if(${PIO_BUILD_TESTS})
-#  ADD_SUBDIRECTORY(examples)
-  ADD_SUBDIRECTORY(test)
-  ADD_SUBDIRECTORY(unittests)
-  if(${PIO_BUILD_TIMING})
-    ADD_SUBDIRECTORY(performancetest)
-  endif()
-#	ADD_SUBDIRECTORY(scripts)
-endif()
-
-# Build documentation
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc")
-  configure_file(${CMAKE_SOURCE_DIR}/Doxyfile.rbuild ${CMAKE_BINARY_DIR}/Doxyfile.rbuild.cmake @ONLY)
-  add_custom_target(doc
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/customdoxygen.css ${CMAKE_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/DoxygenLayout.xml ${CMAKE_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/doxygen.sty ${CMAKE_BINARY_DIR}
-    COMMAND cat ${CMAKE_SOURCE_DIR}/Doxyfile > ${CMAKE_BINARY_DIR}/Doxyfile.cmake
-    COMMAND cat ${CMAKE_BINARY_DIR}/Doxyfile.rbuild.cmake >> ${CMAKE_BINARY_DIR}/Doxyfile.cmake
-    COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/Doxyfile.cmake
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generating API documentation"
+# configure a header file to pass some of the CMake settings
+# to the source code
+configure_file (
+  "${PROJECT_SOURCE_DIR}/src/clib/config.h.in"
+  "${PROJECT_BINARY_DIR}/src/clib/config.h"
   )
-endif(DOXYGEN_FOUND)
 
+#==============================================================================
+#  INCLUDE SOURCE DIRECTORIES
+#==============================================================================
+
+# Libraries
+add_subdirectory (src)
+
+# Tests
+if (PIO_ENABLE_TESTS)
+    enable_testing()
+    include (CTest)
+    add_subdirectory (tests)
+    add_subdirectory (examples)
+endif ()
+
+# Documentation
+add_subdirectory (doc)
